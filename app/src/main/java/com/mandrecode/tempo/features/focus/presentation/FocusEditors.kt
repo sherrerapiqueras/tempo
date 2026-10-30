@@ -11,6 +11,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mandrecode.tempo.core.ui.adaptive.SheetPlacement
+import com.mandrecode.tempo.core.ui.util.rememberFrozenWhileHidden
 import com.mandrecode.tempo.features.tasks.presentation.TaskEditor
 import com.mandrecode.tempo.features.tasks.presentation.TasksContract
 import com.mandrecode.tempo.features.tasks.presentation.TasksViewModel
@@ -23,13 +24,16 @@ import com.mandrecode.tempo.features.tasks.presentation.components.dialogs.Delet
  * auto-save and deletion behave exactly as they do in Tasks. The view model is created on the
  * first edit rather than with the screen, so simply looking at your day costs nothing.
  *
- * Always a bottom sheet, never the docked pane the tabs can use on a wide window: Focus has no
- * list-detail layout for a pane to dock beside.
+ * [placement] is where the screen shows it: docked beside the agenda on a large window, as in
+ * Tasks (#502), otherwise a bottom sheet. [dismissRequestKey] closes a docked editor through its
+ * guarded dismiss when the open task's card is tapped again.
  */
 @Composable
 internal fun FocusTaskEditor(
     target: FocusContract.TaskEditorTarget,
     onDismiss: () -> Unit,
+    placement: SheetPlacement,
+    dismissRequestKey: Int,
     viewModel: TasksViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -63,12 +67,19 @@ internal fun FocusTaskEditor(
     // dismissal would close the editor before it appeared.
     DismissWhenClosed(isOpen = uiState.taskForm.isVisible, onClose = currentOnDismiss)
 
-    if (uiState.taskForm.isVisible) {
+    // The docked sheet resets the form the instant dismissal is requested, before the pane's own
+    // slide-out finishes; holding the last open state stops the exiting pane from going blank.
+    val shownState =
+        rememberFrozenWhileHidden(
+            uiState,
+            isLive = uiState.taskForm.isVisible || placement != SheetPlacement.DockedPane,
+        )
+    if (shownState.taskForm.isVisible) {
         TaskEditor(
-            uiState = uiState,
+            uiState = shownState,
             onEvent = viewModel::onEvent,
-            placement = SheetPlacement.BottomSheet,
-            dismissRequestKey = 0,
+            placement = placement,
+            dismissRequestKey = dismissRequestKey,
         )
     }
 

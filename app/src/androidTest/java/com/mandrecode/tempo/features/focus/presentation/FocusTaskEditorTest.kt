@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTextInput
 import com.mandrecode.tempo.core.data.preferences.TasksScreenPreferencesRepository
+import com.mandrecode.tempo.core.ui.adaptive.SheetPlacement
 import com.mandrecode.tempo.core.ui.theme.TempoTheme
 import com.mandrecode.tempo.features.tasks.domain.model.Category
 import com.mandrecode.tempo.features.tasks.domain.repository.CategoryRepository
@@ -31,7 +32,13 @@ class FocusTaskEditorTest {
      * back must not open the editor a second time, which would reset the half-written task.
      */
     @Test
-    fun recreatingTheScreen_keepsTheDraft() {
+    fun recreatingTheScreen_keepsTheDraft() = recreatingTheScreenKeepsTheDraft(SheetPlacement.BottomSheet)
+
+    /** The same holds beside the agenda on a large window (#502). */
+    @Test
+    fun recreatingTheScreen_keepsTheDraftInTheDockedPane() = recreatingTheScreenKeepsTheDraft(SheetPlacement.DockedPane)
+
+    private fun recreatingTheScreenKeepsTheDraft(placement: SheetPlacement) {
         val viewModel = tasksViewModel()
         val restorationTester = StateRestorationTester(composeTestRule)
         restorationTester.setContent {
@@ -39,6 +46,8 @@ class FocusTaskEditorTest {
                 FocusTaskEditor(
                     target = FocusContract.TaskEditorTarget.NewTask,
                     onDismiss = {},
+                    placement = placement,
+                    dismissRequestKey = 0,
                     viewModel = viewModel,
                 )
             }

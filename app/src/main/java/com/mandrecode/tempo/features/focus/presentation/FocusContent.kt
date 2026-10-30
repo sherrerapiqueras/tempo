@@ -26,6 +26,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -68,7 +70,12 @@ fun FocusContent(
     uiState: FocusContract.UiState,
     onEvent: (FocusContract.UiEvent) -> Unit,
     modifier: Modifier = Modifier,
+    /** The task open in a docked editor beside the agenda, shown as selected (#502). */
+    selectedTaskId: Long? = null,
+    /** Reports how far below the top the content block starts, so a docked editor can line up. */
+    onContentBlockTopChange: (Dp) -> Unit = {},
 ) {
+    val density = LocalDensity.current
     val listBottomPadding = floatingNavigationBottomClearancePadding(defaultPadding = 16.dp)
 
     Box(
@@ -89,7 +96,11 @@ fun FocusContent(
                     completedCount = uiState.completedCount,
                     progress = uiState.progress,
                     band = uiState.headlineBand,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .onSizeChanged { onContentBlockTopChange(with(density) { it.height.toDp() }) }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
                 )
 
                 Box(
@@ -121,6 +132,7 @@ fun FocusContent(
                                 uiState = uiState,
                                 onEvent = onEvent,
                                 bottomPadding = listBottomPadding,
+                                selectedTaskId = selectedTaskId,
                             )
                         }
                     }
@@ -135,6 +147,7 @@ private fun FocusAgendaList(
     uiState: FocusContract.UiState,
     onEvent: (FocusContract.UiEvent) -> Unit,
     bottomPadding: Dp,
+    selectedTaskId: Long?,
 ) {
     LazyColumn(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = bottomPadding),
@@ -151,6 +164,7 @@ private fun FocusAgendaList(
             entries = uiState.visibleToday,
             uiState = uiState,
             onEvent = onEvent,
+            selectedTaskId = selectedTaskId,
         )
 
         agendaSection(
@@ -159,6 +173,7 @@ private fun FocusAgendaList(
             entries = uiState.visibleOverdue,
             uiState = uiState,
             onEvent = onEvent,
+            selectedTaskId = selectedTaskId,
         )
 
         if (uiState.undatedTaskCount > 0) {
@@ -183,6 +198,7 @@ private fun LazyListScope.agendaSection(
     entries: List<FocusAgendaItem>,
     uiState: FocusContract.UiState,
     onEvent: (FocusContract.UiEvent) -> Unit,
+    selectedTaskId: Long?,
 ) {
     if (entries.isEmpty()) return
 
@@ -193,6 +209,7 @@ private fun LazyListScope.agendaSection(
         AgendaRow(
             entry = entry,
             expandedTaskIds = uiState.expandedTaskIds,
+            selectedTaskId = selectedTaskId,
             onEvent = onEvent,
             // Rows slide out of each other's way when one grows, the way they do in Routines and
             // Tasks. Without this an expanding card teleported everything below it, which read as
@@ -350,6 +367,7 @@ private const val SINGLE_PEEK_FRACTION = 0.88f
 private fun AgendaRow(
     entry: FocusAgendaItem,
     expandedTaskIds: ImmutableList<Long>,
+    selectedTaskId: Long?,
     onEvent: (FocusContract.UiEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -359,6 +377,7 @@ private fun AgendaRow(
                 modifier = modifier,
                 task = entry.task,
                 subtasks = entry.subtasks,
+                isSelected = entry.task.id == selectedTaskId,
                 onToggleCompletion = { onEvent(FocusContract.UiEvent.ToggleTaskCompletion(it)) },
                 onEdit = { onEvent(FocusContract.UiEvent.EditTask(it)) },
                 // Without both of these the card is pinned open: its default is expanded and its

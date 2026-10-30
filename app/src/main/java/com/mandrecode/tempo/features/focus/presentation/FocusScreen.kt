@@ -1,6 +1,7 @@
 package com.mandrecode.tempo.features.focus.presentation
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,15 +25,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mandrecode.tempo.R
+import com.mandrecode.tempo.core.ui.adaptive.DockedEditorPane
+import com.mandrecode.tempo.core.ui.adaptive.SheetPlacement
 import com.mandrecode.tempo.core.ui.components.ExpressiveSnackbarHost
 import com.mandrecode.tempo.core.ui.components.HoldSplashWhileFirstLoad
 import com.mandrecode.tempo.core.ui.glass.ambientBackground
 import com.mandrecode.tempo.core.ui.navigation.FocusFloatingBarState
 import com.mandrecode.tempo.core.ui.navigation.adaptiveScreenContentLayout
+import com.mandrecode.tempo.core.ui.navigation.animatedDockedContentBias
 import com.mandrecode.tempo.core.ui.navigation.floatingNavigationSnackbarBottomPadding
 import com.mandrecode.tempo.core.ui.navigation.floatingRailContentClearance
 import com.mandrecode.tempo.features.focus.presentation.components.PlanTasksSheet
@@ -70,6 +75,10 @@ fun FocusScreen(
     val railContentClearance = floatingRailContentClearance()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val editor = focusEditorHost(uiState = uiState, onEvent = viewModel::onEvent)
+    val contentBias = animatedDockedContentBias(editor.isDocked)
+    var contentBlockTop by remember { mutableStateOf(0.dp) }
+
     FocusEffects(
         uiEffect = viewModel.uiEffect,
         snackbarHostState = snackbarHostState,
@@ -78,20 +87,24 @@ fun FocusScreen(
     )
     TaskEditorEffects(isEditorOpen = uiState.taskEditor != null, snackbarHostState = snackbarHostState)
 
-    Box(
+    Row(
         modifier =
             modifier
                 .fillMaxSize()
-                .fillMaxHeight()
                 // Explicit fill rather than relying on the root Surface: on rail layouts
-                // adaptiveScreenContentLayout insets the Scaffold to clear the floating rail,
-                // exposing this Box's background in that gutter. It must match the Scaffold's own
-                // colour, matching what Routines and Tasks already do. The page's one ambient
-                // backdrop; the Scaffold and content inside it stay transparent.
+                // adaptiveScreenContentLayout insets the Scaffold to clear the floating rail, and
+                // the docked editor leaves a gutter and margins around its card, exposing this
+                // Row's background in those gaps. It must match the Scaffold's own colour, matching
+                // what Routines and Tasks already do. The page's one ambient backdrop; the Scaffold
+                // and content inside it stay transparent.
                 .ambientBackground(),
     ) {
         Scaffold(
-            modifier = Modifier.adaptiveScreenContentLayout(railClearance = railContentClearance),
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .adaptiveScreenContentLayout(railClearance = railContentClearance, horizontalBias = contentBias),
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0),
             topBar = { topBar(uiState.isVacationModeActive) },
@@ -99,39 +112,64 @@ fun FocusScreen(
             Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
                 FocusContent(
                     uiState = uiState,
-                    onEvent = viewModel::onEvent,
+                    onEvent = editor.onContentEvent,
+                    selectedTaskId = editor.selectedTaskId,
+                    onContentBlockTopChange = { contentBlockTop = it },
                 )
 
-                // Hosted here rather than as the Scaffold's own snackbarHost, the way Tasks and
-                // Routines do it: the floating bar owns the bottom of a compact window, and a
-                // snackbar left where Material puts it comes up underneath it.
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .navigationBarsPadding()
-                            .padding(bottom = floatingNavigationSnackbarBottomPadding()),
-                    contentAlignment = Alignment.BottomCenter,
-                ) {
-                    ExpressiveSnackbarHost(snackbarHostState)
-                }
+                FocusSnackbarHost(snackbarHostState)
+            }
+        }
+        DockedEditorPane(visible = editor.isDocked, contentBlockTop = contentBlockTop) {
+            // Only while docking is possible: past the breakpoint the editor moves to the sheet in
+            // the same frame the pane starts its exit, and must not be in both places.
+            if (editor.canDock) {
+                editor.shownTarget?.let { editor.content(it, SheetPlacement.DockedPane) }
             }
         }
     }
 
-    val dismissEditor = { viewModel.onEvent(FocusContract.UiEvent.DismissEditor) }
+    FocusOverlays(uiState = uiState, editor = editor, onEvent = viewModel::onEvent)
+}
+
+/**
+ * Hosted inside the content rather than as the Scaffold's own snackbarHost, the way Tasks and
+ * Routines do it: the floating bar owns the bottom of a compact window, and a snackbar left where
+ * Material puts it comes up underneath it.
+ */
+@Composable
+private fun FocusSnackbarHost(snackbarHostState: SnackbarHostState) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .navigationBarsPadding()
+                .padding(bottom = floatingNavigationSnackbarBottomPadding()),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        ExpressiveSnackbarHost(snackbarHostState)
+    }
+}
+
+/** What opens over the screen: the replace-session prompt, the Plan tasks sheet and a sheet editor. */
+@Composable
+private fun FocusOverlays(
+    uiState: FocusContract.UiState,
+    editor: FocusEditorHost,
+    onEvent: (FocusContract.UiEvent) -> Unit,
+) {
     uiState.pendingStart?.let { pending ->
-        ReplaceSessionDialog(pending = pending, onEvent = viewModel::onEvent)
+        ReplaceSessionDialog(pending = pending, onEvent = onEvent)
     }
 
     // Under the editors, so opening a task from the sheet stacks the form over it rather than
     // replacing it — closing the form puts you back where you were planning from.
     uiState.planSheet?.let { planSheet ->
-        PlanTasksSheet(state = planSheet, onEvent = viewModel::onEvent)
+        PlanTasksSheet(state = planSheet, onEvent = onEvent)
     }
 
-    uiState.taskEditor?.let { target ->
-        FocusTaskEditor(target = target, onDismiss = dismissEditor)
+    if (!editor.canDock) {
+        uiState.taskEditor?.let { editor.content(it, SheetPlacement.BottomSheet) }
     }
 }
 

@@ -5,8 +5,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -64,11 +68,12 @@ class FocusContentTest {
 
     private fun setContent(
         uiState: FocusContract.UiState,
+        selectedTaskId: Long? = null,
         onEvent: (FocusContract.UiEvent) -> Unit,
     ) {
         composeTestRule.setContent {
             TempoTheme {
-                FocusContent(uiState = uiState, onEvent = onEvent)
+                FocusContent(uiState = uiState, onEvent = onEvent, selectedTaskId = selectedTaskId)
             }
         }
         composeTestRule.waitForIdle()
@@ -140,6 +145,19 @@ class FocusContentTest {
         // assertion below would pass just as well on a row that never rendered.
         composeTestRule.onNodeWithText("Call the bank").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("Add Subtask").assertDoesNotExist()
+    }
+
+    @Test
+    fun taskOpenBesideTheAgenda_isTheOnlySelectedRow() {
+        val state = stateWith(items = listOf(taskEntry(1, "Write the report"), taskEntry(2, "Call the bank")))
+
+        setContent(state, selectedTaskId = 1) { }
+
+        fun row(title: String) = hasAnyDescendant(hasText(title))
+        val selected = SemanticsMatcher.expectValue(SemanticsProperties.Selected, true)
+        val notSelected = SemanticsMatcher.expectValue(SemanticsProperties.Selected, false)
+        composeTestRule.onNode(selected and row("Write the report"), useUnmergedTree = true).assertExists()
+        composeTestRule.onNode(notSelected and row("Call the bank"), useUnmergedTree = true).assertExists()
     }
 
     @Test

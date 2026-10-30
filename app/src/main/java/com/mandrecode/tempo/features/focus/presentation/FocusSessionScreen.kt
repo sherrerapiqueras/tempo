@@ -17,6 +17,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mandrecode.tempo.core.ui.adaptive.SheetPlacement
 import com.mandrecode.tempo.core.ui.components.TempoModalBottomSheet
 import com.mandrecode.tempo.core.ui.theme.inputTitle
 import com.mandrecode.tempo.features.focus.domain.model.FocusSession
@@ -74,6 +75,9 @@ fun FocusSessionRoute(
         FocusTaskEditor(
             target = target,
             onDismiss = { viewModel.onEvent(FocusContract.UiEvent.DismissEditor) },
+            // The session is itself a sheet, so its subtask editor stays one at every width.
+            placement = SheetPlacement.BottomSheet,
+            dismissRequestKey = 0,
         )
     }
 
