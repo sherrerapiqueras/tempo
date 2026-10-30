@@ -2,7 +2,7 @@
 
 ## Context
 
-Tasks and Routines dock their editors with the same pieces: the screen lays out a `Row` with the weighted `Scaffold` and a `DockedEditorPane`; `rememberSheetPlacement()` decides `DockedPane` vs `BottomSheet`; `animatedRailClearance` / `animatedDockedContentBias` slide the content aside; `onContentBlockTopChange` aligns the pane with the content block; and a `LaunchedEffect` reports the docked state to the navigator, which pushes an `EditorRoute` (`TasksEditorRoute`, `RoutinesEditorRoute`).
+Tasks and Routines dock their editors with the same pieces: the screen lays out a `Row` with the weighted `Scaffold` and a `DockedEditorPane`; `rememberSheetPlacement()` decides `DockedPane` vs `BottomSheet`; `animatedRailClearance` / `animatedDockedContentBias` slide the content aside; `onContentBlockTopChange` aligns the pane with the content block. Since #501, docking doesn't touch navigation: Back is handled by the docked sheet itself, and the form state lives in the view model.
 
 Focus already reuses the Tasks editor: `FocusTaskEditor` creates its own `TasksViewModel` on first use and always renders `TaskEditor` with `SheetPlacement.BottomSheet`. `FocusScreen` draws it after its `Scaffold`, and after `PlanTasksSheet`, so an edit opened from planning stacks over the plan sheet. `FocusRoute` already carries `EDITOR_MAIN_ROUTE_METADATA`, but no editor route supports it.
 
@@ -29,7 +29,7 @@ Alternative considered: dock even from the plan sheet. Rejected: the plan sheet 
 
 `FocusScreen` adopts the `Row` + `DockedEditorPane` structure, rail clearance, content bias and content-block top from `TasksScreen`, and renders the docked `TaskEditor` inside the pane with a movable content holder so moving between pane and sheet when the window crosses 1200 dp keeps the draft (the same reason `TasksScreen` uses `movableContentOf`). `rememberFrozenWhileHidden` keeps the exiting pane from recomposing into a blank form.
 
-A new `FocusEditorRoute : EditorRoute` supports `FocusRoute`; `FocusDestination` reports visibility through `navigator.setEditorVisible`, like the other tabs. With `fix-501-docked-editor-blink` in place this is not a scene change, so it doesn't blink.
+Like the other tabs after #501, Focus doesn't report the docked state to navigation, so the back stack and `NavDisplay`'s scene never change when the editor docks, and it can't blink.
 
 ### Selection and re-tap
 

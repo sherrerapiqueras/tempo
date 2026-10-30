@@ -30,6 +30,5 @@ _None._
 ## Impact
 
 - UI: `features/focus/presentation/FocusScreen.kt` (screen `Row` with `DockedEditorPane`, rail clearance and content bias as in Tasks), `FocusEditors.kt` (`FocusTaskEditor` takes a placement), `FocusContent.kt` (selected card).
-- Navigation: a Focus editor route alongside `TasksEditorRoute` / `RoutinesEditorRoute` in `core/ui/navigation/Navigation.kt`, reported from `FocusDestination` in `NavigationDestinations.kt`.
-- Depends on [#501](https://github.com/sherrerapiqueras/tempo/issues/501) (`fix-501-docked-editor-blink`) so the new docking path doesn't blink.
+- Depends on [#501](https://github.com/sherrerapiqueras/tempo/issues/501) (`fix-501-docked-editor-blink`), which stops docking from reaching navigation; Focus follows the same pattern, so it needs no navigation change.
 - Tests: Focus screenshot references at Large widths (docked editor beside the agenda); unit tests for the Focus view model's editor state if it changes; manual validation on tablet, desktop window and phone.
