@@ -68,3 +68,26 @@ From Large up, a task editor opened on the Focus tab from the agenda, from a sub
 #### Scenario: Phone
 - **WHEN** the window is Compact and the user opens a task from the Focus agenda
 - **THEN** the task editor opens as a bottom sheet, as before
+
+### Requirement: Focus docks the running session
+From Large up, the focus session SHALL dock beside the Focus agenda, in the task editor's pane, and the session pill on any tab SHALL switch to Focus with it docked. The pane SHALL hold whichever of a task and the session was opened last; a docked task closes through its unsaved-changes guard. Below Large, the session SHALL remain a bottom sheet.
+
+#### Scenario: Open the session from another tab
+- **WHEN** the window is 1280 dp wide, a session is running and the user taps the session pill on the Tasks tab
+- **THEN** Focus is shown with the session docked beside the agenda
+
+#### Scenario: A task replaces the session
+- **WHEN** the session is docked and the user taps a task in the Focus agenda
+- **THEN** the task editor takes the session's place in the pane, and the session pill brings the session back
+
+#### Scenario: The session replaces a task
+- **WHEN** a task is docked on Focus and the user taps the session pill
+- **THEN** the task closes, confirming unsaved changes first, and the session is docked in its place
+
+#### Scenario: Close the docked session
+- **WHEN** the session is docked and the user presses Back
+- **THEN** the pane closes and Focus stays open
+
+#### Scenario: Smaller window
+- **WHEN** the window is 1050 dp wide and the user opens the session
+- **THEN** it opens as a bottom sheet, as before

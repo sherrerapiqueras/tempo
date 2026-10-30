@@ -35,6 +35,12 @@ Like the other tabs after #501, Focus doesn't report the docked state to navigat
 
 The agenda shows the edited task as selected, as Tasks does with `selectedTaskId`. Tapping the task already in the pane closes the editor, mirroring `TasksScreen`'s `editorDismissRequestKey`; tapping a different task replaces the target and `FocusTaskEditor` opens it (its `LaunchedEffect(target)` already re-opens per target).
 
+### The session docks in the same pane, one item at a time
+
+Added after review. The session route stays on Focus's back stack as before (the pill already switches to Focus and pushes it), so Back still closes it. On Large and up the app-level overlay stops drawing it, and `FocusScreen` shows it in its docked pane instead, with its own `FocusViewModel` instance as the sheet had (the state comes from the repositories both observe). `focusPane()` decides what the pane holds: a task when one is open, else the session. The one opened last wins: a task opening closes the session (`navigator.pop()`); the session opening, or being found open when Focus is composed afresh after the pill switched tabs, closes a docked task through its guarded dismiss. A subtask tapped in the docked session is handed to Focus's own editor, so it takes over the pane like any task.
+
+Alternative considered: docking the session beside whichever tab is showing. Rejected by the user in favour of switching to Focus, which keeps one pane per screen and avoids two panes squeezing a list.
+
 ## Risks / Trade-offs
 
 - [Duplicated docking glue in a third screen] → kept as a straight copy of the Tasks pattern so a later extraction is mechanical; noted as a follow-up for #468.

@@ -60,6 +60,13 @@ fun FocusScreen(
     topBar: @Composable (isVacationModeActive: Boolean) -> Unit = {},
     /** Hands the floating bar its add action, which opens the task form over Focus (#434). */
     onFloatingBarStateChange: (FocusFloatingBarState) -> Unit = {},
+    /**
+     * Whether the session is open. On a large window Focus docks it beside the agenda (#502), and
+     * [onCloseSession] closes it; otherwise the app shows it as a sheet and this screen ignores it.
+     */
+    isSessionOpen: Boolean = false,
+    onCloseSession: () -> Unit = {},
+    onOpenTaskInTasks: (Long) -> Unit = {},
     viewModel: FocusViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -75,8 +82,8 @@ fun FocusScreen(
     val railContentClearance = floatingRailContentClearance()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val editor = focusEditorHost(uiState = uiState, onEvent = viewModel::onEvent)
-    val contentBias = animatedDockedContentBias(editor.isDocked)
+    val editor = focusEditorHost(uiState, viewModel::onEvent, isSessionOpen, onCloseSession)
+    val contentBias = animatedDockedContentBias(editor.isPaneVisible)
     var contentBlockTop by remember { mutableStateOf(0.dp) }
 
     FocusEffects(
@@ -120,11 +127,11 @@ fun FocusScreen(
                 FocusSnackbarHost(snackbarHostState)
             }
         }
-        DockedEditorPane(visible = editor.isDocked, contentBlockTop = contentBlockTop) {
+        DockedEditorPane(visible = editor.isPaneVisible, contentBlockTop = contentBlockTop) {
             // Only while docking is possible: past the breakpoint the editor moves to the sheet in
             // the same frame the pane starts its exit, and must not be in both places.
             if (editor.canDock) {
-                editor.shownTarget?.let { editor.content(it, SheetPlacement.DockedPane) }
+                FocusPaneContent(editor, onCloseSession, onOpenTaskInTasks, viewModel::onEvent)
             }
         }
     }
@@ -150,6 +157,32 @@ private fun FocusSnackbarHost(snackbarHostState: SnackbarHostState) {
         ExpressiveSnackbarHost(snackbarHostState)
     }
 }
+
+@Composable
+private fun FocusPaneContent(
+    editor: FocusEditorHost,
+    onCloseSession: () -> Unit,
+    onOpenTaskInTasks: (Long) -> Unit,
+    onEvent: (FocusContract.UiEvent) -> Unit,
+) {
+    when (editor.shownPane) {
+        FocusPane.EDITOR -> editor.shownTarget?.let { editor.content(it, SheetPlacement.DockedPane) }
+        // Its own view model, as the session sheet has: the state it shows comes from the
+        // repositories both observe. A subtask it opens goes to the agenda's editor, which takes
+        // over the pane.
+        FocusPane.SESSION ->
+            FocusSessionRoute(
+                onBack = onCloseSession,
+                onOpenTaskInTasks = onOpenTaskInTasks,
+                placement = SheetPlacement.DockedPane,
+                onEditTask = { onEvent(FocusContract.UiEvent.EditTask(it)) },
+                viewModel = viewModel(key = DOCKED_SESSION_VIEW_MODEL_KEY),
+            )
+        FocusPane.NONE -> Unit
+    }
+}
+
+private const val DOCKED_SESSION_VIEW_MODEL_KEY = "tempo.focus.dockedSession"
 
 /** What opens over the screen: the replace-session prompt, the Plan tasks sheet and a sheet editor. */
 @Composable

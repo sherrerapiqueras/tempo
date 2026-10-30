@@ -37,6 +37,8 @@ import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.mandrecode.tempo.core.domain.model.TempoTab
+import com.mandrecode.tempo.core.ui.adaptive.SheetPlacement
+import com.mandrecode.tempo.core.ui.adaptive.rememberSheetPlacement
 import com.mandrecode.tempo.core.ui.glass.GlassBackdropSource
 import com.mandrecode.tempo.core.ui.glass.ProvideGlassBackdrop
 import com.mandrecode.tempo.core.ui.glass.rememberGlassBackdrop
@@ -283,7 +285,8 @@ private fun BoxScope.SlideOverlays(
         SettingsDestination(navigator = navigator)
     }
 
-    if (navigator.currentRoute == FocusSessionRoute) {
+    // On a large window Focus docks the session beside its agenda instead (#502).
+    if (navigator.currentRoute == FocusSessionRoute && rememberSheetPlacement() != SheetPlacement.DockedPane) {
         FocusSessionDestination(navigator = navigator, onOpenTaskInTasks = onOpenTaskInTasks)
     }
 }
@@ -363,6 +366,7 @@ private fun rememberNavEntryProvider(
         FocusDestination(
             navigator = navigator,
             onFloatingBarStateChange = onFocusFloatingBarStateChange,
+            onOpenTaskInTasks = onOpenTaskInTasks,
         )
     }
     entry<RoutinesRoute>(metadata = mapOf(TOP_LEVEL_ROUTE_METADATA to RoutinesRoute)) {
