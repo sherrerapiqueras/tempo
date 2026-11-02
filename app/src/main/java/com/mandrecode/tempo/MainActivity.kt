@@ -40,6 +40,7 @@ import com.mandrecode.tempo.core.ui.navigation.TempoNavHost
 import com.mandrecode.tempo.core.ui.navigation.route
 import com.mandrecode.tempo.core.ui.navigation.tabViewModel
 import com.mandrecode.tempo.core.ui.navigation.tabViewModelKey
+import com.mandrecode.tempo.core.ui.theme.ApplyApplicationNightMode
 import com.mandrecode.tempo.core.ui.theme.TempoTheme
 import com.mandrecode.tempo.features.focus.domain.repository.FocusSessionRepository
 import com.mandrecode.tempo.features.focus.presentation.FocusViewModel
@@ -151,6 +152,8 @@ class MainActivity :
                 }
 
                 is MainUiState.Success -> {
+                    ApplyApplicationNightMode(state.themeMode)
+
                     // Read once: the start destination is fixed for the session, so there is no need to
                     // hit SharedPreferences on every recomposition.
                     val lastRoute = remember { navigationPreferencesRepository.getLastRoute() }
