@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.19.2](https://github.com/sherrerapiqueras/tempo/compare/v1.19.1...v1.19.2) (2026-11-02)
+
+
+### Bug Fixes
+
+* unify horizontal spacing across sheets, cards and lists ([#525](https://github.com/sherrerapiqueras/tempo/issues/525)) ([17e2a45](https://github.com/sherrerapiqueras/tempo/commit/17e2a457c50b7f246dc98b96348a45753433df2b))
+
 ## [1.19.1](https://github.com/sherrerapiqueras/tempo/compare/v1.19.0...v1.19.1) (2026-11-02)
 
 
