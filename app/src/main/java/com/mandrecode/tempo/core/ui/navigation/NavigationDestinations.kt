@@ -30,7 +30,9 @@ import com.mandrecode.tempo.features.tasks.presentation.TasksViewModel
 internal fun FocusDestination(
     navigator: TempoNavigator,
     onFloatingBarStateChange: (FocusFloatingBarState) -> Unit,
+    onOpenTaskInTasks: (Long) -> Unit,
 ) {
+    val closeSession = { if (navigator.currentRoute == FocusSessionRoute) navigator.pop() }
     FocusScreen(
         viewModel = tabViewModel<FocusViewModel>(),
         topBar = { isVacationModeActive ->
@@ -47,6 +49,12 @@ internal fun FocusDestination(
         },
         onOpenSession = { navigator.navigate(FocusSessionRoute) },
         onFloatingBarStateChange = onFloatingBarStateChange,
+        isSessionRouteOpen = navigator.currentRoute == FocusSessionRoute,
+        onCloseSession = { closeSession() },
+        onOpenTaskInTasks = { taskId ->
+            closeSession()
+            onOpenTaskInTasks(taskId)
+        },
     )
 }
 
