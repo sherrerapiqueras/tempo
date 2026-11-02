@@ -4,7 +4,6 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -122,7 +120,6 @@ fun TasksContent(
     val sectionEditState = remember(uiState.selectedCategoryId) { SectionEditState() }
     val useStickySectionHeaders = isShortWindow()
     val showSectionShortcuts = currentWindowWidthClass().isAtLeast(WindowWidthClass.LARGE)
-    val gridState = rememberLazyStaggeredGridState()
     val dragState = remember { TaskDragState() }
     // Tasks move between sections in any sort (#61); only Manual also places them by hand.
     val sectionDragState =
@@ -155,15 +152,11 @@ fun TasksContent(
         onEvent(event)
     }
 
-    BoxWithConstraints(
+    Box(
         // Transparent: the page's backdrop (background tone and header gradient) is painted once by
         // the screen around this, and by the preview hosts.
         modifier = modifier.fillMaxSize(),
     ) {
-        // A wide pane spreads a sectioned category over two columns (#61).
-        val isTwoColumn = !sectionedList?.sections.isNullOrEmpty() && maxWidth >= TwoColumnSectionsMinWidth
-        // The card the one-column list and the two-column grid share; [gestures] carries the
-        // cross-section drag, otherwise the tied-run reorder applies.
         // Each card's place in its connected run: per section, per header group, or the whole list.
         val groupPositions =
             remember(sectionedList, activeTaskGroups, completedTaskGroups, uiState.sortOption) {
@@ -176,7 +169,8 @@ fun TasksContent(
                     separateCompletedRuns = uiState.sortOption.hasCompletedGroupHeaders,
                 )
             }
-        val taskCard: @Composable (Task, Modifier?, Modifier) -> Unit = { task, gestures, base ->
+        // A list row's card; [gestures] carries the cross-section drag, otherwise the tied-run reorder applies.
+        val taskRow: @Composable LazyItemScope.(Task, Modifier?) -> Unit = { task, gestures ->
             val taskSubtasks = subtasksMap[task.id] ?: persistentListOf()
             TaskListItem(
                 task = task,
@@ -186,7 +180,8 @@ fun TasksContent(
                 onEvent = onRowEvent,
                 groupPosition = groupPositions[task.id] ?: CardGroupPosition.SINGLE,
                 modifier =
-                    base
+                    Modifier
+                        .animateItem()
                         .then(gestures ?: Modifier)
                         .taskReorderGestures(
                             enabled = gestures == null,
@@ -237,9 +232,7 @@ fun TasksContent(
                     TasksSectionShortcuts(
                         list = sectionedList,
                         category = uiState.categories.firstOrNull { it.id == uiState.selectedCategoryId },
-                        isTwoColumn = isTwoColumn,
                         listState = listState,
-                        gridState = gridState,
                         collapsedSectionIds = uiState.collapsedSectionIds,
                         editState = sectionEditState,
                     )
@@ -259,13 +252,7 @@ fun TasksContent(
                             .onGloballyPositioned { sectionDragState?.setViewport(it.boundsInRoot()) },
                 ) {
                     sectionDragState?.let { drag ->
-                        SectionDragAutoScroll(drag) { delta ->
-                            if (isTwoColumn && sectionedList != null) {
-                                gridState.scrollBy(delta)
-                            } else {
-                                listState.scrollBy(delta)
-                            }
-                        }
+                        SectionDragAutoScroll(drag) { delta -> listState.scrollBy(delta) }
                     }
                     val hasNothingToList = !hasActiveTasks && completedTaskGroups.isEmpty()
                     // An empty category keeps the empty screen even with sections on; one that has
@@ -275,76 +262,113 @@ fun TasksContent(
                     if (hasNothingToList && !hasSectionUi) {
                         EmptyStateContent()
                     } else {
-                        if (isTwoColumn && sectionedList != null) {
-                            SectionedTaskGrid(
-                                list = sectionedList,
-                                collapsedSectionIds = uiState.collapsedSectionIds,
-                                editState = sectionEditState,
-                                dragState = sectionDragState,
-                                gridState = gridState,
-                                contentPadding =
-                                    PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = listBottomPadding),
-                                onEvent = onEvent,
-                                taskCard = { task, gestures -> taskCard(task, gestures, Modifier) },
-                                completedBlock = {
-                                    CompletedBlock(
-                                        uiState = uiState,
-                                        onEvent = onEvent,
-                                        taskCard = { task -> taskCard(task, null, Modifier) },
+                        LazyColumn(
+                            state = listState,
+                            // 16dp at the top, the same as the sides and the same as Routines,
+                            // which is the same block with the same 28dp corners. The first card
+                            // starts inside that curve, so anything less reads as the card being
+                            // shoved against the seam rather than sitting in the panel.
+                            contentPadding =
+                                PaddingValues(
+                                    start = 16.dp,
+                                    end = 16.dp,
+                                    top = 16.dp,
+                                    bottom = listBottomPadding,
+                                ),
+                            // The seam between the cards of a connected run; headers and other
+                            // rows add their own room (GroupSeparation).
+                            verticalArrangement = Arrangement.spacedBy(ConnectedCardGap),
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            if (sectionedList != null) {
+                                sectionedTaskItems(
+                                    list = sectionedList,
+                                    collapsedSectionIds = uiState.collapsedSectionIds,
+                                    useStickyHeaders = useStickySectionHeaders,
+                                    editState = sectionEditState,
+                                    onEvent = onEvent,
+                                    taskRow = taskRow,
+                                    dragState = sectionDragState,
+                                )
+                            } else {
+                                val activeEntries =
+                                    sortedActiveEntries(
+                                        groups = activeTaskGroups,
+                                        sortOption = uiState.sortOption,
                                     )
-                                },
-                            )
-                        } else {
-                            LazyColumn(
-                                state = listState,
-                                // 16dp at the top, the same as the sides and the same as Routines,
-                                // which is the same block with the same 28dp corners. The first card
-                                // starts inside that curve, so anything less reads as the card being
-                                // shoved against the seam rather than sitting in the panel.
-                                contentPadding =
-                                    PaddingValues(
-                                        start = 16.dp,
-                                        end = 16.dp,
-                                        top = 16.dp,
-                                        bottom = listBottomPadding,
-                                    ),
-                                // The seam between the cards of a connected run; headers and other
-                                // rows add their own room (GroupSeparation).
-                                verticalArrangement = Arrangement.spacedBy(ConnectedCardGap),
-                                modifier = Modifier.fillMaxSize(),
-                            ) {
-                                val taskRow: @Composable LazyItemScope.(Task, Modifier?) -> Unit = { task, gestures ->
-                                    taskCard(task, gestures, Modifier.animateItem())
+                                val showActiveHeaders = uiState.sortOption.hasActiveGroupHeaders
+
+                                activeEntries.forEachIndexed { groupIndex, (key, tasksForGroup) ->
+                                    if (showActiveHeaders) {
+                                        item(key = "active_header_${key.stableKey}") {
+                                            ActiveGroupHeader(
+                                                label = resolveActiveGroupLabel(key),
+                                                isFirst = groupIndex == 0,
+                                                modifier =
+                                                    Modifier
+                                                        .animateItem()
+                                                        .groupSeparation(above = groupIndex > 0),
+                                            )
+                                        }
+                                    }
+
+                                    items(
+                                        items = tasksForGroup,
+                                        key = { task -> task.id },
+                                        contentType = { "task" },
+                                    ) { task ->
+                                        taskRow(task, null)
+                                    }
+                                }
+                            }
+
+                            if (hasCompletedTasks) {
+                                val sortOption = uiState.sortOption
+                                val showDivider = sortOption.hasCompletedGroupHeaders
+                                val completedEntries =
+                                    sortedCompletedEntries(
+                                        groups = completedTaskGroups,
+                                        sortOption = sortOption,
+                                    )
+
+                                item(key = "completed_separator") {
+                                    // A sectioned list always ends in its section controls (Add
+                                    // section, or the field naming a new one), so the separator
+                                    // follows them even when no task is active.
+                                    val followsContent = hasActiveTasks || sectionedList != null
+                                    val firstGroupLabel =
+                                        if (showDivider) {
+                                            resolveGroupLabel(completedEntries.firstOrNull()?.key)
+                                        } else {
+                                            null
+                                        }
+                                    CompletedTasksSeparator(
+                                        isExpanded = uiState.showCompletedTasks,
+                                        onToggle = {
+                                            onEvent(TasksContract.UiEvent.ToggleCompletedTasksVisibility)
+                                        },
+                                        showDivider = showDivider,
+                                        firstGroupLabel = firstGroupLabel,
+                                        isFirstVisibleItem = !followsContent,
+                                        followsSectionControls = sectionedList != null,
+                                        modifier =
+                                            Modifier
+                                                .animateItem()
+                                                .groupSeparation(above = followsContent),
+                                    )
                                 }
 
-                                if (sectionedList != null) {
-                                    sectionedTaskItems(
-                                        list = sectionedList,
-                                        collapsedSectionIds = uiState.collapsedSectionIds,
-                                        useStickyHeaders = useStickySectionHeaders,
-                                        editState = sectionEditState,
-                                        onEvent = onEvent,
-                                        taskRow = taskRow,
-                                        dragState = sectionDragState,
-                                    )
-                                } else {
-                                    val activeEntries =
-                                        sortedActiveEntries(
-                                            groups = activeTaskGroups,
-                                            sortOption = uiState.sortOption,
-                                        )
-                                    val showActiveHeaders = uiState.sortOption.hasActiveGroupHeaders
-
-                                    activeEntries.forEachIndexed { groupIndex, (key, tasksForGroup) ->
-                                        if (showActiveHeaders) {
-                                            item(key = "active_header_${key.stableKey}") {
-                                                ActiveGroupHeader(
-                                                    label = resolveActiveGroupLabel(key),
-                                                    isFirst = groupIndex == 0,
+                                if (uiState.showCompletedTasks) {
+                                    completedEntries.forEachIndexed { index, (key, tasksForGroup) ->
+                                        // Skip first group header — it's shown in the separator
+                                        if (index > 0 && showDivider) {
+                                            item(key = "group_header_${key.stableKey}") {
+                                                CompletedGroupHeader(
+                                                    label = resolveGroupLabel(key),
                                                     modifier =
                                                         Modifier
                                                             .animateItem()
-                                                            .groupSeparation(above = groupIndex > 0),
+                                                            .groupSeparation(above = true),
                                                 )
                                             }
                                         }
@@ -354,93 +378,31 @@ fun TasksContent(
                                             key = { task -> task.id },
                                             contentType = { "task" },
                                         ) { task ->
-                                            taskRow(task, null)
-                                        }
-                                    }
-                                }
+                                            val taskSubtasks = subtasksMap[task.id] ?: persistentListOf()
 
-                                if (hasCompletedTasks) {
-                                    val sortOption = uiState.sortOption
-                                    val showDivider = sortOption.hasCompletedGroupHeaders
-                                    val completedEntries =
-                                        sortedCompletedEntries(
-                                            groups = completedTaskGroups,
-                                            sortOption = sortOption,
-                                        )
-
-                                    item(key = "completed_separator") {
-                                        // A sectioned list always ends in its section controls (Add
-                                        // section, or the field naming a new one), so the separator
-                                        // follows them even when no task is active.
-                                        val followsContent = hasActiveTasks || sectionedList != null
-                                        val firstGroupLabel =
-                                            if (showDivider) {
-                                                resolveGroupLabel(completedEntries.firstOrNull()?.key)
-                                            } else {
-                                                null
-                                            }
-                                        CompletedTasksSeparator(
-                                            isExpanded = uiState.showCompletedTasks,
-                                            onToggle = {
-                                                onEvent(TasksContract.UiEvent.ToggleCompletedTasksVisibility)
-                                            },
-                                            showDivider = showDivider,
-                                            firstGroupLabel = firstGroupLabel,
-                                            isFirstVisibleItem = !followsContent,
-                                            followsSectionControls = sectionedList != null,
-                                            modifier =
-                                                Modifier
-                                                    .animateItem()
-                                                    .groupSeparation(above = followsContent),
-                                        )
-                                    }
-
-                                    if (uiState.showCompletedTasks) {
-                                        completedEntries.forEachIndexed { index, (key, tasksForGroup) ->
-                                            // Skip first group header — it's shown in the separator
-                                            if (index > 0 && showDivider) {
-                                                item(key = "group_header_${key.stableKey}") {
-                                                    CompletedGroupHeader(
-                                                        label = resolveGroupLabel(key),
-                                                        modifier =
-                                                            Modifier
-                                                                .animateItem()
-                                                                .groupSeparation(above = true),
-                                                    )
-                                                }
-                                            }
-
-                                            items(
-                                                items = tasksForGroup,
-                                                key = { task -> task.id },
-                                                contentType = { "task" },
-                                            ) { task ->
-                                                val taskSubtasks = subtasksMap[task.id] ?: persistentListOf()
-
-                                                TaskListItem(
-                                                    task = task,
-                                                    subtasks = taskSubtasks,
-                                                    isSubtasksExpanded =
-                                                        task.id in uiState.expandedTaskIds || taskSubtasks.isEmpty(),
-                                                    isSelected = task.id == selectedTaskId,
-                                                    onEvent = onRowEvent,
-                                                    groupPosition =
-                                                        groupPositions[task.id] ?: CardGroupPosition.SINGLE,
-                                                    modifier = Modifier.animateItem(),
-                                                )
-                                            }
-                                        }
-
-                                        // Below the last completed task rather than in the separator: it
-                                        // only shows once the tasks it deletes are on screen.
-                                        item(key = "completed_clear") {
-                                            ClearCompletedFooter(
-                                                onClick = {
-                                                    onEvent(TasksContract.UiEvent.RequestDeleteCompletedTasks)
-                                                },
-                                                modifier = Modifier.animateItem().padding(top = GroupSeparation),
+                                            TaskListItem(
+                                                task = task,
+                                                subtasks = taskSubtasks,
+                                                isSubtasksExpanded =
+                                                    task.id in uiState.expandedTaskIds || taskSubtasks.isEmpty(),
+                                                isSelected = task.id == selectedTaskId,
+                                                onEvent = onRowEvent,
+                                                groupPosition =
+                                                    groupPositions[task.id] ?: CardGroupPosition.SINGLE,
+                                                modifier = Modifier.animateItem(),
                                             )
                                         }
+                                    }
+
+                                    // Below the last completed task rather than in the separator: it
+                                    // only shows once the tasks it deletes are on screen.
+                                    item(key = "completed_clear") {
+                                        ClearCompletedFooter(
+                                            onClick = {
+                                                onEvent(TasksContract.UiEvent.RequestDeleteCompletedTasks)
+                                            },
+                                            modifier = Modifier.animateItem().padding(top = GroupSeparation),
+                                        )
                                     }
                                 }
                             }

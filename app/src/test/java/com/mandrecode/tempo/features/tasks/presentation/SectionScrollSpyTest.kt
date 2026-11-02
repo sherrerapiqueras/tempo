@@ -36,13 +36,6 @@ class SectionScrollSpyTest {
     }
 
     @Test
-    fun `grid keys map to their section`() {
-        assertThat(gridKeySection(GRID_UNSECTIONED_KEY)).isEqualTo(SectionKey.Of(null))
-        assertThat(gridKeySection(gridSectionKey(chores.id))).isEqualTo(SectionKey.Of(chores.id))
-        assertThat(gridKeySection("grid_completed")).isEqualTo(SectionKey.Unknown)
-    }
-
-    @Test
     fun `header index follows the emitted order`() {
         // [1] [Cat] [2] [3] [Home chores] [4] [Garden] [empty]
         assertThat(sectionHeaderListIndex(list, emptySet(), null, cat.id)).isEqualTo(1)

@@ -59,8 +59,8 @@ private val sectionedState =
     )
 
 /**
- * A category with sections (#61) at the three adaptive widths: one list on a phone and a foldable,
- * and on a tablet the section shortcuts under the categories with sections in two columns.
+ * A category with sections (#61) at the three adaptive widths: one list at each, and on a tablet the
+ * section shortcuts under the categories.
  */
 @PreviewTest
 @PreviewAdaptiveFormFactors
