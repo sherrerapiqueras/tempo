@@ -56,6 +56,8 @@ kover {
                     "com.mandrecode.tempo.core.ui.components.*",
                     "com.mandrecode.tempo.core.ui.navigation.*",
                     "com.mandrecode.tempo.core.ui.theme.*",
+                    // Compose UI with no logic of its own, covered by the sheets' instrumented tests.
+                    "com.mandrecode.tempo.core.ui.editor.EditorDescriptionField*",
                     // Glass material: Modifier.Node drawing (GraphicsLayer, RenderEffect) and dialog
                     // window blur. Rendering only, like the theme and components above; verified on
                     // device and by the screenshot references, not unit-testable on the JVM.

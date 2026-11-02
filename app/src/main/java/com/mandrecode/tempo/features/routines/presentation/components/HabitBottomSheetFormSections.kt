@@ -38,6 +38,7 @@ import com.mandrecode.tempo.core.ui.components.SelectorButtonGroup
 import com.mandrecode.tempo.core.ui.editor.EDITOR_PROPERTY_ROW_GAP
 import com.mandrecode.tempo.core.ui.editor.EDITOR_TEXT_FIELD_BOTTOM_INSET
 import com.mandrecode.tempo.core.ui.editor.EditorAddButton
+import com.mandrecode.tempo.core.ui.editor.EditorDescriptionField
 import com.mandrecode.tempo.core.ui.editor.EditorPropertyRow
 import com.mandrecode.tempo.core.ui.editor.EditorValueChip
 import com.mandrecode.tempo.core.ui.editor.editorTransparentTextFieldColors
@@ -401,35 +402,18 @@ private fun HabitDescriptionSection(
         verticalAlignment = Alignment.Top,
         iconBoxModifier = Modifier.width(48.dp).padding(top = 16.dp),
     ) {
-        TextField(
+        EditorDescriptionField(
             value = descriptionState.value,
             onValueChange = onDescriptionChange,
-            placeholder = {
-                Text(
-                    stringResource(R.string.add_details),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-            },
-            textStyle = MaterialTheme.typography.bodyLarge,
-            colors = editorTransparentTextFieldColors(),
+            error = descriptionError?.let { stringResource(it) },
+            fieldModifier =
+                Modifier
+                    .testTag(HABIT_BOTTOM_SHEET_DESCRIPTION_FIELD_TEST_TAG)
+                    .focusRequester(focusConfig.descriptionFocusRequester),
             modifier =
                 Modifier
                     .weight(1f)
-                    .padding(start = 4.dp)
-                    .testTag(HABIT_BOTTOM_SHEET_DESCRIPTION_FIELD_TEST_TAG)
-                    .focusRequester(focusConfig.descriptionFocusRequester),
-            maxLines = 5,
-            keyboardOptions =
-                KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Sentences,
-                ),
-            isError = descriptionError != null,
-            supportingText =
-                if (descriptionError != null) {
-                    { Text(stringResource(descriptionError)) }
-                } else {
-                    null
-                },
+                    .padding(start = 4.dp),
         )
     }
 }

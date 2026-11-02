@@ -9,10 +9,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEqualTo
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -23,6 +25,7 @@ import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import com.mandrecode.tempo.R
 import com.mandrecode.tempo.core.domain.model.Periodicity
@@ -410,14 +413,14 @@ class TaskBottomSheetTest {
 
     // --- Regression tests for #398, #424: title overflow and long text ---
 
-    private fun renderSheet() {
+    private fun renderSheet(formState: TasksContract.TaskFormState = defaultFormState()) {
         composeTestRule.setContent {
             TempoTheme {
                 TaskBottomSheet(
                     task = null,
                     categories = listOf(DEFAULT_INBOX_CATEGORY),
                     selectedCategoryIdFromFilter = null,
-                    formState = defaultFormState(),
+                    formState = formState,
                     onSetPriority = {},
                     onClearPriority = {},
                     onSetReminder = { _, _, _, _, _ -> },
@@ -434,6 +437,42 @@ class TaskBottomSheetTest {
             }
         }
     }
+
+    // --- Regression tests for #518: the description lines up with the option rows ---
+    // Unmerged: merged, the text reports the bounds of its field or sheet instead of its own.
+
+    @Test
+    fun givenEmptyDescription_whenShown_thenPlaceholderStartsWithOptionRows() {
+        renderSheet()
+
+        composeTestRule
+            .onNodeWithText(addDetailsPlaceholder, useUnmergedTree = true)
+            .getBoundsInRoot()
+            .left
+            .assertIsEqualTo(optionRowStart(), "description placeholder start", tolerance = 1.dp)
+    }
+
+    @Test
+    fun givenDescriptionError_whenShown_thenErrorStartsWithOptionRows() {
+        renderSheet(defaultFormState().copy(descriptionError = R.string.error_task_description_too_long))
+
+        composeTestRule
+            .onNodeWithText(
+                InstrumentationRegistry
+                    .getInstrumentation()
+                    .targetContext
+                    .getString(R.string.error_task_description_too_long),
+                useUnmergedTree = true,
+            ).getBoundsInRoot()
+            .left
+            .assertIsEqualTo(optionRowStart(), "description error start", tolerance = 1.dp)
+    }
+
+    private fun optionRowStart() =
+        composeTestRule
+            .onNodeWithTag("taskPriorityChip_${Priority.priorities.first().name}")
+            .getBoundsInRoot()
+            .left
 
     @Test
     fun titleOverflow_at65Chars_movesExcessTextToDescription() {

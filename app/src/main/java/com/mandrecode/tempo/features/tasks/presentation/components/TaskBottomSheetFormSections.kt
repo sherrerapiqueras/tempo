@@ -57,6 +57,7 @@ import com.mandrecode.tempo.core.ui.components.selectorButtonColors
 import com.mandrecode.tempo.core.ui.editor.EDITOR_PROPERTY_ROW_GAP
 import com.mandrecode.tempo.core.ui.editor.EDITOR_TEXT_FIELD_BOTTOM_INSET
 import com.mandrecode.tempo.core.ui.editor.EditorAddButton
+import com.mandrecode.tempo.core.ui.editor.EditorDescriptionField
 import com.mandrecode.tempo.core.ui.editor.EditorPropertyRow
 import com.mandrecode.tempo.core.ui.editor.EditorValueChip
 import com.mandrecode.tempo.core.ui.editor.editorTransparentTextFieldColors
@@ -220,63 +221,21 @@ private fun TaskDescriptionSection(
         verticalAlignment = Alignment.Top,
         iconBoxModifier = Modifier.width(48.dp).padding(top = 16.dp),
     ) {
-        Column(
+        EditorDescriptionField(
+            value = descriptionState.value,
+            onValueChange = onDescriptionChange,
+            error = descriptionError?.let { stringResource(it) },
+            visualTransformation = linkVisualTransformation,
+            fieldModifier =
+                Modifier
+                    .testTag(TASK_BOTTOM_SHEET_DESCRIPTION_FIELD_TEST_TAG)
+                    .taskDescriptionFocus(focusConfig),
             modifier =
                 Modifier
                     .weight(1f)
                     .padding(start = 4.dp),
-        ) {
-            TaskDescriptionField(
-                descriptionState = descriptionState,
-                linkVisualTransformation = linkVisualTransformation,
-                descriptionError = descriptionError,
-                onDescriptionChange = onDescriptionChange,
-                focusConfig = focusConfig,
-            )
-        }
+        )
     }
-}
-
-@Composable
-private fun TaskDescriptionField(
-    descriptionState: DescriptionEditorState,
-    linkVisualTransformation: IncrementalLinkVisualTransformation,
-    descriptionError: Int?,
-    onDescriptionChange: (TextFieldValue) -> Unit,
-    focusConfig: TaskBottomSheetFocusConfig,
-) {
-    val descriptionValue = descriptionState.value
-
-    TextField(
-        value = descriptionValue,
-        onValueChange = onDescriptionChange,
-        placeholder = {
-            Text(
-                stringResource(R.string.add_details),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        },
-        textStyle = MaterialTheme.typography.bodyLarge,
-        visualTransformation = linkVisualTransformation,
-        colors = editorTransparentTextFieldColors(),
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .testTag(TASK_BOTTOM_SHEET_DESCRIPTION_FIELD_TEST_TAG)
-                .taskDescriptionFocus(focusConfig),
-        maxLines = 5,
-        keyboardOptions =
-            KeyboardOptions(
-                capitalization = KeyboardCapitalization.Sentences,
-            ),
-        isError = descriptionError != null,
-        supportingText =
-            if (descriptionError != null) {
-                { Text(stringResource(descriptionError)) }
-            } else {
-                null
-            },
-    )
 }
 
 @Composable
