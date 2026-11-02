@@ -497,7 +497,8 @@ class TaskBottomSheetTest {
         val descriptionTop =
             composeTestRule.onNodeWithText(addDetailsPlaceholder, useUnmergedTree = true).getBoundsInRoot().top
 
-        (descriptionTop - titleBottom).assertIsEqualTo(EDITOR_PROPERTY_ROW_GAP, "title to description", tolerance = 1.dp)
+        // Font metrics move a text's bounds by about 2dp between API levels, though not its field.
+        (descriptionTop - titleBottom).assertIsEqualTo(EDITOR_PROPERTY_ROW_GAP, "title to description", tolerance = 3.dp)
     }
 
     @Test
