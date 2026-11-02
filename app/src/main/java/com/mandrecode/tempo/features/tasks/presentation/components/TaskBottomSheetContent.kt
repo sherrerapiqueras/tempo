@@ -82,6 +82,7 @@ internal fun TaskBottomSheetContent(
     attachmentActions: TaskAttachmentActions? = null,
     sectionsByCategory: Map<Long, List<TaskSection>> = emptyMap(),
     onSelectSection: (Long?) -> Unit = {},
+    onSetPeriodicityEndDate: (LocalDate?) -> Unit = {},
 ) {
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
@@ -243,6 +244,7 @@ internal fun TaskBottomSheetContent(
                     periodicityInterval = it.periodicityInterval,
                     repeatDays = it.repeatDays,
                     monthDayOption = it.monthDayOption,
+                    periodicityEndDate = it.periodicityEndDate,
                     sectionId = it.sectionId,
                 )
             }
@@ -261,6 +263,7 @@ internal fun TaskBottomSheetContent(
             formState.periodicityInterval,
             formState.repeatDays,
             formState.monthDayOption,
+            formState.periodicityEndDate,
             formState.attachments,
             formState.sectionId,
         ) {
@@ -283,6 +286,7 @@ internal fun TaskBottomSheetContent(
                     formState.periodicityInterval != taskSnapshot.periodicityInterval ||
                     formState.repeatDays != taskSnapshot.repeatDays ||
                     formState.monthDayOption != taskSnapshot.monthDayOption ||
+                    formState.periodicityEndDate != taskSnapshot.periodicityEndDate ||
                     formState.sectionId != taskSnapshot.sectionId
             }
         }
@@ -310,6 +314,7 @@ internal fun TaskBottomSheetContent(
                 periodicityInterval = formState.periodicityInterval,
                 repeatDays = formState.repeatDays,
                 monthDayOption = formState.monthDayOption,
+                periodicityEndDate = formState.periodicityEndDate,
                 sectionId = formState.sectionId,
             )
         },
@@ -334,6 +339,7 @@ internal fun TaskBottomSheetContent(
                 periodicityInterval = formState.periodicityInterval,
                 repeatDays = formState.repeatDays,
                 monthDayOption = formState.monthDayOption,
+                periodicityEndDate = formState.periodicityEndDate,
                 sectionId = formState.sectionId,
             )
         if (autoSaveEnabled && currentSnapshot.title.isNotBlank()) {
@@ -443,6 +449,7 @@ internal fun TaskBottomSheetContent(
                         },
                         attachmentActions = attachmentActions,
                         onSelectSection = onSelectSection,
+                        onSetPeriodicityEndDate = onSetPeriodicityEndDate,
                     ),
                 focusConfig =
                     TaskBottomSheetFocusConfig(

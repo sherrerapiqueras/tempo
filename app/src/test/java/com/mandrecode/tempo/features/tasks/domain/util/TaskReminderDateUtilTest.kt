@@ -6,6 +6,7 @@ import com.mandrecode.tempo.core.domain.model.MonthDayOption
 import com.mandrecode.tempo.core.domain.model.Periodicity
 import com.mandrecode.tempo.features.tasks.domain.model.Task
 import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.plus
 import org.junit.Test
@@ -512,14 +513,14 @@ class TaskReminderDateUtilTest {
         assertThat(next.minute).isEqualTo(45)
     }
 
-    // ── isPastReminderWithoutPeriodicity ─────────────────────────────────
+    // ── isPastReminderThatWontFire ─────────────────────────────────
 
     @Test
     fun `isPast returns true for past reminder without periodicity`() {
         val past = LocalDateTime(2020, 1, 1, 10, 0)
         val task = task(reminderDate = past, periodicity = null)
 
-        assertThat(TaskReminderDateUtil.isPastReminderWithoutPeriodicity(task)).isTrue()
+        assertThat(TaskReminderDateUtil.isPastReminderThatWontFire(task)).isTrue()
     }
 
     @Test
@@ -527,7 +528,7 @@ class TaskReminderDateUtilTest {
         val past = LocalDateTime(2020, 1, 1, 10, 0)
         val task = task(reminderDate = past, periodicity = Periodicity.DAILY)
 
-        assertThat(TaskReminderDateUtil.isPastReminderWithoutPeriodicity(task)).isFalse()
+        assertThat(TaskReminderDateUtil.isPastReminderThatWontFire(task)).isFalse()
     }
 
     @Test
@@ -535,17 +536,190 @@ class TaskReminderDateUtilTest {
         val future = LocalDateTime(2099, 1, 1, 10, 0)
         val task = task(reminderDate = future, periodicity = null)
 
-        assertThat(TaskReminderDateUtil.isPastReminderWithoutPeriodicity(task)).isFalse()
+        assertThat(TaskReminderDateUtil.isPastReminderThatWontFire(task)).isFalse()
     }
 
     @Test
     fun `isPast returns false for null reminder`() {
         val task = task(reminderDate = null, periodicity = null)
 
-        assertThat(TaskReminderDateUtil.isPastReminderWithoutPeriodicity(task)).isFalse()
+        assertThat(TaskReminderDateUtil.isPastReminderThatWontFire(task)).isFalse()
     }
 
     // ── helpers ──────────────────────────────────────────────────────────
+
+    // ── periodicity end date ─────────────────────────────────────────────
+
+    @Test
+    fun `next occurrence on the end date is within it`() {
+        val task = endingTask(LocalDate(2026, 6, 18), reminderDate = LocalDateTime(2026, 6, 17, 18, 0))
+
+        assertThat(TaskReminderDateUtil.nextOccurrenceWithinEnd(task, fixedNow))
+            .isEqualTo(LocalDateTime(2026, 6, 18, 18, 0))
+    }
+
+    @Test
+    fun `next occurrence after the end date is null`() {
+        val task = endingTask(LocalDate(2026, 6, 17), reminderDate = LocalDateTime(2026, 6, 17, 18, 0))
+
+        assertThat(TaskReminderDateUtil.nextOccurrenceWithinEnd(task, fixedNow)).isNull()
+    }
+
+    @Test
+    fun `no end date always has a next occurrence`() {
+        val task = task(reminderDate = LocalDateTime(2026, 6, 17, 18, 0), periodicity = Periodicity.DAILY)
+
+        assertThat(TaskReminderDateUtil.nextOccurrenceWithinEnd(task, fixedNow))
+            .isEqualTo(LocalDateTime(2026, 6, 18, 18, 0))
+    }
+
+    @Test
+    fun `no periodicity has no next occurrence`() {
+        val task = task(reminderDate = LocalDateTime(2026, 6, 17, 18, 0), periodicity = null)
+
+        assertThat(TaskReminderDateUtil.nextOccurrenceWithinEnd(task, fixedNow)).isNull()
+    }
+
+    @Test
+    fun `interval that steps over the end date ends the series`() {
+        val task =
+            endingTask(LocalDate(2026, 6, 23), reminderDate = LocalDateTime(2026, 6, 17, 18, 0))
+                .copy(periodicity = Periodicity.DAILY, periodicityInterval = 7)
+
+        assertThat(TaskReminderDateUtil.nextOccurrenceWithinEnd(task, fixedNow)).isNull()
+    }
+
+    @Test
+    fun `hourly occurrences continue through the end date and stop after it`() {
+        val endDate = LocalDate(2026, 6, 17)
+        val lastHour =
+            endingTask(endDate, reminderDate = LocalDateTime(2026, 6, 17, 22, 0))
+                .copy(periodicity = Periodicity.HOURLY)
+        val pastLastHour = lastHour.copy(reminderDate = LocalDateTime(2026, 6, 17, 23, 0))
+
+        assertThat(TaskReminderDateUtil.nextOccurrenceWithinEnd(lastHour, fixedNow))
+            .isEqualTo(LocalDateTime(2026, 6, 17, 23, 0))
+        assertThat(TaskReminderDateUtil.nextOccurrenceWithinEnd(pastLastHour, fixedNow)).isNull()
+    }
+
+    @Test
+    fun `weekly next occurrence respects the end date`() {
+        // 17 June 2026 is a Wednesday, and the next selected day is the following Monday, the 22nd.
+        val weekly =
+            endingTask(LocalDate(2026, 6, 21), reminderDate = LocalDateTime(2026, 6, 17, 18, 0))
+                .copy(periodicity = Periodicity.WEEKLY, repeatDays = setOf(DayOfWeek.MONDAY))
+
+        assertThat(TaskReminderDateUtil.nextOccurrenceWithinEnd(weekly, fixedNow)).isNull()
+        assertThat(
+            TaskReminderDateUtil.nextOccurrenceWithinEnd(
+                weekly.copy(periodicityEndDate = LocalDate(2026, 6, 22)),
+                fixedNow,
+            ),
+        ).isEqualTo(LocalDateTime(2026, 6, 22, 18, 0))
+    }
+
+    @Test
+    fun `monthly and yearly next occurrences respect the end date`() {
+        val monthly =
+            endingTask(LocalDate(2026, 7, 16), reminderDate = LocalDateTime(2026, 6, 17, 18, 0))
+                .copy(periodicity = Periodicity.MONTHLY)
+        val yearly =
+            endingTask(LocalDate(2027, 6, 16), reminderDate = LocalDateTime(2026, 6, 17, 18, 0))
+                .copy(periodicity = Periodicity.YEARLY)
+
+        assertThat(TaskReminderDateUtil.nextOccurrenceWithinEnd(monthly, fixedNow)).isNull()
+        assertThat(TaskReminderDateUtil.nextOccurrenceWithinEnd(yearly, fixedNow)).isNull()
+    }
+
+    @Test
+    fun `skipping ahead past the end date ends the series even when the first step is within it`() {
+        // The very next occurrence, the 11th, is within the end date but is itself long gone.
+        val task = endingTask(LocalDate(2026, 6, 15), reminderDate = LocalDateTime(2026, 6, 10, 9, 0))
+
+        assertThat(TaskReminderDateUtil.nextOccurrenceWithinEnd(task, fixedNow)).isNull()
+    }
+
+    @Test
+    fun `skipping ahead stays on the next future occurrence within the end date`() {
+        val task = endingTask(LocalDate(2026, 6, 30), reminderDate = LocalDateTime(2026, 6, 10, 9, 0))
+
+        assertThat(TaskReminderDateUtil.nextOccurrenceWithinEnd(task, fixedNow))
+            .isEqualTo(LocalDateTime(2026, 6, 18, 9, 0))
+    }
+
+    @Test
+    fun `advance leaves the reminder alone when it would pass the end date`() {
+        val task = endingTask(LocalDate(2026, 6, 17), reminderDate = LocalDateTime(2026, 6, 17, 9, 0))
+
+        assertThat(advanceReminder(task)).isEqualTo(task)
+    }
+
+    @Test
+    fun `advance moves the reminder when the next occurrence is within the end date`() {
+        val task = endingTask(LocalDate(2026, 6, 18), reminderDate = LocalDateTime(2026, 6, 17, 9, 0))
+
+        assertThat(advanceReminder(task).reminderDate).isEqualTo(LocalDateTime(2026, 6, 18, 9, 0))
+    }
+
+    @Test
+    fun `withoutRecurrence clears every recurrence field`() {
+        val stripped =
+            endingTask(LocalDate(2026, 6, 18), reminderDate = LocalDateTime(2026, 6, 17, 9, 0))
+                .copy(
+                    periodicityInterval = 3,
+                    repeatDays = setOf(DayOfWeek.MONDAY),
+                    monthDayOption = MonthDayOption.LAST_DAY,
+                ).withoutRecurrence()
+
+        assertThat(stripped.periodicity).isNull()
+        assertThat(stripped.periodicityInterval).isEqualTo(1)
+        assertThat(stripped.repeatDays).isNull()
+        assertThat(stripped.monthDayOption).isNull()
+        assertThat(stripped.periodicityEndDate).isNull()
+        assertThat(stripped.reminderDate).isEqualTo(LocalDateTime(2026, 6, 17, 9, 0))
+    }
+
+    @Test
+    fun `past reminder that the end date stops from advancing won't fire`() {
+        val task = endingTask(LocalDate(2026, 6, 17), reminderDate = LocalDateTime(2026, 6, 17, 9, 0))
+
+        assertThat(TaskReminderDateUtil.isPastReminderThatWontFire(task, fixedNow)).isTrue()
+    }
+
+    @Test
+    fun `past reminder that can still advance within the end date will fire`() {
+        val task = endingTask(LocalDate(2026, 6, 18), reminderDate = LocalDateTime(2026, 6, 17, 9, 0))
+
+        assertThat(TaskReminderDateUtil.isPastReminderThatWontFire(task, fixedNow)).isFalse()
+    }
+
+    @Test
+    fun `future reminder past its own end date will fire`() {
+        val task = endingTask(LocalDate(2026, 6, 17), reminderDate = LocalDateTime(2026, 6, 20, 9, 0))
+
+        assertThat(TaskReminderDateUtil.isPastReminderThatWontFire(task, fixedNow)).isFalse()
+    }
+
+    @Test
+    fun `asNextOccurrence starts a fresh incomplete task and keeps the recurrence`() {
+        val next =
+            endingTask(LocalDate(2026, 6, 30), reminderDate = LocalDateTime(2026, 6, 17, 9, 0))
+                .copy(isCompleted = true, completedAt = fixedNow, nextInstanceId = 9L)
+                .asNextOccurrence(LocalDateTime(2026, 6, 18, 9, 0))
+
+        assertThat(next.id).isEqualTo(0L)
+        assertThat(next.isCompleted).isFalse()
+        assertThat(next.completedAt).isNull()
+        assertThat(next.nextInstanceId).isNull()
+        assertThat(next.reminderDate).isEqualTo(LocalDateTime(2026, 6, 18, 9, 0))
+        assertThat(next.periodicity).isEqualTo(Periodicity.DAILY)
+        assertThat(next.periodicityEndDate).isEqualTo(LocalDate(2026, 6, 30))
+    }
+
+    private fun endingTask(
+        endDate: LocalDate,
+        reminderDate: LocalDateTime,
+    ) = task(reminderDate = reminderDate, periodicity = Periodicity.DAILY).copy(periodicityEndDate = endDate)
 
     private fun advanceReminder(task: Task): Task = TaskReminderDateUtil.advanceReminderIfNeeded(task, now = fixedNow)
 

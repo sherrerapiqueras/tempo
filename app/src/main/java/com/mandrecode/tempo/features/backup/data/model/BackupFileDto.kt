@@ -114,6 +114,8 @@ data class TaskBackupDto(
     val periodicityInterval: Int = 1,
     val repeatDays: List<Int>? = null,
     val monthDayOption: String? = null,
+    /** The series' last date (#509); absent (no end) in files written before end dates existed. */
+    val periodicityEndDate: String? = null,
     val parentTaskId: Long? = null,
     val sortOrder: Int = 0,
     val completedAt: String? = null,

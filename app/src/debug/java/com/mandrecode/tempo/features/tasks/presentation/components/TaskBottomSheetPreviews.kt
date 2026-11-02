@@ -18,6 +18,7 @@ import com.mandrecode.tempo.features.tasks.domain.model.Category
 import com.mandrecode.tempo.features.tasks.domain.model.Task
 import com.mandrecode.tempo.features.tasks.presentation.TasksContract
 import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 
 // Colors are `ColorOption.labelKey` values and icons are `TempoIcon.iconName` values, because
@@ -139,6 +140,33 @@ private fun TaskBottomSheetCompletedLongTitlePreview() {
 // endregion
 
 // region TaskBottomSheet – Periodicity Previews
+
+@Preview(name = "Light", showBackground = true, device = "id:pixel_9")
+@Preview(name = "Dark", showBackground = true, device = "id:pixel_9", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun PeriodicityEndDateRowAddPreview() {
+    TempoTheme {
+        Surface {
+            PeriodicityEndDateRow(endDate = null, reminderDate = null, enabled = true, onEndDateChange = {})
+        }
+    }
+}
+
+@Preview(name = "Light", showBackground = true, device = "id:pixel_9")
+@Preview(name = "Dark", showBackground = true, device = "id:pixel_9", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun PeriodicityEndDateRowSetPreview() {
+    TempoTheme {
+        Surface {
+            PeriodicityEndDateRow(
+                endDate = LocalDate(2027, 3, 31),
+                reminderDate = null,
+                enabled = true,
+                onEndDateChange = {},
+            )
+        }
+    }
+}
 
 @Preview(name = "Light", showBackground = true, device = "id:pixel_9")
 @Preview(name = "Dark", showBackground = true, device = "id:pixel_9", uiMode = Configuration.UI_MODE_NIGHT_YES)

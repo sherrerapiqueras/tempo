@@ -7,6 +7,7 @@ import com.mandrecode.tempo.core.domain.model.DayOfWeek
 import com.mandrecode.tempo.core.domain.model.MonthDayOption
 import com.mandrecode.tempo.core.domain.model.Periodicity
 import com.mandrecode.tempo.core.domain.model.Priority
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 
 @Entity(
@@ -26,6 +27,8 @@ data class TaskEntity(
     val periodicityInterval: Int = 1,
     val repeatDays: Set<DayOfWeek>? = null,
     val monthDayOption: MonthDayOption? = null,
+    // The last date the series may have an occurrence on, inclusive (#509). Null means no end.
+    val periodicityEndDate: LocalDate? = null,
     val parentTaskId: Long? = null,
     val sortOrder: Int = 0,
     val completedAt: LocalDateTime? = null,

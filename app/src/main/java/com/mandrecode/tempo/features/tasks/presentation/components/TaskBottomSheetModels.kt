@@ -11,10 +11,12 @@ import com.mandrecode.tempo.features.tasks.domain.model.Task
 import com.mandrecode.tempo.features.tasks.domain.model.TaskAttachment
 import com.mandrecode.tempo.features.tasks.domain.model.TaskSection
 import com.mandrecode.tempo.features.tasks.presentation.TasksContract
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 
 internal const val TASK_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG = "task_bottom_sheet_title_field"
 internal const val TASK_BOTTOM_SHEET_DESCRIPTION_FIELD_TEST_TAG = "task_bottom_sheet_description_field"
+internal const val TASK_PERIODICITY_END_DATE_ROW_TEST_TAG = "task_periodicity_end_date_row"
 
 /**
  * Subset of [Task] fields the sheet treats as form input. Captured once when
@@ -34,6 +36,7 @@ internal data class TaskFormSnapshot(
     val periodicityInterval: Int,
     val repeatDays: Set<DayOfWeek>?,
     val monthDayOption: MonthDayOption?,
+    val periodicityEndDate: LocalDate?,
     val sectionId: Long? = null,
 )
 
@@ -71,6 +74,7 @@ internal data class TaskBottomSheetBodyActions(
     val onConfirmClick: () -> Unit,
     val attachmentActions: TaskAttachmentActions? = null,
     val onSelectSection: (Long?) -> Unit = {},
+    val onSetPeriodicityEndDate: (LocalDate?) -> Unit = {},
 )
 
 /** What the attachments section can ask for; the section is only shown when the host provides it. */

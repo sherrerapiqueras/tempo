@@ -46,7 +46,7 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         TaskAttachmentEntity::class,
         TaskSectionEntity::class,
     ],
-    version = 12,
+    version = 13,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -316,6 +316,17 @@ abstract class TempoDatabase : RoomDatabase() {
                 }
             }
 
+        /**
+         * Adds the optional end date of a repeating task (#509). Purely additive — every existing
+         * task reads as a series with no end, so no backfill is needed.
+         */
+        val MIGRATION_12_13 =
+            object : Migration(12, 13) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE tasks ADD COLUMN periodicityEndDate TEXT DEFAULT NULL")
+                }
+            }
+
         val MIGRATIONS =
             arrayOf(
                 MIGRATION_1_2,
@@ -329,6 +340,7 @@ abstract class TempoDatabase : RoomDatabase() {
                 MIGRATION_9_10,
                 MIGRATION_10_11,
                 MIGRATION_11_12,
+                MIGRATION_12_13,
             )
 
         suspend fun getDatabase(

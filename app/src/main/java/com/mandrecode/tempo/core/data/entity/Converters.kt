@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.room.TypeConverter
 import com.mandrecode.tempo.core.domain.model.DayOfWeek
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 
 class Converters {
@@ -12,6 +13,12 @@ class Converters {
 
     @TypeConverter
     fun dateToString(date: LocalDateTime?): String? = date?.toString()
+
+    @TypeConverter
+    fun fromLocalDateString(value: String?): LocalDate? = value?.let { LocalDate.parse(it) }
+
+    @TypeConverter
+    fun localDateToString(date: LocalDate?): String? = date?.toString()
 
     @TypeConverter
     fun fromColorToInt(color: Color?): Int? = color?.toArgb()

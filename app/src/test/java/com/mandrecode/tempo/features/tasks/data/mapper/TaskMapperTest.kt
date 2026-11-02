@@ -7,6 +7,7 @@ import com.mandrecode.tempo.core.domain.model.MonthDayOption
 import com.mandrecode.tempo.core.domain.model.Periodicity
 import com.mandrecode.tempo.core.domain.model.Priority
 import com.mandrecode.tempo.features.tasks.domain.model.Task
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import org.junit.Test
 
@@ -170,5 +171,21 @@ class TaskMapperTest {
         val result = original.toEntity().toDomain()
 
         assertThat(result).isEqualTo(original)
+    }
+
+    @Test
+    fun `round trip preserves periodicity end date`() {
+        val original =
+            Task(
+                id = 8,
+                title = "Until March",
+                description = "",
+                periodicity = Periodicity.DAILY,
+                periodicityEndDate = LocalDate(2027, 3, 31),
+            )
+
+        val result = original.toEntity().toDomain()
+
+        assertThat(result.periodicityEndDate).isEqualTo(LocalDate(2027, 3, 31))
     }
 }

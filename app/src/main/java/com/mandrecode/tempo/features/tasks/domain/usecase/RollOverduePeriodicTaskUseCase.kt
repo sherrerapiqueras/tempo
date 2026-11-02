@@ -28,6 +28,9 @@ class RollOverduePeriodicTaskUseCase
 
             data object FailedToCreate : Result()
 
+            /** The overdue task was the series' last occurrence, and is now a one-off task. */
+            data object SeriesEnded : Result()
+
             data class CreatedNextInstance(
                 val overdueTask: Task,
                 val nextInstance: Task,
@@ -59,6 +62,8 @@ class RollOverduePeriodicTaskUseCase
 
             data object FailedToCreate : TransactionResult()
 
+            data object SeriesEnded : TransactionResult()
+
             data class Committed(
                 val commit: RolloverCommit,
             ) : TransactionResult()
@@ -82,6 +87,9 @@ class RollOverduePeriodicTaskUseCase
                 TransactionResult.FailedToCreate -> Result.FailedToCreate
                 TransactionResult.MissingOriginal -> Result.MissingOriginal
                 TransactionResult.NotApplicable -> Result.NotApplicable
+                // Touches no alarm: the reminder has passed, so none is pending, and cancelling
+                // would also dismiss the notification this occurrence may have just posted.
+                TransactionResult.SeriesEnded -> Result.SeriesEnded
                 is TransactionResult.Committed -> transactionResult.commit.toResult()
             }
         }
@@ -97,10 +105,10 @@ class RollOverduePeriodicTaskUseCase
                 else -> {
                     val transactionResult =
                         findReusableCommit(currentTask)?.let { TransactionResult.Committed(it) }
-                            ?: createNextInstanceTransactionResult(currentTask, now)
+                            ?: createNextInstanceOrEndSeries(currentTask, now)
 
                     if (transactionResult is TransactionResult.Committed) {
-                        val rolledOverOriginal = transactionResult.commit.overdueTask.asRolledOverOriginal()
+                        val rolledOverOriginal = transactionResult.commit.overdueTask.withoutRecurrence()
                         taskRepository.updateTask(rolledOverOriginal)
                         TransactionResult.Committed(
                             transactionResult.commit.copy(overdueTask = rolledOverOriginal),
@@ -127,12 +135,24 @@ class RollOverduePeriodicTaskUseCase
             }
         }
 
-        private suspend fun createNextInstanceTransactionResult(
+        private suspend fun createNextInstanceOrEndSeries(
             currentTask: Task,
             now: LocalDateTime,
         ): TransactionResult {
+            val nextReminderDate = TaskReminderDateUtil.nextOccurrenceWithinEnd(currentTask, now)
+            return if (nextReminderDate == null) {
+                endSeries(currentTask)
+            } else {
+                createNextInstance(currentTask, nextReminderDate)
+            }
+        }
+
+        private suspend fun createNextInstance(
+            currentTask: Task,
+            nextReminderDate: LocalDateTime,
+        ): TransactionResult {
             val subtasksBefore = taskRepository.getSubtasksSync(currentTask.id)
-            val nextTaskInstance = currentTask.nextTaskInstance(now)
+            val nextTaskInstance = currentTask.asNextOccurrence(nextReminderDate)
             val newParentId = taskRepository.insertTask(nextTaskInstance)
             if (newParentId <= 0) return TransactionResult.FailedToCreate
 
@@ -150,6 +170,11 @@ class RollOverduePeriodicTaskUseCase
                     nextInstance = nextInstance,
                 ),
             )
+        }
+
+        private suspend fun endSeries(currentTask: Task): TransactionResult {
+            taskRepository.updateTask(currentTask.withoutRecurrence().copy(nextInstanceId = null))
+            return TransactionResult.SeriesEnded
         }
 
         private fun RolloverCommit.toResult(): Result {
@@ -195,35 +220,6 @@ class RollOverduePeriodicTaskUseCase
                 if (cloneId > 0) taskAttachmentRepository.copyAttachments(original.id, cloneId)
             }
         }
-
-        private fun Task.nextTaskInstance(now: LocalDateTime): Task {
-            val nextReminderTime =
-                TaskReminderDateUtil.calculateNextOccurrence(
-                    from = requireNotNull(reminderDate),
-                    periodicity = requireNotNull(periodicity),
-                    interval = periodicityInterval,
-                    repeatDays = repeatDays,
-                    monthDayOption = monthDayOption,
-                )
-            return TaskReminderDateUtil.advanceReminderIfNeeded(
-                copy(
-                    id = 0,
-                    isCompleted = false,
-                    completedAt = null,
-                    reminderDate = nextReminderTime,
-                    nextInstanceId = null,
-                ),
-                now,
-            )
-        }
-
-        private fun Task.asRolledOverOriginal(): Task =
-            copy(
-                periodicity = null,
-                periodicityInterval = 1,
-                repeatDays = null,
-                monthDayOption = null,
-            )
 
         private fun Task.canRollOver(now: LocalDateTime): Boolean =
             !isCompleted &&

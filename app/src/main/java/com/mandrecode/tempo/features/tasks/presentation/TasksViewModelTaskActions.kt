@@ -21,6 +21,7 @@ import kotlinx.collections.immutable.toPersistentSet
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 
 /** @return `true` if [result] is an error and the corresponding form error field was set. */
@@ -70,6 +71,7 @@ internal fun TasksViewModel.createOrUpdateTask(
                 periodicityInterval = editFields.periodicityInterval,
                 repeatDays = editFields.repeatDays,
                 monthDayOption = editFields.monthDayOption,
+                periodicityEndDate = editFields.periodicityEndDate,
                 parentTaskId = if (shouldUnlink) null else taskToEdit.parentTaskId,
             )
         val withSection =
@@ -87,6 +89,7 @@ internal fun TasksViewModel.createOrUpdateTask(
                 periodicityInterval = sanitized.periodicityInterval,
                 repeatDays = sanitized.repeatDays,
                 monthDayOption = sanitized.monthDayOption,
+                periodicityEndDate = sanitized.periodicityEndDate,
                 parentTaskId = parentTaskId,
                 sectionId = resolvedFormSectionId(categoryId, parentTaskId),
             )
@@ -109,6 +112,7 @@ private data class TaskEditFields(
     val periodicityInterval: Int,
     val repeatDays: Set<DayOfWeek>?,
     val monthDayOption: MonthDayOption?,
+    val periodicityEndDate: LocalDate?,
 )
 
 private fun Task.editFieldsFrom(form: TaskFormState): TaskEditFields =
@@ -120,6 +124,7 @@ private fun Task.editFieldsFrom(form: TaskFormState): TaskEditFields =
             periodicityInterval = periodicityInterval,
             repeatDays = repeatDays,
             monthDayOption = monthDayOption,
+            periodicityEndDate = periodicityEndDate,
         )
     } else {
         TaskEditFields(
@@ -129,6 +134,7 @@ private fun Task.editFieldsFrom(form: TaskFormState): TaskEditFields =
             periodicityInterval = form.periodicityInterval,
             repeatDays = form.repeatDays,
             monthDayOption = form.monthDayOption,
+            periodicityEndDate = form.periodicityEndDate,
         )
     }
 
@@ -146,6 +152,7 @@ internal fun TasksViewModel.sanitizePeriodicityFields(): TaskFormState {
         periodicityInterval = interval,
         repeatDays = if (periodicity == Periodicity.WEEKLY) form.repeatDays else null,
         monthDayOption = if (periodicity == Periodicity.MONTHLY) form.monthDayOption else null,
+        periodicityEndDate = if (periodicity != null) form.periodicityEndDate else null,
     )
 }
 
@@ -184,8 +191,8 @@ internal fun TasksViewModel.addTask(
                                 R.string.msg_task_added_failed_scheduling
                             result.reminderAdvanced ->
                                 R.string.msg_task_added_reminder_advanced
-                            result.pastReminderWithoutPeriodicity ->
-                                R.string.msg_task_added_past_reminder_no_periodicity
+                            result.pastReminderWontFire ->
+                                R.string.msg_task_added_past_reminder
                             else -> R.string.msg_task_added_success
                         }
 
@@ -237,8 +244,8 @@ internal fun TasksViewModel.updateTask(
                                 R.string.msg_task_updated_failed_scheduling
                             result.reminderAdvanced ->
                                 R.string.msg_task_updated_reminder_advanced
-                            result.pastReminderWithoutPeriodicity ->
-                                R.string.msg_task_updated_past_reminder_no_periodicity
+                            result.pastReminderWontFire ->
+                                R.string.msg_task_updated_past_reminder
                             comesFromDialog -> R.string.msg_task_updated_success
                             else -> null
                         }
@@ -456,6 +463,7 @@ internal fun TasksViewModel.showTaskDialog(
                         periodicityInterval = task?.periodicityInterval ?: 1,
                         repeatDays = task?.repeatDays?.toPersistentSet(),
                         monthDayOption = task?.monthDayOption,
+                        periodicityEndDate = task?.periodicityEndDate,
                         parentTaskId = parentTaskId,
                         parentTask = parentTask,
                         sectionId = task?.sectionId ?: sectionId,
@@ -518,6 +526,7 @@ internal fun TasksViewModel.onClearPeriodicity() {
                     periodicityInterval = 1,
                     repeatDays = null,
                     monthDayOption = null,
+                    periodicityEndDate = null,
                 ),
         )
     }
@@ -539,6 +548,10 @@ internal fun TasksViewModel.onSetRepeatDays(days: Set<DayOfWeek>?) {
 
 internal fun TasksViewModel.onSetMonthDayOption(option: MonthDayOption?) {
     mutableUiState.update { it.copy(taskForm = it.taskForm.copy(monthDayOption = option)) }
+}
+
+internal fun TasksViewModel.onSetPeriodicityEndDate(endDate: LocalDate?) {
+    mutableUiState.update { it.copy(taskForm = it.taskForm.copy(periodicityEndDate = endDate)) }
 }
 
 internal fun TasksViewModel.openTaskFromNotificationInternal(
@@ -567,6 +580,7 @@ internal fun TasksViewModel.openTaskFromNotificationInternal(
                             periodicityInterval = task.periodicityInterval,
                             repeatDays = task.repeatDays?.toPersistentSet(),
                             monthDayOption = task.monthDayOption,
+                            periodicityEndDate = task.periodicityEndDate,
                         ),
                 )
             }
@@ -582,7 +596,17 @@ internal fun TasksViewModel.setReminder(
     minute: Int,
 ) {
     val newReminderDate = LocalDateTime(year, month, day, hour, minute)
-    mutableUiState.update { it.copy(taskForm = it.taskForm.copy(reminderDate = newReminderDate)) }
+    mutableUiState.update {
+        val form = it.taskForm
+        it.copy(
+            taskForm =
+                form.copy(
+                    reminderDate = newReminderDate,
+                    // An end date before the first occurrence means nothing, so it doesn't stay.
+                    periodicityEndDate = form.periodicityEndDate?.takeIf { end -> end >= newReminderDate.date },
+                ),
+        )
+    }
 }
 
 internal fun TasksViewModel.clearReminder() {
@@ -595,6 +619,7 @@ internal fun TasksViewModel.clearReminder() {
                     periodicityInterval = 1,
                     repeatDays = null,
                     monthDayOption = null,
+                    periodicityEndDate = null,
                 ),
         )
     }

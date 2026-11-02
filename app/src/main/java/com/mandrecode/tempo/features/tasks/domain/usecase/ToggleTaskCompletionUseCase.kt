@@ -69,25 +69,13 @@ class ToggleTaskCompletionUseCase
             task: Task,
             now: LocalDateTime,
         ): Result {
-            // Snapshot subtasks BEFORE the transaction so we don't keep the DB lock open while
-            // computing reminder math, and so the post-commit scheduler calls have what they need.
+            // Snapshot subtasks BEFORE the transaction so the post-commit scheduler calls have what
+            // they need.
             val subtasksBefore = taskRepository.getSubtasksSync(task.id)
-
-            val baseDateTime = task.reminderDate ?: now
-            // Periodicity is non-null at this branch (guarded by the dispatch in `invoke`).
-            val periodicity = requireNotNull(task.periodicity)
-            val nextReminderTime =
-                TaskReminderDateUtil.calculateNextOccurrence(
-                    from = baseDateTime,
-                    periodicity = periodicity,
-                    interval = task.periodicityInterval,
-                    repeatDays = task.repeatDays,
-                    monthDayOption = task.monthDayOption,
-                )
 
             val commit =
                 taskRepository.runInTransaction {
-                    performPeriodicCompletionTxn(task, now, nextReminderTime, subtasksBefore)
+                    performPeriodicCompletionTxn(task, now, subtasksBefore)
                 }
 
             taskReminderScheduler.cancel(commit.archivedTask)
@@ -101,7 +89,6 @@ class ToggleTaskCompletionUseCase
         private suspend fun performPeriodicCompletionTxn(
             task: Task,
             now: LocalDateTime,
-            nextReminderTime: LocalDateTime?,
             subtasksBefore: List<Task>,
         ): PeriodicCommit {
             val currentTask = taskRepository.getTaskById(task.id) ?: task
@@ -109,12 +96,8 @@ class ToggleTaskCompletionUseCase
             // 1. Persist archived copy with recurrence stripped. We bypass UpdateTaskUseCase
             //    so the scheduler isn't called inside the transaction — we run it after commit.
             val archivedTask =
-                currentTask.copy(
+                currentTask.withoutRecurrence().copy(
                     isCompleted = true,
-                    periodicity = null,
-                    periodicityInterval = 1,
-                    repeatDays = null,
-                    monthDayOption = null,
                     completedAt = now,
                     nextInstanceId = null,
                 )
@@ -140,24 +123,23 @@ class ToggleTaskCompletionUseCase
                 }
 
             if (nextInstance == null) {
-                val nextTaskInstance =
-                    TaskReminderDateUtil.advanceReminderIfNeeded(
-                        currentTask.copy(
-                            id = 0,
-                            isCompleted = false,
-                            completedAt = null,
-                            reminderDate = nextReminderTime,
-                            nextInstanceId = null,
-                        ),
+                // `task` carries the occurrence being completed, which callers may have restored to
+                // the one that fired. No date means this was the last occurrence of the series.
+                val nextReminderDate =
+                    TaskReminderDateUtil.nextOccurrenceWithinEnd(
+                        currentTask.copy(reminderDate = task.reminderDate),
                         now,
                     )
-                val newParentId = taskRepository.insertTask(nextTaskInstance)
-                if (newParentId > 0) {
-                    taskRepository.updateTaskNextInstanceId(currentTask.id, newParentId)
-                    cloneSubtasksUnder(newParentId, subtasksBefore)
-                    // The next occurrence is the same piece of work, so it keeps the same files.
-                    taskAttachmentRepository.copyAttachments(currentTask.id, newParentId)
-                    nextInstance = nextTaskInstance.copy(id = newParentId)
+                if (nextReminderDate != null) {
+                    val nextTaskInstance = currentTask.asNextOccurrence(nextReminderDate)
+                    val newParentId = taskRepository.insertTask(nextTaskInstance)
+                    if (newParentId > 0) {
+                        taskRepository.updateTaskNextInstanceId(currentTask.id, newParentId)
+                        cloneSubtasksUnder(newParentId, subtasksBefore)
+                        // The next occurrence is the same piece of work, so it keeps the same files.
+                        taskAttachmentRepository.copyAttachments(currentTask.id, newParentId)
+                        nextInstance = nextTaskInstance.copy(id = newParentId)
+                    }
                 }
             }
 
@@ -234,14 +216,10 @@ class ToggleTaskCompletionUseCase
             // reminder date, but recurrence must remain stripped so only the next occurrence owns
             // future scheduling.
             val restoredTask =
-                archivedTask.copy(
+                archivedTask.withoutRecurrence().copy(
                     isCompleted = false,
                     completedAt = null,
                     nextInstanceId = null,
-                    periodicity = null,
-                    periodicityInterval = 1,
-                    repeatDays = null,
-                    monthDayOption = null,
                 )
             taskRepository.updateTask(restoredTask)
 

@@ -74,7 +74,7 @@ class CreateTaskUseCaseTest {
             val result = useCase(task)
 
             assertThat(taskSlot.captured.reminderDate).isEqualTo(pastReminder)
-            assertThat((result as CreateTaskUseCase.Result.Success).pastReminderWithoutPeriodicity).isTrue()
+            assertThat((result as CreateTaskUseCase.Result.Success).pastReminderWontFire).isTrue()
             assertThat(result.reminderAdvanced).isFalse()
         }
 

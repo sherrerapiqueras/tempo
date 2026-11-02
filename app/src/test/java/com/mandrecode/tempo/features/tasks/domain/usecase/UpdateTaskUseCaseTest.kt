@@ -166,14 +166,14 @@ class UpdateTaskUseCaseTest {
         }
 
     @Test
-    fun `updating non-periodic task with past reminder sets pastReminderWithoutPeriodicity flag`() =
+    fun `updating non-periodic task with past reminder sets pastReminderWontFire flag`() =
         runTest {
             val pastReminder = LocalDateTime(2020, 1, 1, 10, 0)
             val task = task(reminderDate = pastReminder, periodicity = null)
 
             val result = useCase(task)
 
-            assertThat((result as UpdateTaskUseCase.Result.Success).pastReminderWithoutPeriodicity).isTrue()
+            assertThat((result as UpdateTaskUseCase.Result.Success).pastReminderWontFire).isTrue()
             assertThat(result.reminderAdvanced).isFalse()
         }
 
@@ -187,7 +187,7 @@ class UpdateTaskUseCaseTest {
             val result = useCase(task)
 
             assertThat((result as UpdateTaskUseCase.Result.Success).reminderAdvanced).isFalse()
-            assertThat(result.pastReminderWithoutPeriodicity).isFalse()
+            assertThat(result.pastReminderWontFire).isFalse()
         }
 
     @Test
@@ -214,7 +214,7 @@ class UpdateTaskUseCaseTest {
             val result = useCase(task)
 
             assertThat((result as UpdateTaskUseCase.Result.Success).reminderAdvanced).isFalse()
-            assertThat(result.pastReminderWithoutPeriodicity).isFalse()
+            assertThat(result.pastReminderWontFire).isFalse()
             assertThat(result.scheduleResult).isEqualTo(ScheduleResult.Skipped)
         }
 

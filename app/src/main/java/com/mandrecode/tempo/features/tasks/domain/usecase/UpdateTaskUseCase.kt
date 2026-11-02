@@ -19,7 +19,7 @@ class UpdateTaskUseCase
             data class Success(
                 val scheduleResult: ScheduleResult,
                 val reminderAdvanced: Boolean = false,
-                val pastReminderWithoutPeriodicity: Boolean = false,
+                val pastReminderWontFire: Boolean = false,
             ) : Result()
 
             data class ValidationError(
@@ -39,14 +39,14 @@ class UpdateTaskUseCase
                 TitleDescriptionValidationResult.Valid -> {}
             }
 
-            val (adjustedTask, reminderAdvanced, pastReminderWithoutPeriodicity) =
+            val (adjustedTask, reminderAdvanced, pastReminderWontFire) =
                 if (trimmedTask.isCompleted) {
                     Triple(trimmedTask, false, false)
                 } else {
                     val advancedTask = TaskReminderDateUtil.advanceReminderIfNeeded(trimmedTask)
                     val reminderWasAdvanced = advancedTask.reminderDate != trimmedTask.reminderDate
-                    val isPastReminderNoPeriodicity = TaskReminderDateUtil.isPastReminderWithoutPeriodicity(trimmedTask)
-                    Triple(advancedTask, reminderWasAdvanced, isPastReminderNoPeriodicity)
+                    val isPastReminderWontFire = TaskReminderDateUtil.isPastReminderThatWontFire(trimmedTask)
+                    Triple(advancedTask, reminderWasAdvanced, isPastReminderWontFire)
                 }
 
             taskRepository.updateTask(adjustedTask)
@@ -66,6 +66,6 @@ class UpdateTaskUseCase
                     }
                     result
                 }
-            return Result.Success(scheduleResult, reminderAdvanced, pastReminderWithoutPeriodicity)
+            return Result.Success(scheduleResult, reminderAdvanced, pastReminderWontFire)
         }
     }

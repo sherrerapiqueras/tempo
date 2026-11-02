@@ -403,6 +403,7 @@ internal fun TaskEditor(
         onSetPeriodicityInterval = { onEvent(TasksContract.UiEvent.SetPeriodicityInterval(it)) },
         onSetRepeatDays = { onEvent(TasksContract.UiEvent.SetRepeatDays(it)) },
         onSetMonthDayOption = { onEvent(TasksContract.UiEvent.SetMonthDayOption(it)) },
+        onSetPeriodicityEndDate = { onEvent(TasksContract.UiEvent.SetPeriodicityEndDate(it)) },
         onDismiss = { onEvent(TasksContract.UiEvent.HideTaskDialog) },
         onClearErrors = { onEvent(TasksContract.UiEvent.ClearTaskErrors) },
         onConfirm = { title, description, categoryId ->

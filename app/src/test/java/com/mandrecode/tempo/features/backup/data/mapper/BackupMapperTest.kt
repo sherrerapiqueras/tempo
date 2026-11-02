@@ -57,6 +57,7 @@ class BackupMapperTest {
                         periodicityInterval = 2,
                         repeatDays = setOf(DayOfWeek.MONDAY, DayOfWeek.SUNDAY),
                         monthDayOption = MonthDayOption.LAST_DAY,
+                        periodicityEndDate = LocalDate(2027, 3, 31),
                         parentTaskId = null,
                         sortOrder = 3,
                         completedAt = LocalDateTime(2026, 7, 1, 12, 30),
@@ -168,6 +169,38 @@ class BackupMapperTest {
 
         assertThat(dto.toDomain().vacationPeriods)
             .containsExactly(VacationPeriod(LocalDate(2026, 3, 1), LocalDate(2026, 3, 20)))
+    }
+
+    @Test
+    fun `task written before end dates existed decodes with no end date`() {
+        val dto =
+            com.mandrecode.tempo.features.backup.data.model
+                .BackupFileDto(
+                    schemaVersion = 1,
+                    categories = listOf(),
+                    tasks = listOf(TaskBackupDto(id = 1, title = "T", categoryId = 1, periodicity = "DAILY")),
+                )
+
+        assertThat(
+            dto
+                .toDomain()
+                .tasks
+                .single()
+                .periodicityEndDate,
+        ).isNull()
+    }
+
+    @Test
+    fun `malformed end date fails decoding`() {
+        val dto =
+            com.mandrecode.tempo.features.backup.data.model
+                .BackupFileDto(
+                    schemaVersion = 1,
+                    categories = listOf(),
+                    tasks = listOf(TaskBackupDto(id = 1, title = "T", categoryId = 1, periodicityEndDate = "soon")),
+                )
+
+        assertThrows(IllegalArgumentException::class.java) { dto.toDomain() }
     }
 
     @Test

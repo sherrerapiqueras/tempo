@@ -20,7 +20,7 @@ class CreateTaskUseCase
                 val taskId: Long,
                 val scheduleResult: ScheduleResult,
                 val reminderAdvanced: Boolean = false,
-                val pastReminderWithoutPeriodicity: Boolean = false,
+                val pastReminderWontFire: Boolean = false,
             ) : Result()
 
             data class ValidationError(
@@ -44,7 +44,7 @@ class CreateTaskUseCase
 
             val adjustedTask = TaskReminderDateUtil.advanceReminderIfNeeded(trimmedTask)
             val reminderAdvanced = adjustedTask.reminderDate != trimmedTask.reminderDate
-            val pastReminderWithoutPeriodicity = TaskReminderDateUtil.isPastReminderWithoutPeriodicity(trimmedTask)
+            val pastReminderWontFire = TaskReminderDateUtil.isPastReminderThatWontFire(trimmedTask)
             val parentId = adjustedTask.parentTaskId?.let { topLevelAncestorOf(it) }
             val maxSortOrder =
                 if (parentId != null) {
@@ -63,7 +63,7 @@ class CreateTaskUseCase
                 } else {
                     ScheduleResult.Skipped
                 }
-            return Result.Success(newTaskId, scheduleResult, reminderAdvanced, pastReminderWithoutPeriodicity)
+            return Result.Success(newTaskId, scheduleResult, reminderAdvanced, pastReminderWontFire)
         }
 
         /**

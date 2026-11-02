@@ -22,6 +22,7 @@ import kotlinx.collections.immutable.PersistentSet
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 
 /**
@@ -82,6 +83,7 @@ object TasksContract {
         val periodicityInterval: Int = 1,
         val repeatDays: PersistentSet<DayOfWeek>? = null,
         val monthDayOption: MonthDayOption? = null,
+        val periodicityEndDate: LocalDate? = null,
         val parentTaskId: Long? = null,
         val parentTask: Task? = null,
         /** The section the task will be saved into (#61), or null for unsectioned. */
@@ -237,6 +239,10 @@ object TasksContract {
 
         data class SetMonthDayOption(
             val option: MonthDayOption?,
+        ) : UiEvent
+
+        data class SetPeriodicityEndDate(
+            val endDate: LocalDate?,
         ) : UiEvent
 
         // Sort & display

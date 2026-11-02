@@ -400,4 +400,36 @@ class MigrationTest {
                 }
             }
     }
+
+    @Test
+    fun migrate12To13_addsPeriodicityEndDateAndLeavesSeriesWithoutAnEnd() {
+        helper.createDatabase(DB_NAME, 12).use { db ->
+            db.execSQL(
+                "INSERT INTO categories (id, name, color, icon, isDefault, sortOrder, sectionsEnabled) " +
+                    "VALUES (-1, 'Inbox', NULL, 'inbox', 1, -1, 0)",
+            )
+            db.execSQL(
+                """
+                INSERT INTO tasks (id, title, description, isCompleted, categoryId, priority,
+                    periodicity, parentTaskId, sortOrder, periodicityInterval)
+                VALUES (1, 'Water plants', 'desc', 0, -1, NULL, 'DAILY', NULL, 0, 2)
+                """.trimIndent(),
+            )
+        }
+
+        helper
+            .runMigrationsAndValidate(
+                DB_NAME,
+                13,
+                true,
+                TempoDatabase.MIGRATION_12_13,
+            ).use { db ->
+                db.query("SELECT periodicityEndDate, periodicity, periodicityInterval FROM tasks WHERE id = 1").use { cursor ->
+                    assertThat(cursor.moveToFirst()).isTrue()
+                    assertThat(cursor.isNull(0)).isTrue()
+                    assertThat(cursor.getString(1)).isEqualTo("DAILY")
+                    assertThat(cursor.getInt(2)).isEqualTo(2)
+                }
+            }
+    }
 }

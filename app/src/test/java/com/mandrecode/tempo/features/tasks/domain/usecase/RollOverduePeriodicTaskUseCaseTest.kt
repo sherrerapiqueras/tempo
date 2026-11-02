@@ -14,6 +14,7 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import org.junit.Before
 import org.junit.Test
@@ -291,6 +292,121 @@ class RollOverduePeriodicTaskUseCaseTest {
             useCase(overdueTask, now)
 
             assertThat(insertedSlot.captured.sectionId).isEqualTo(8L)
+        }
+
+    @Test
+    fun `last occurrence going overdue ends the series without creating another`() =
+        runTest {
+            val now = LocalDateTime(2026, 4, 24, 10, 0)
+            val overdueTask = overdueTask().copy(periodicityEndDate = LocalDate(2026, 4, 24))
+            val updatedSlot = slot<Task>()
+            coEvery { taskRepository.getTaskById(1L) } returns overdueTask
+
+            val result = useCase(overdueTask, now)
+
+            assertThat(result).isEqualTo(RollOverduePeriodicTaskUseCase.Result.SeriesEnded)
+            coVerify(exactly = 0) { taskRepository.insertTask(any()) }
+            coVerify { taskRepository.updateTask(capture(updatedSlot)) }
+            assertThat(updatedSlot.captured.isCompleted).isFalse()
+            assertThat(updatedSlot.captured.periodicity).isNull()
+            assertThat(updatedSlot.captured.periodicityEndDate).isNull()
+            assertThat(updatedSlot.captured.reminderDate).isEqualTo(overdueTask.reminderDate)
+        }
+
+    @Test
+    fun `ending the series leaves the notification and alarm alone`() =
+        runTest {
+            val now = LocalDateTime(2026, 4, 24, 10, 0)
+            val overdueTask = overdueTask().copy(periodicityEndDate = LocalDate(2026, 4, 24))
+            coEvery { taskRepository.getTaskById(1L) } returns overdueTask
+
+            useCase(overdueTask, now)
+
+            coVerify(exactly = 0) { taskReminderScheduler.cancel(any()) }
+            coVerify(exactly = 0) { taskReminderScheduler.dismissNotification(any()) }
+            coVerify(exactly = 0) { taskReminderScheduler.schedule(any()) }
+        }
+
+    @Test
+    fun `device off past the end date creates no stale occurrence`() =
+        runTest {
+            val now = LocalDateTime(2026, 4, 30, 10, 0)
+            val overdueTask =
+                overdueTask(reminderDate = LocalDateTime(2026, 4, 20, 9, 0))
+                    .copy(periodicityInterval = 1, periodicityEndDate = LocalDate(2026, 4, 25))
+            coEvery { taskRepository.getTaskById(1L) } returns overdueTask
+
+            val result = useCase(overdueTask, now)
+
+            assertThat(result).isEqualTo(RollOverduePeriodicTaskUseCase.Result.SeriesEnded)
+            coVerify(exactly = 0) { taskRepository.insertTask(any()) }
+        }
+
+    @Test
+    fun `next occurrence within the end date keeps the end date`() =
+        runTest {
+            val now = LocalDateTime(2026, 4, 24, 10, 0)
+            val endDate = LocalDate(2026, 5, 31)
+            val overdueTask = overdueTask().copy(periodicityInterval = 1, periodicityEndDate = endDate)
+            val insertedSlot = slot<Task>()
+            val updatedSlot = slot<Task>()
+            coEvery { taskRepository.getTaskById(1L) } returns overdueTask
+            coEvery { taskRepository.getSubtasksSync(1L) } returns emptyList()
+            coEvery { taskRepository.insertTask(capture(insertedSlot)) } returns 10L
+
+            val result = useCase(overdueTask, now)
+
+            assertThat(result).isInstanceOf(RollOverduePeriodicTaskUseCase.Result.CreatedNextInstance::class.java)
+            assertThat(insertedSlot.captured.periodicityEndDate).isEqualTo(endDate)
+            assertThat(insertedSlot.captured.reminderDate).isEqualTo(LocalDateTime(2026, 4, 25, 9, 0))
+            coVerify { taskRepository.updateTask(capture(updatedSlot)) }
+            assertThat(updatedSlot.captured.periodicityEndDate).isNull()
+        }
+
+    @Test
+    fun `an existing next occurrence is reused rather than ending the series`() =
+        runTest {
+            val now = LocalDateTime(2026, 4, 24, 10, 0)
+            val overdueTask =
+                overdueTask(nextInstanceId = 42L).copy(periodicityEndDate = LocalDate(2026, 4, 24))
+            val nextInstance = overdueTask.copy(id = 42L, nextInstanceId = null)
+            coEvery { taskRepository.getTaskById(1L) } returns overdueTask
+            coEvery { taskRepository.getTaskById(42L) } returns nextInstance
+
+            val result = useCase(overdueTask, now)
+
+            assertThat(result).isInstanceOf(RollOverduePeriodicTaskUseCase.Result.ReusedNextInstance::class.java)
+            coVerify(exactly = 0) { taskRepository.insertTask(any()) }
+        }
+
+    @Test
+    fun `a stale next-instance link is not kept when the series ends`() =
+        runTest {
+            val now = LocalDateTime(2026, 4, 24, 10, 0)
+            val overdueTask =
+                overdueTask(nextInstanceId = 42L).copy(periodicityEndDate = LocalDate(2026, 4, 24))
+            val updatedSlot = slot<Task>()
+            coEvery { taskRepository.getTaskById(1L) } returns overdueTask
+            coEvery { taskRepository.getTaskById(42L) } returns null
+
+            val result = useCase(overdueTask, now)
+
+            assertThat(result).isEqualTo(RollOverduePeriodicTaskUseCase.Result.SeriesEnded)
+            coVerify { taskRepository.updateTask(capture(updatedSlot)) }
+            assertThat(updatedSlot.captured.nextInstanceId).isNull()
+        }
+
+    @Test
+    fun `a task whose series has ended is not processed again`() =
+        runTest {
+            val now = LocalDateTime(2026, 4, 24, 10, 0)
+            val ended = overdueTask().withoutRecurrence()
+
+            val result = useCase(ended, now)
+
+            assertThat(result).isEqualTo(RollOverduePeriodicTaskUseCase.Result.NotApplicable)
+            coVerify(exactly = 0) { taskRepository.updateTask(any()) }
+            coVerify(exactly = 0) { taskRepository.insertTask(any()) }
         }
 
     private fun overdueTask(
