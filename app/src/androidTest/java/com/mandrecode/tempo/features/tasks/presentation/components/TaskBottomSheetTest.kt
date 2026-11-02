@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEqualTo
@@ -14,6 +15,7 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -25,6 +27,7 @@ import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import com.mandrecode.tempo.R
@@ -32,6 +35,7 @@ import com.mandrecode.tempo.core.domain.model.Periodicity
 import com.mandrecode.tempo.core.domain.model.Priority
 import com.mandrecode.tempo.core.ui.components.TASK_COMPLETION_CHECKBOX_TEST_TAG
 import com.mandrecode.tempo.core.ui.editor.EDITOR_AUTO_SAVE_DEBOUNCE_MS
+import com.mandrecode.tempo.core.ui.editor.EDITOR_PROPERTY_ROW_GAP
 import com.mandrecode.tempo.core.ui.theme.TempoTheme
 import com.mandrecode.tempo.features.tasks.domain.model.Category
 import com.mandrecode.tempo.features.tasks.domain.model.DEFAULT_INBOX_CATEGORY
@@ -413,11 +417,16 @@ class TaskBottomSheetTest {
 
     // --- Regression tests for #398, #424: title overflow and long text ---
 
-    private fun renderSheet(formState: TasksContract.TaskFormState = defaultFormState()) {
+    private fun renderSheet(
+        formState: TasksContract.TaskFormState = defaultFormState(),
+        task: Task? = null,
+        onToggleCompletion: (Task) -> Unit = {},
+    ) {
         composeTestRule.setContent {
             TempoTheme {
                 TaskBottomSheet(
-                    task = null,
+                    task = task,
+                    onToggleCompletion = onToggleCompletion,
                     categories = listOf(DEFAULT_INBOX_CATEGORY),
                     selectedCategoryIdFromFilter = null,
                     formState = formState,
@@ -466,6 +475,41 @@ class TaskBottomSheetTest {
             ).getBoundsInRoot()
             .left
             .assertIsEqualTo(optionRowStart(), "description error start", tolerance = 1.dp)
+    }
+
+    @Test
+    fun givenTaskWithCheckbox_whenShown_thenTitleStartsWithDescription() {
+        renderSheet(task = sampleTask().copy(title = "", description = ""))
+
+        composeTestRule
+            .onNodeWithText(taskTitlePlaceholder, useUnmergedTree = true)
+            .getBoundsInRoot()
+            .left
+            .assertIsEqualTo(optionRowStart(), "title placeholder start", tolerance = 1.dp)
+    }
+
+    @Test
+    fun givenNewTask_whenShown_thenGapBelowTitleMatchesGapBetweenRows() {
+        renderSheet()
+
+        val titleBottom =
+            composeTestRule.onNodeWithText(taskTitlePlaceholder, useUnmergedTree = true).getBoundsInRoot().bottom
+        val descriptionTop =
+            composeTestRule.onNodeWithText(addDetailsPlaceholder, useUnmergedTree = true).getBoundsInRoot().top
+
+        (descriptionTop - titleBottom).assertIsEqualTo(EDITOR_PROPERTY_ROW_GAP, "title to description", tolerance = 1.dp)
+    }
+
+    @Test
+    fun givenSmallerCheckbox_whenTappedJustOutsideIt_thenStillToggles() {
+        var toggles = 0
+        renderSheet(task = sampleTask(), onToggleCompletion = { toggles++ })
+
+        composeTestRule.onNodeWithTag(TASK_COMPLETION_CHECKBOX_TEST_TAG).performTouchInput {
+            click(Offset(x = -3.dp.toPx(), y = center.y))
+        }
+
+        composeTestRule.runOnIdle { assertEquals(1, toggles) }
     }
 
     private fun optionRowStart() =

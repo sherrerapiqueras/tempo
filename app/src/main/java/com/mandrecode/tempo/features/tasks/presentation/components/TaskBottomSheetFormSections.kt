@@ -21,12 +21,8 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,12 +33,9 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
@@ -54,15 +47,17 @@ import com.mandrecode.tempo.core.ui.components.DayOfWeekSelector
 import com.mandrecode.tempo.core.ui.components.SelectorButtonGroup
 import com.mandrecode.tempo.core.ui.components.TaskCompletionCheckbox
 import com.mandrecode.tempo.core.ui.components.selectorButtonColors
+import com.mandrecode.tempo.core.ui.editor.EDITOR_CHECKBOX_SIZE
+import com.mandrecode.tempo.core.ui.editor.EDITOR_CHECKBOX_TITLE_GAP
 import com.mandrecode.tempo.core.ui.editor.EDITOR_PROPERTY_ROW_GAP
 import com.mandrecode.tempo.core.ui.editor.EDITOR_TEXT_FIELD_BOTTOM_INSET
+import com.mandrecode.tempo.core.ui.editor.EDITOR_TEXT_FIELD_TOP_INSET
 import com.mandrecode.tempo.core.ui.editor.EditorAddButton
 import com.mandrecode.tempo.core.ui.editor.EditorDescriptionField
 import com.mandrecode.tempo.core.ui.editor.EditorPropertyRow
+import com.mandrecode.tempo.core.ui.editor.EditorTitleField
 import com.mandrecode.tempo.core.ui.editor.EditorValueChip
-import com.mandrecode.tempo.core.ui.editor.editorTransparentTextFieldColors
 import com.mandrecode.tempo.core.ui.theme.TempoIcon
-import com.mandrecode.tempo.core.ui.theme.inputTitle
 import com.mandrecode.tempo.core.ui.util.DescriptionEditorState
 import com.mandrecode.tempo.core.ui.util.IncrementalLinkVisualTransformation
 import com.mandrecode.tempo.core.ui.util.color
@@ -149,7 +144,7 @@ private fun TaskTitleSection(
 ) {
     val task = state.task
     val onToggleCompletion = actions.onToggleCompletion
-    val focusManager = LocalFocusManager.current
+    val besideCheckbox = task != null && onToggleCompletion != null
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -158,51 +153,26 @@ private fun TaskTitleSection(
             TaskCompletionCheckbox(
                 isCompleted = task.isCompleted,
                 onToggle = { onToggleCompletion(task) },
+                size = EDITOR_CHECKBOX_SIZE,
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(EDITOR_CHECKBOX_TITLE_GAP))
         }
-        TextField(
+        EditorTitleField(
             value = state.taskTitle,
             onValueChange = actions.onTaskTitleChanged,
-            placeholder = {
-                Text(
-                    stringResource(R.string.task_title_placeholder),
-                    style = MaterialTheme.typography.inputTitle,
-                )
-            },
-            textStyle = MaterialTheme.typography.inputTitle,
-            colors = editorTransparentTextFieldColors(),
-            modifier =
+            placeholder = stringResource(R.string.task_title_placeholder),
+            error =
+                when {
+                    state.formState.titleError != null -> stringResource(state.formState.titleError)
+                    state.isTitleError -> stringResource(R.string.task_title_required)
+                    else -> null
+                },
+            besideCheckbox = besideCheckbox,
+            modifier = Modifier.weight(1f),
+            fieldModifier =
                 Modifier
-                    .weight(1f)
                     .testTag(TASK_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG)
                     .taskTitleFocus(focusConfig),
-            keyboardOptions =
-                KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Sentences,
-                    imeAction = ImeAction.Done,
-                ),
-            keyboardActions =
-                KeyboardActions(
-                    onDone = {
-                        defaultKeyboardAction(ImeAction.Done)
-                        focusManager.clearFocus()
-                    },
-                ),
-            singleLine = false,
-            maxLines = 3,
-            isError = state.isTitleError || state.formState.titleError != null,
-            supportingText =
-                if (state.isTitleError || state.formState.titleError != null) {
-                    {
-                        Text(
-                            state.formState.titleError?.let { stringResource(it) }
-                                ?: stringResource(R.string.task_title_required),
-                        )
-                    }
-                } else {
-                    null
-                },
         )
     }
 }
@@ -219,7 +189,7 @@ private fun TaskDescriptionSection(
         iconPainter = painterResource(R.drawable.ic_short_text),
         iconContentDescription = stringResource(R.string.description),
         verticalAlignment = Alignment.Top,
-        iconBoxModifier = Modifier.width(48.dp).padding(top = 16.dp),
+        iconBoxModifier = Modifier.width(48.dp).padding(top = EDITOR_TEXT_FIELD_TOP_INSET),
     ) {
         EditorDescriptionField(
             value = descriptionState.value,
@@ -609,7 +579,7 @@ private fun TaskPeriodicitySection(
                         DayOfWeekSelector(
                             selectedDays = state.formState.repeatDays,
                             onDaysChange = actions.onSetRepeatDays,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f).padding(start = 4.dp),
                             nullMeansEveryDay = false,
                             enabled = !isPeriodicityReadOnly,
                         )

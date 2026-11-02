@@ -36,3 +36,35 @@ private fun EditorDescriptionFieldErrorPreview() {
         )
     }
 }
+
+@Preview(name = "Beside a checkbox", showBackground = true, widthDp = 300)
+@Preview(name = "Beside a checkbox dark", showBackground = true, widthDp = 300, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun EditorTitleFieldBesideCheckboxPreview() {
+    TempoTheme {
+        EditorTitleField(
+            value = "Plan the weekend trip",
+            onValueChange = {},
+            placeholder = "Title",
+            error = null,
+            besideCheckbox = true,
+            modifier = Modifier.padding(16.dp),
+        )
+    }
+}
+
+@Preview(name = "New with error", showBackground = true, widthDp = 300)
+@Preview(name = "New with error dark", showBackground = true, widthDp = 300, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun EditorTitleFieldErrorPreview() {
+    TempoTheme {
+        EditorTitleField(
+            value = "",
+            onValueChange = {},
+            placeholder = "Title",
+            error = "Title is required",
+            besideCheckbox = false,
+            modifier = Modifier.padding(16.dp),
+        )
+    }
+}

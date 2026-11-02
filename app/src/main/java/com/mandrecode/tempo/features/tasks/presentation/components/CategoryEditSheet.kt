@@ -60,6 +60,7 @@ import com.mandrecode.tempo.core.domain.util.ValidationUtils
 import com.mandrecode.tempo.core.ui.components.ColorPicker
 import com.mandrecode.tempo.core.ui.components.IconPicker
 import com.mandrecode.tempo.core.ui.components.TempoModalTopSheet
+import com.mandrecode.tempo.core.ui.editor.editorSheetHorizontalPadding
 import com.mandrecode.tempo.core.ui.glass.glassButtonContainer
 import com.mandrecode.tempo.core.ui.theme.LocalIsDarkTheme
 import com.mandrecode.tempo.core.ui.theme.TempoIcon
@@ -197,7 +198,7 @@ fun CategoryEditSheet(
                 Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp)
+                    .padding(horizontal = editorSheetHorizontalPadding())
                     .padding(top = 8.dp, bottom = 32.dp),
         ) {
             TextField(

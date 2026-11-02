@@ -1487,4 +1487,26 @@ class HabitBottomSheetTest {
                 tolerance = 1.dp,
             )
     }
+
+    @Test
+    fun givenChainWithCheckbox_whenShown_thenTitleStartsWithDescription() {
+        renderEditHabitChainSheet(
+            chain = chainContainingHabit().copy(title = "", description = ""),
+            onToggleHabitCompletion = { _, _ -> },
+        )
+        val targetContext = InstrumentationRegistry.getInstrumentation().targetContext
+
+        composeTestRule
+            .onNodeWithText(targetContext.getString(R.string.habit_chain_title_placeholder), useUnmergedTree = true)
+            .getBoundsInRoot()
+            .left
+            .assertIsEqualTo(
+                composeTestRule
+                    .onNodeWithText(targetContext.getString(R.string.add_details), useUnmergedTree = true)
+                    .getBoundsInRoot()
+                    .left,
+                "title placeholder start",
+                tolerance = 1.dp,
+            )
+    }
 }

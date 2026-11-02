@@ -13,21 +13,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
 import com.mandrecode.tempo.core.ui.components.ColorPicker
@@ -35,14 +28,16 @@ import com.mandrecode.tempo.core.ui.components.DayOfWeekSelector
 import com.mandrecode.tempo.core.ui.components.HabitCompletionCheckbox
 import com.mandrecode.tempo.core.ui.components.IconPicker
 import com.mandrecode.tempo.core.ui.components.SelectorButtonGroup
+import com.mandrecode.tempo.core.ui.editor.EDITOR_CHECKBOX_SIZE
+import com.mandrecode.tempo.core.ui.editor.EDITOR_CHECKBOX_TITLE_GAP
 import com.mandrecode.tempo.core.ui.editor.EDITOR_PROPERTY_ROW_GAP
 import com.mandrecode.tempo.core.ui.editor.EDITOR_TEXT_FIELD_BOTTOM_INSET
+import com.mandrecode.tempo.core.ui.editor.EDITOR_TEXT_FIELD_TOP_INSET
 import com.mandrecode.tempo.core.ui.editor.EditorAddButton
 import com.mandrecode.tempo.core.ui.editor.EditorDescriptionField
 import com.mandrecode.tempo.core.ui.editor.EditorPropertyRow
+import com.mandrecode.tempo.core.ui.editor.EditorTitleField
 import com.mandrecode.tempo.core.ui.editor.EditorValueChip
-import com.mandrecode.tempo.core.ui.editor.editorTransparentTextFieldColors
-import com.mandrecode.tempo.core.ui.theme.inputTitle
 import com.mandrecode.tempo.core.ui.theme.resolveColor
 import com.mandrecode.tempo.core.ui.util.DescriptionEditorState
 import com.mandrecode.tempo.features.routines.domain.model.HabitType
@@ -260,6 +255,7 @@ private fun HabitTitleSection(
                 state = state,
                 actions = actions,
                 focusConfig = focusConfig,
+                besideCheckbox = false,
                 modifier = Modifier.fillMaxWidth(),
             )
     }
@@ -318,12 +314,14 @@ internal fun HabitCheckboxTitleRow(
             iconName = iconName,
             canToggle = canToggle,
             isContainerCompleted = false,
+            size = EDITOR_CHECKBOX_SIZE,
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(EDITOR_CHECKBOX_TITLE_GAP))
         HabitTitleField(
             state = state,
             actions = actions,
             focusConfig = focusConfig,
+            besideCheckbox = true,
             modifier = Modifier.weight(1f),
         )
     }
@@ -334,58 +332,34 @@ private fun HabitTitleField(
     state: HabitBottomSheetBodyState,
     actions: HabitBottomSheetBodyActions,
     focusConfig: HabitBottomSheetFocusConfig,
+    besideCheckbox: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val focusManager = LocalFocusManager.current
-    TextField(
+    EditorTitleField(
         value = state.title,
         onValueChange = actions.onTitleChanged,
-        placeholder = {
-            Text(
-                when (state.formState.selectedTab) {
-                    HabitSheetTab.HABIT ->
-                        when (state.formState.selectedHabitType) {
-                            HabitType.BUILD -> stringResource(R.string.habit_title_placeholder)
-                            HabitType.QUIT -> stringResource(R.string.habit_title_placeholder_quit)
-                        }
+        placeholder =
+            when (state.formState.selectedTab) {
+                HabitSheetTab.HABIT ->
+                    when (state.formState.selectedHabitType) {
+                        HabitType.BUILD -> stringResource(R.string.habit_title_placeholder)
+                        HabitType.QUIT -> stringResource(R.string.habit_title_placeholder_quit)
+                    }
 
-                    HabitSheetTab.HABIT_CHAIN -> stringResource(R.string.habit_chain_title_placeholder)
-                },
-                style = MaterialTheme.typography.inputTitle,
-            )
-        },
-        textStyle = MaterialTheme.typography.inputTitle,
-        colors = editorTransparentTextFieldColors(),
-        modifier =
-            modifier
+                HabitSheetTab.HABIT_CHAIN -> stringResource(R.string.habit_chain_title_placeholder)
+            },
+        error =
+            when {
+                state.formState.titleError != null -> stringResource(state.formState.titleError)
+                state.isTitleError -> stringResource(R.string.task_title_required)
+                else -> null
+            },
+        besideCheckbox = besideCheckbox,
+        modifier = modifier,
+        fieldModifier =
+            Modifier
                 .testTag(HABIT_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG)
                 .focusRequester(focusConfig.titleFocusRequester),
-        keyboardOptions =
-            KeyboardOptions(
-                capitalization = KeyboardCapitalization.Sentences,
-                imeAction = ImeAction.Done,
-            ),
-        keyboardActions =
-            androidx.compose.foundation.text.KeyboardActions(
-                onDone = {
-                    defaultKeyboardAction(ImeAction.Done)
-                    focusManager.clearFocus()
-                },
-            ),
-        singleLine = false,
-        maxLines = 3,
-        isError = state.isTitleError || state.formState.titleError != null,
-        supportingText =
-            if (state.isTitleError || state.formState.titleError != null) {
-                {
-                    Text(
-                        state.formState.titleError?.let { stringResource(it) }
-                            ?: stringResource(R.string.task_title_required),
-                    )
-                }
-            } else {
-                null
-            },
     )
 }
 
@@ -400,7 +374,7 @@ private fun HabitDescriptionSection(
         iconPainter = painterResource(R.drawable.ic_short_text),
         iconContentDescription = stringResource(R.string.description),
         verticalAlignment = Alignment.Top,
-        iconBoxModifier = Modifier.width(48.dp).padding(top = 16.dp),
+        iconBoxModifier = Modifier.width(48.dp).padding(top = EDITOR_TEXT_FIELD_TOP_INSET),
     ) {
         EditorDescriptionField(
             value = descriptionState.value,
