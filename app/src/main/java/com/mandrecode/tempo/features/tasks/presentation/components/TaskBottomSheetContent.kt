@@ -34,11 +34,9 @@ import com.mandrecode.tempo.core.ui.adaptive.SheetPlacement
 import com.mandrecode.tempo.core.ui.components.HandleReminderPermissions
 import com.mandrecode.tempo.core.ui.components.TempoTimePickerDialog
 import com.mandrecode.tempo.core.ui.editor.EDITOR_AUTO_SAVE_DEBOUNCE_MS
-import com.mandrecode.tempo.core.ui.editor.EDITOR_MAX_TITLE_LENGTH
-import com.mandrecode.tempo.core.ui.editor.descriptionWithTitleOverflow
 import com.mandrecode.tempo.core.ui.editor.editorSaveableKey
 import com.mandrecode.tempo.core.ui.editor.rememberEditorAutosaveController
-import com.mandrecode.tempo.core.ui.editor.splitEditorTitle
+import com.mandrecode.tempo.core.ui.editor.resolveEditorTitleChange
 import com.mandrecode.tempo.core.ui.util.DebouncedSnapshotEffect
 import com.mandrecode.tempo.core.ui.util.DescriptionEditorState
 import com.mandrecode.tempo.core.ui.util.IncrementalLinkVisualTransformation
@@ -391,23 +389,18 @@ internal fun TaskBottomSheetContent(
                 actions =
                     TaskBottomSheetBodyActions(
                         onTaskTitleChanged = { newValue ->
-                            if (newValue.contains("\n")) {
+                            val change = resolveEditorTitleChange(newValue, taskTitle, descriptionState.value.text)
+                            if (change == null) {
                                 focusManager.clearFocus()
-                            } else if (newValue.length > EDITOR_MAX_TITLE_LENGTH) {
-                                val split = splitEditorTitle(newValue)
-                                taskTitle = split.title
-                                updateDescription(
-                                    descriptionWithTitleOverflow(
-                                        overflow = split.overflow,
-                                        description = descriptionState.value.text,
-                                    ),
-                                )
-                                isDescriptionDirty = descriptionState.value.text != initialDescription
-                                focusDescriptionTrigger++
                             } else {
-                                taskTitle = newValue
-                                isTitleError = newValue.isBlank()
+                                taskTitle = change.title
+                                isTitleError = change.title.isBlank()
                                 onClearErrors()
+                                change.description?.let {
+                                    updateDescription(it)
+                                    isDescriptionDirty = descriptionState.value.text != initialDescription
+                                    focusDescriptionTrigger++
+                                }
                             }
                         },
                         onTaskDescriptionChanged = {

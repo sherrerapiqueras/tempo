@@ -39,6 +39,7 @@ import com.mandrecode.tempo.core.ui.editor.EDITOR_PROPERTY_ROW_GAP
 import com.mandrecode.tempo.core.ui.editor.EDITOR_TEXT_FIELD_BOTTOM_INSET
 import com.mandrecode.tempo.core.ui.editor.EditorAddButton
 import com.mandrecode.tempo.core.ui.editor.EditorPropertyRow
+import com.mandrecode.tempo.core.ui.editor.EditorTitleFieldState
 import com.mandrecode.tempo.core.ui.editor.EditorValueChip
 import com.mandrecode.tempo.core.ui.editor.editorTransparentTextFieldColors
 import com.mandrecode.tempo.core.ui.theme.inputTitle
@@ -336,9 +337,10 @@ private fun HabitTitleField(
     modifier: Modifier = Modifier,
 ) {
     val focusManager = LocalFocusManager.current
+    val titleField = remember { EditorTitleFieldState() }
     TextField(
-        value = state.title,
-        onValueChange = actions.onTitleChanged,
+        value = titleField.displayed(state.title),
+        onValueChange = { titleField.onValueChange(it, state.title, actions.onTitleChanged) },
         placeholder = {
             Text(
                 when (state.formState.selectedTab) {

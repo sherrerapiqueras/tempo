@@ -561,6 +561,30 @@ class HabitBottomSheetTest {
     }
 
     @Test
+    fun titlePaste_withLineBreak_movesLaterLinesToDescription() {
+        renderNewHabitSheet()
+
+        composeTestRule
+            .onNodeWithTag(HABIT_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG)
+            .performTextInput("First line\nSecond line")
+
+        composeTestRule.onNodeWithText("First line").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Second line").assertIsDisplayed()
+    }
+
+    @Test
+    fun titleOverflow_sameKeystrokeTwice_movesBothToDescription() {
+        renderNewHabitSheet()
+
+        val title = composeTestRule.onNodeWithTag(HABIT_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG)
+        title.performTextInput("A".repeat(65))
+        title.performTextInput("b")
+        title.performTextInput("b")
+
+        composeTestRule.onNodeWithText("b b").assertIsDisplayed()
+    }
+
+    @Test
     fun longTitle_nearLimit_displaysCorrectly() {
         renderNewHabitSheet()
 

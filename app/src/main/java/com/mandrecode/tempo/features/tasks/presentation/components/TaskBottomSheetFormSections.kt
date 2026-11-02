@@ -58,6 +58,7 @@ import com.mandrecode.tempo.core.ui.editor.EDITOR_PROPERTY_ROW_GAP
 import com.mandrecode.tempo.core.ui.editor.EDITOR_TEXT_FIELD_BOTTOM_INSET
 import com.mandrecode.tempo.core.ui.editor.EditorAddButton
 import com.mandrecode.tempo.core.ui.editor.EditorPropertyRow
+import com.mandrecode.tempo.core.ui.editor.EditorTitleFieldState
 import com.mandrecode.tempo.core.ui.editor.EditorValueChip
 import com.mandrecode.tempo.core.ui.editor.editorTransparentTextFieldColors
 import com.mandrecode.tempo.core.ui.theme.TempoIcon
@@ -149,6 +150,7 @@ private fun TaskTitleSection(
     val task = state.task
     val onToggleCompletion = actions.onToggleCompletion
     val focusManager = LocalFocusManager.current
+    val titleField = remember { EditorTitleFieldState() }
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -161,8 +163,8 @@ private fun TaskTitleSection(
             Spacer(modifier = Modifier.width(8.dp))
         }
         TextField(
-            value = state.taskTitle,
-            onValueChange = actions.onTaskTitleChanged,
+            value = titleField.displayed(state.taskTitle),
+            onValueChange = { titleField.onValueChange(it, state.taskTitle, actions.onTaskTitleChanged) },
             placeholder = {
                 Text(
                     stringResource(R.string.task_title_placeholder),
@@ -176,11 +178,7 @@ private fun TaskTitleSection(
                     .weight(1f)
                     .testTag(TASK_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG)
                     .taskTitleFocus(focusConfig),
-            keyboardOptions =
-                KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Sentences,
-                    imeAction = ImeAction.Done,
-                ),
+            keyboardOptions = TASK_TITLE_KEYBOARD_OPTIONS,
             keyboardActions =
                 KeyboardActions(
                     onDone = {
@@ -205,6 +203,12 @@ private fun TaskTitleSection(
         )
     }
 }
+
+private val TASK_TITLE_KEYBOARD_OPTIONS =
+    KeyboardOptions(
+        capitalization = KeyboardCapitalization.Sentences,
+        imeAction = ImeAction.Done,
+    )
 
 @Composable
 private fun TaskDescriptionSection(
