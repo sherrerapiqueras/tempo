@@ -85,5 +85,4 @@ internal data class HabitBottomSheetBodyActions(
 
 internal data class HabitBottomSheetFocusConfig(
     val titleFocusRequester: FocusRequester,
-    val descriptionFocusRequester: FocusRequester,
 )

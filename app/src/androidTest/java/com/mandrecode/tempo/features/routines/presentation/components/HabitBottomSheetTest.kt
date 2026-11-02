@@ -10,6 +10,7 @@ import androidx.compose.ui.test.assertIsEqualTo
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -533,93 +534,29 @@ class HabitBottomSheetTest {
     }
 
     @Test
-    fun titleOverflow_at65Chars_movesExcessTextToDescription() {
+    fun givenTitleTypedPast65Chars_whenEntered_thenAllStaysInTitle() {
         renderNewHabitSheet()
 
-        val titlePart = "A".repeat(65)
-        val overflowPart = "OVERFLOW"
+        val longTitle = "A".repeat(65) + " STILL THE TITLE"
         composeTestRule
-            .onNodeWithText("Go for a walk")
-            .performTextInput(titlePart + overflowPart)
+            .onNodeWithTag(HABIT_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG)
+            .performTextInput(longTitle)
 
-        // The overflow text should now appear in the description field
-        composeTestRule
-            .onNodeWithText(overflowPart, substring = true)
-            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag(HABIT_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG).assertTextContains(longTitle)
+        composeTestRule.onNodeWithTag(HABIT_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG).assertIsFocused()
     }
 
     @Test
-    fun titleOverflow_midWord_movesWholeWordToDescription() {
-        renderNewHabitSheet()
-
-        val titlePart = "A".repeat(60)
-        val overflowWord = "OVERFLOWING"
-        composeTestRule
-            .onNodeWithText("Go for a walk")
-            .performTextInput("$titlePart $overflowWord")
-
-        // Exact matches: a mid-word split would leave part of the word in each field
-        composeTestRule.onNodeWithText(titlePart).assertIsDisplayed()
-        composeTestRule.onNodeWithText(overflowWord).assertIsDisplayed()
-    }
-
-    @Test
-    fun titlePaste_withLineBreak_movesLaterLinesToDescription() {
+    fun givenPastedLineBreak_whenEntered_thenLinesJoinInTitle() {
         renderNewHabitSheet()
 
         composeTestRule
             .onNodeWithTag(HABIT_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG)
             .performTextInput("First line\nSecond line")
 
-        composeTestRule.onNodeWithText("First line").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Second line").assertIsDisplayed()
-    }
-
-    @Test
-    fun titleOverflow_sameKeystrokeTwice_movesBothToDescription() {
-        renderNewHabitSheet()
-
-        val title = composeTestRule.onNodeWithTag(HABIT_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG)
-        title.performTextInput("A".repeat(65))
-        title.performTextInput("b")
-        title.performTextInput("b")
-
-        composeTestRule.onNodeWithText("b b").assertIsDisplayed()
-    }
-
-    @Test
-    fun longTitle_nearLimit_displaysCorrectly() {
-        renderNewHabitSheet()
-
-        val longTitle = "B".repeat(60)
         composeTestRule
-            .onNodeWithText("Go for a walk")
-            .performTextInput(longTitle)
-
-        composeTestRule
-            .onNodeWithText(longTitle, substring = true)
-            .assertIsDisplayed()
-    }
-
-    @Test
-    fun titleAtExactLimit_doesNotOverflowToDescription() {
-        renderNewHabitSheet()
-
-        val exactTitle = "C".repeat(65)
-        composeTestRule
-            .onNodeWithText("Go for a walk")
-            .performTextInput(exactTitle)
-
-        // Title should contain all 65 chars
-        composeTestRule
-            .onNodeWithText(exactTitle, substring = true)
-            .assertIsDisplayed()
-
-        // Description placeholder should still be visible (no overflow text)
-        composeTestRule
-            .onNodeWithText("Add details", substring = true)
-            .performScrollTo()
-            .assertIsDisplayed()
+            .onNodeWithTag(HABIT_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG)
+            .assertTextContains("First line Second line")
     }
 
     @Test

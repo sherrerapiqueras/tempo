@@ -10,7 +10,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -31,10 +30,11 @@ import com.mandrecode.tempo.core.ui.adaptive.SheetPlacement
 import com.mandrecode.tempo.core.ui.components.HandleReminderPermissions
 import com.mandrecode.tempo.core.ui.components.TempoTimePickerDialog
 import com.mandrecode.tempo.core.ui.editor.EDITOR_AUTO_SAVE_DEBOUNCE_MS
+import com.mandrecode.tempo.core.ui.editor.canAutosaveEditorTitle
 import com.mandrecode.tempo.core.ui.editor.editorSaveableKey
 import com.mandrecode.tempo.core.ui.editor.editorSheetHorizontalPadding
 import com.mandrecode.tempo.core.ui.editor.rememberEditorAutosaveController
-import com.mandrecode.tempo.core.ui.editor.resolveEditorTitleChange
+import com.mandrecode.tempo.core.ui.editor.resolveEditorTitleEdit
 import com.mandrecode.tempo.core.ui.theme.LocalIsDarkTheme
 import com.mandrecode.tempo.core.ui.theme.TempoIcon
 import com.mandrecode.tempo.core.ui.theme.getMaterialYouColors
@@ -169,15 +169,6 @@ internal fun HabitBottomSheetContent(
         )
     }
     val titleFocusRequester = remember { FocusRequester() }
-    val descriptionFocusRequester = remember { FocusRequester() }
-    var focusDescriptionTrigger by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(focusDescriptionTrigger) {
-        if (focusDescriptionTrigger > 0) {
-            descriptionFocusRequester.requestFocus()
-        }
-    }
-
     val currentOnClearReminder by rememberUpdatedState(onClearReminder)
     val currentOnSetColorKey by rememberUpdatedState(onSetColorKey)
     val currentOnSetIcon by rememberUpdatedState(onSetIcon)
@@ -500,7 +491,7 @@ internal fun HabitBottomSheetContent(
     com.mandrecode.tempo.core.ui.components.TempoModalBottomSheet(
         onDismissRequest = onSheetDismissRequest,
         modifier = modifier,
-        hasUnsavedChanges = if (autoSaveEnabled && title.isNotBlank()) false else hasUnsavedChanges,
+        hasUnsavedChanges = if (autoSaveEnabled && canAutosaveEditorTitle(title)) false else hasUnsavedChanges,
         adaptivePlacement = true,
         placement = placement,
         dismissRequestKey = dismissRequestKey,
@@ -538,18 +529,13 @@ internal fun HabitBottomSheetContent(
                         onSelectTab = onSelectTab,
                         onSetHabitType = onSetHabitType,
                         onTitleChanged = { newValue ->
-                            val change = resolveEditorTitleChange(newValue, title, descriptionState.value.text)
-                            if (change == null) {
+                            val edited = resolveEditorTitleEdit(newValue, title)
+                            if (edited == null) {
                                 focusManager.clearFocus()
                             } else {
-                                title = change.title
-                                isTitleError = change.title.isBlank()
+                                title = edited
+                                isTitleError = edited.isBlank()
                                 onClearErrors()
-                                change.description?.let {
-                                    updateDescription(it)
-                                    isDescriptionDirty = descriptionState.value.text != initialDescription
-                                    focusDescriptionTrigger++
-                                }
                             }
                         },
                         onDescriptionChanged = {
@@ -589,7 +575,6 @@ internal fun HabitBottomSheetContent(
                 focusConfig =
                     HabitBottomSheetFocusConfig(
                         titleFocusRequester = titleFocusRequester,
-                        descriptionFocusRequester = descriptionFocusRequester,
                     ),
             )
         }

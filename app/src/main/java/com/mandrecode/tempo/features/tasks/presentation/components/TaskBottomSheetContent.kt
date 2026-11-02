@@ -11,7 +11,6 @@ import androidx.compose.material3.SelectableDates
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,10 +33,11 @@ import com.mandrecode.tempo.core.ui.adaptive.SheetPlacement
 import com.mandrecode.tempo.core.ui.components.HandleReminderPermissions
 import com.mandrecode.tempo.core.ui.components.TempoTimePickerDialog
 import com.mandrecode.tempo.core.ui.editor.EDITOR_AUTO_SAVE_DEBOUNCE_MS
+import com.mandrecode.tempo.core.ui.editor.canAutosaveEditorTitle
 import com.mandrecode.tempo.core.ui.editor.editorSaveableKey
 import com.mandrecode.tempo.core.ui.editor.editorSheetHorizontalPadding
 import com.mandrecode.tempo.core.ui.editor.rememberEditorAutosaveController
-import com.mandrecode.tempo.core.ui.editor.resolveEditorTitleChange
+import com.mandrecode.tempo.core.ui.editor.resolveEditorTitleEdit
 import com.mandrecode.tempo.core.ui.util.DebouncedSnapshotEffect
 import com.mandrecode.tempo.core.ui.util.DescriptionEditorState
 import com.mandrecode.tempo.core.ui.util.IncrementalLinkVisualTransformation
@@ -125,16 +125,7 @@ internal fun TaskBottomSheetContent(
     var isTitleError by remember(editorKey) { mutableStateOf(false) }
     var showPermissionCheck by remember { mutableStateOf(false) }
     val titleFocusRequester = remember { FocusRequester() }
-    val descriptionFocusRequester = remember { FocusRequester() }
     val editorFocusState = remember { TaskEditorFocusState() }
-    var focusDescriptionTrigger by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(focusDescriptionTrigger) {
-        if (focusDescriptionTrigger > 0) {
-            descriptionFocusRequester.requestFocus()
-        }
-    }
-
     val formattedReminder = rememberFormattedDateTime(formState.reminderDate)
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
@@ -355,7 +346,7 @@ internal fun TaskBottomSheetContent(
     com.mandrecode.tempo.core.ui.components.TempoModalBottomSheet(
         onDismissRequest = onSheetDismissRequest,
         modifier = modifier,
-        hasUnsavedChanges = if (autoSaveEnabled && taskTitle.isNotBlank()) false else hasUnsavedChanges,
+        hasUnsavedChanges = if (autoSaveEnabled && canAutosaveEditorTitle(taskTitle)) false else hasUnsavedChanges,
         adaptivePlacement = true,
         placement = placement,
         dismissRequestKey = dismissRequestKey,
@@ -390,18 +381,13 @@ internal fun TaskBottomSheetContent(
                 actions =
                     TaskBottomSheetBodyActions(
                         onTaskTitleChanged = { newValue ->
-                            val change = resolveEditorTitleChange(newValue, taskTitle, descriptionState.value.text)
-                            if (change == null) {
+                            val edited = resolveEditorTitleEdit(newValue, taskTitle)
+                            if (edited == null) {
                                 focusManager.clearFocus()
                             } else {
-                                taskTitle = change.title
-                                isTitleError = change.title.isBlank()
+                                taskTitle = edited
+                                isTitleError = edited.isBlank()
                                 onClearErrors()
-                                change.description?.let {
-                                    updateDescription(it)
-                                    isDescriptionDirty = descriptionState.value.text != initialDescription
-                                    focusDescriptionTrigger++
-                                }
                             }
                         },
                         onTaskDescriptionChanged = {
@@ -449,7 +435,6 @@ internal fun TaskBottomSheetContent(
                 focusConfig =
                     TaskBottomSheetFocusConfig(
                         titleFocusRequester = titleFocusRequester,
-                        descriptionFocusRequester = descriptionFocusRequester,
                         focusState = editorFocusState,
                         clearEditorFocus = { focusManager.clearFocus() },
                     ),

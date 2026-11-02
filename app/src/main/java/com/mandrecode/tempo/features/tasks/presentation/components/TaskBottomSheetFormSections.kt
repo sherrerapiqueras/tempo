@@ -56,7 +56,6 @@ import com.mandrecode.tempo.core.ui.editor.EditorAddButton
 import com.mandrecode.tempo.core.ui.editor.EditorDescriptionField
 import com.mandrecode.tempo.core.ui.editor.EditorPropertyRow
 import com.mandrecode.tempo.core.ui.editor.EditorTitleField
-import com.mandrecode.tempo.core.ui.editor.EditorTitleFieldState
 import com.mandrecode.tempo.core.ui.editor.EditorValueChip
 import com.mandrecode.tempo.core.ui.theme.TempoIcon
 import com.mandrecode.tempo.core.ui.util.DescriptionEditorState
@@ -146,7 +145,6 @@ private fun TaskTitleSection(
     val task = state.task
     val onToggleCompletion = actions.onToggleCompletion
     val besideCheckbox = task != null && onToggleCompletion != null
-    val titleField = remember { EditorTitleFieldState() }
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -160,8 +158,8 @@ private fun TaskTitleSection(
             Spacer(modifier = Modifier.width(EDITOR_CHECKBOX_TITLE_GAP))
         }
         EditorTitleField(
-            value = titleField.displayed(state.taskTitle),
-            onValueChange = { titleField.onValueChange(it, state.taskTitle, actions.onTaskTitleChanged) },
+            value = state.taskTitle,
+            onValueChange = actions.onTaskTitleChanged,
             placeholder = stringResource(R.string.task_title_placeholder),
             error =
                 when {

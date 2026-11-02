@@ -53,7 +53,6 @@ class TaskEditorBackHandlerTest {
                 remember {
                     TaskBottomSheetFocusConfig(
                         titleFocusRequester = FocusRequester(),
-                        descriptionFocusRequester = FocusRequester(),
                         focusState = focusState,
                         clearEditorFocus = { focusManager.clearFocus() },
                         interceptsLegacyImeBack = interceptsLegacyImeBack,

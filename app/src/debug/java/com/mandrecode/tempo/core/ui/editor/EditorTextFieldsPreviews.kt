@@ -43,7 +43,7 @@ private fun EditorDescriptionFieldErrorPreview() {
 private fun EditorTitleFieldBesideCheckboxPreview() {
     TempoTheme {
         EditorTitleField(
-            value = TextFieldValue("Plan the weekend trip"),
+            value = "Plan the weekend trip",
             onValueChange = {},
             placeholder = "Title",
             error = null,
@@ -59,7 +59,7 @@ private fun EditorTitleFieldBesideCheckboxPreview() {
 private fun EditorTitleFieldErrorPreview() {
     TempoTheme {
         EditorTitleField(
-            value = TextFieldValue(""),
+            value = "",
             onValueChange = {},
             placeholder = "Title",
             error = "Title is required",

@@ -37,7 +37,6 @@ import com.mandrecode.tempo.core.ui.editor.EditorAddButton
 import com.mandrecode.tempo.core.ui.editor.EditorDescriptionField
 import com.mandrecode.tempo.core.ui.editor.EditorPropertyRow
 import com.mandrecode.tempo.core.ui.editor.EditorTitleField
-import com.mandrecode.tempo.core.ui.editor.EditorTitleFieldState
 import com.mandrecode.tempo.core.ui.editor.EditorValueChip
 import com.mandrecode.tempo.core.ui.theme.resolveColor
 import com.mandrecode.tempo.core.ui.util.DescriptionEditorState
@@ -113,7 +112,6 @@ internal fun HabitBottomSheetBody(
             descriptionState = descriptionState,
             descriptionError = state.formState.descriptionError,
             onDescriptionChange = actions.onDescriptionChanged,
-            focusConfig = focusConfig,
         )
 
         Spacer(modifier = Modifier.height(EDITOR_PROPERTY_ROW_GAP - EDITOR_TEXT_FIELD_BOTTOM_INSET))
@@ -336,10 +334,9 @@ private fun HabitTitleField(
     besideCheckbox: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val titleField = remember { EditorTitleFieldState() }
     EditorTitleField(
-        value = titleField.displayed(state.title),
-        onValueChange = { titleField.onValueChange(it, state.title, actions.onTitleChanged) },
+        value = state.title,
+        onValueChange = actions.onTitleChanged,
         placeholder =
             when (state.formState.selectedTab) {
                 HabitSheetTab.HABIT ->
@@ -370,7 +367,6 @@ private fun HabitDescriptionSection(
     descriptionState: DescriptionEditorState,
     descriptionError: Int?,
     onDescriptionChange: (androidx.compose.ui.text.input.TextFieldValue) -> Unit,
-    focusConfig: HabitBottomSheetFocusConfig,
 ) {
     EditorPropertyRow(
         iconPainter = painterResource(R.drawable.ic_short_text),
@@ -384,8 +380,7 @@ private fun HabitDescriptionSection(
             error = descriptionError?.let { stringResource(it) },
             fieldModifier =
                 Modifier
-                    .testTag(HABIT_BOTTOM_SHEET_DESCRIPTION_FIELD_TEST_TAG)
-                    .focusRequester(focusConfig.descriptionFocusRequester),
+                    .testTag(HABIT_BOTTOM_SHEET_DESCRIPTION_FIELD_TEST_TAG),
             modifier =
                 Modifier
                     .weight(1f)
