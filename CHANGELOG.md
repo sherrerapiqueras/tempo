@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.19.0](https://github.com/sherrerapiqueras/tempo/compare/v1.18.2...v1.19.0) (2026-11-02)
+
+
+### Features
+
+* **#509:** add an end date to repeating tasks ([#515](https://github.com/sherrerapiqueras/tempo/issues/515)) ([1ae5955](https://github.com/sherrerapiqueras/tempo/commit/1ae5955d5a501b4bd679d19d120a49a8752dd183))
+
+
+### Bug Fixes
+
+* **#502:** dock the Focus task editor and session on large windows ([#505](https://github.com/sherrerapiqueras/tempo/issues/505)) ([48731b5](https://github.com/sherrerapiqueras/tempo/commit/48731b5880ba67648762dec20340215759457705))
+* **#510:** keep the Tasks list in one column when a category has sections ([#511](https://github.com/sherrerapiqueras/tempo/issues/511)) ([dcbf07a](https://github.com/sherrerapiqueras/tempo/commit/dcbf07a8e78de8040338159a7f29b3c26339b466))
+* **#513:** keep the splash and window background on the app's theme ([#514](https://github.com/sherrerapiqueras/tempo/issues/514)) ([402aa0f](https://github.com/sherrerapiqueras/tempo/commit/402aa0f332da25576ec6bccd7e0a5a74371abe96))
+
 ## [1.18.2](https://github.com/sherrerapiqueras/tempo/compare/v1.18.1...v1.18.2) (2026-10-30)
 
 
