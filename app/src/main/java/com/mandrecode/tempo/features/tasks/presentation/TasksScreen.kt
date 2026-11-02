@@ -43,8 +43,6 @@ import com.mandrecode.tempo.core.ui.glass.ambientBackground
 import com.mandrecode.tempo.core.ui.navigation.FloatingRailContentStartPadding
 import com.mandrecode.tempo.core.ui.navigation.FloatingRailExpandedContentStartPadding
 import com.mandrecode.tempo.core.ui.navigation.PendingNotificationAction
-import com.mandrecode.tempo.core.ui.navigation.ReadableContentMaxWidth
-import com.mandrecode.tempo.core.ui.navigation.SectionedContentMaxWidth
 import com.mandrecode.tempo.core.ui.navigation.TasksFloatingBarState
 import com.mandrecode.tempo.core.ui.navigation.adaptiveScreenContentLayout
 import com.mandrecode.tempo.core.ui.navigation.animatedDockedContentBias
@@ -188,8 +186,6 @@ fun TasksScreen(
     // exiting pane from recomposing into a blank "new task" form mid-animation.
     val frozenUiState = rememberFrozenWhileHidden(uiState, isLive = uiState.taskForm.isVisible)
 
-    val hasSections = !uiState.sectionedList?.sections.isNullOrEmpty()
-    val useSectionedWidth = hasSections && !(isDockedEditor && uiState.taskForm.isVisible)
     Box(modifier = modifier.fillMaxSize()) {
         Row(
             modifier =
@@ -218,14 +214,6 @@ fun TasksScreen(
                         Modifier.adaptiveScreenContentLayout(
                             railClearance = railContentClearance,
                             horizontalBias = contentBias,
-                            // A sectioned category may use the width for two columns, unless an
-                            // editor is docked beside it (#61).
-                            maxContentWidth =
-                                if (useSectionedWidth) {
-                                    SectionedContentMaxWidth
-                                } else {
-                                    ReadableContentMaxWidth
-                                },
                         ),
                     containerColor = Color.Transparent,
                     contentWindowInsets = WindowInsets(0),

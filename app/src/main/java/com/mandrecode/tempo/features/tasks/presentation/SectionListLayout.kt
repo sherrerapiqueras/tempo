@@ -35,21 +35,7 @@ internal const val SECTION_EMPTY_KEY_PREFIX = "section_empty_"
 /** The lazy-list key of a section's header, also what the shortcut group scrolls to. */
 internal fun sectionHeaderKey(sectionId: Long): String = "$SECTION_HEADER_KEY_PREFIX$sectionId"
 
-internal const val GRID_UNSECTIONED_KEY = "grid_unsectioned"
-private const val GRID_SECTION_KEY_PREFIX = "grid_section_"
-
-internal fun gridSectionKey(sectionId: Long): String = "$GRID_SECTION_KEY_PREFIX$sectionId"
-
-/** The section a grid item key belongs to, or null for the unsectioned block; [Unknown] otherwise. */
-internal fun gridKeySection(key: Any?): SectionKey =
-    when {
-        key == GRID_UNSECTIONED_KEY -> SectionKey.Of(null)
-        key is String && key.startsWith(GRID_SECTION_KEY_PREFIX) ->
-            SectionKey.Of(key.removePrefix(GRID_SECTION_KEY_PREFIX).toLongOrNull())
-        else -> SectionKey.Unknown
-    }
-
-/** Which section a list or grid item belongs to, for the shortcut group's scroll spy. */
+/** Which section a list item belongs to, for the shortcut group's scroll spy. */
 internal sealed interface SectionKey {
     data class Of(
         val sectionId: Long?,
@@ -58,7 +44,7 @@ internal sealed interface SectionKey {
     data object Unknown : SectionKey
 }
 
-/** The section a one-column list item key belongs to, for the shortcut group's scroll spy. */
+/** The section a list item key belongs to, for the shortcut group's scroll spy. */
 internal fun listKeySection(
     key: Any?,
     list: SectionedTaskList,
@@ -76,7 +62,7 @@ internal fun listKeySection(
     }
 
 /**
- * Where [sectionId]'s header sits in the one-column list, mirroring [sectionedTaskItems]'s order:
+ * Where [sectionId]'s header sits in the list, mirroring [sectionedTaskItems]'s order:
  * unsectioned tasks, then per section its header, its tasks or placeholder unless collapsed, and a
  * new-section field placed after it.
  */
