@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.19.1](https://github.com/sherrerapiqueras/tempo/compare/v1.19.0...v1.19.1) (2026-11-02)
+
+
+### Bug Fixes
+
+* **#518:** align the editor sheets and give them Material spacing ([#519](https://github.com/sherrerapiqueras/tempo/issues/519)) ([df2f11a](https://github.com/sherrerapiqueras/tempo/commit/df2f11a91a6bbcc8a8f07a50a3c60c32bc60e389))
+* handle title paste, errors and spacing edge cases ([#521](https://github.com/sherrerapiqueras/tempo/issues/521)) ([501927f](https://github.com/sherrerapiqueras/tempo/commit/501927ffa779b74e798cb83a9b14fed927fd25cc))
+* move title overflow at a word boundary ([#520](https://github.com/sherrerapiqueras/tempo/issues/520)) ([9676a06](https://github.com/sherrerapiqueras/tempo/commit/9676a06d491ee94bc1f028188d9997cf7ce494a3))
+* remove the title's automatic move to the description ([#524](https://github.com/sherrerapiqueras/tempo/issues/524)) ([0da6c79](https://github.com/sherrerapiqueras/tempo/commit/0da6c79b4910c3ee4ce7aa3f41ebffac94e5ca6b))
+
 ## [1.19.0](https://github.com/sherrerapiqueras/tempo/compare/v1.18.2...v1.19.0) (2026-11-02)
 
 
