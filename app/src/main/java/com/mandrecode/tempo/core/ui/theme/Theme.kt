@@ -3,6 +3,7 @@ package com.mandrecode.tempo.core.ui.theme
 import android.app.ActivityManager
 import android.content.Context
 import android.content.ContextWrapper
+import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.view.View
 import androidx.activity.ComponentActivity
@@ -18,6 +19,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import com.mandrecode.tempo.util.dynamicColorScheme
@@ -139,6 +141,7 @@ fun TempoTheme(
         }
     val colorScheme = baseColorScheme.withPageSurfaceContrast(darkTheme)
 
+    val windowBackground = colorScheme.surface.toArgb()
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
@@ -160,6 +163,10 @@ fun TempoTheme(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 activity.window.isNavigationBarContrastEnforced = false
             }
+            // Otherwise the window keeps the manifest theme's background, chosen by the system's
+            // night mode: area the app hasn't drawn yet, such as a desktop window growing, would
+            // flash that colour when the app's theme differs (#513).
+            activity.window.setBackgroundDrawable(ColorDrawable(windowBackground))
         }
     }
 

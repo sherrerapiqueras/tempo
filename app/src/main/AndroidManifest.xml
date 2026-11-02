@@ -29,12 +29,14 @@
             desktop window resizing) are handled in place rather than by recreating the activity.
             The UI is Compose throughout and lays itself out from the current window size, with
             no orientation- or size-qualified resources to reload; staying alive keeps animations
-            running across the change, so the layout glides to its new shape (#163). Density,
-            locale and night-mode changes still recreate, as they should.
+            running across the change, so the layout glides to its new shape (#163). Night mode
+            too: the app's colours come from Compose's theme, and handing the chosen theme to the
+            system (#513) would otherwise restart the screen on every change in Settings. Density
+            and locale changes still recreate, as they should.
         -->
         <activity
             android:name=".MainActivity"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
             android:enableOnBackInvokedCallback="true"
             android:exported="true"
             android:launchMode="singleTask"
