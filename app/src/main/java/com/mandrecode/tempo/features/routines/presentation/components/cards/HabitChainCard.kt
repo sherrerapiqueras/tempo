@@ -59,6 +59,7 @@ import com.mandrecode.tempo.core.ui.components.glassCardElevation
 import com.mandrecode.tempo.core.ui.components.selectedContainerColor
 import com.mandrecode.tempo.core.ui.theme.LocalIsDarkTheme
 import com.mandrecode.tempo.core.ui.theme.TempoIcon
+import com.mandrecode.tempo.core.ui.theme.TempoSpacing.cardLeadingContentGap
 import com.mandrecode.tempo.core.ui.theme.chainTitle
 import com.mandrecode.tempo.core.ui.theme.resolveColor
 import com.mandrecode.tempo.core.ui.util.EnhancedDescriptionText
@@ -450,7 +451,7 @@ private fun AddHabitRow(
                 tint = accentColor,
             )
         }
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(cardLeadingContentGap))
         Text(
             text = stringResource(R.string.add_habit),
             style = MaterialTheme.typography.bodyLarge,

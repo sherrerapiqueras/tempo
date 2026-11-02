@@ -40,8 +40,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
+import com.mandrecode.tempo.core.ui.adaptive.adaptiveHorizontalMargin
 import com.mandrecode.tempo.core.ui.theme.IconCategory
 import com.mandrecode.tempo.core.ui.theme.TempoIcon
+import com.mandrecode.tempo.core.ui.theme.sheetTitle
 import com.mandrecode.tempo.core.ui.util.rememberPressableChipAnimation
 import com.mandrecode.tempo.core.ui.util.rememberPressableIconButtonAnimation
 
@@ -380,8 +382,6 @@ private fun BrowseCategoriesButton(
     }
 }
 
-private val MODAL_HORIZONTAL_PADDING = 24.dp
-
 /**
  * Modal listing every [TempoIcon], grouped and headed by its [IconCategory]. Reuses the same
  * adaptive row-sizing the collapsed row and [ColorPicker] use, so every category's icons line
@@ -397,6 +397,7 @@ private fun IconCategoryModal(
     onDismissRequest: () -> Unit,
 ) {
     val iconsByCategory = remember(allIcons) { allIcons.groupBy { it.category } }
+    val horizontalMargin = adaptiveHorizontalMargin()
 
     TempoModalBottomSheet(onDismissRequest = onDismissRequest) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
@@ -405,7 +406,7 @@ private fun IconCategoryModal(
                     availableWidth = maxWidth,
                     itemSize = ICON_OPTION_SIZE,
                     minGap = ROW_ITEM_MIN_GAP,
-                    horizontalPadding = MODAL_HORIZONTAL_PADDING * 2,
+                    horizontalPadding = horizontalMargin * 2,
                     minCount = DEFAULT_ITEMS_PER_ROW,
                     maxCount = MAX_MODAL_ITEMS_PER_ROW,
                 )
@@ -415,12 +416,12 @@ private fun IconCategoryModal(
                     Modifier
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
-                        .padding(horizontal = MODAL_HORIZONTAL_PADDING)
-                        .padding(top = 8.dp, bottom = 32.dp),
+                        .padding(horizontal = horizontalMargin)
+                        .padding(top = 12.dp, bottom = 32.dp),
             ) {
                 Text(
                     text = stringResource(R.string.icon_picker_all_icons_title),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.sheetTitle,
                 )
 
                 IconCategory.entries.forEach { category ->

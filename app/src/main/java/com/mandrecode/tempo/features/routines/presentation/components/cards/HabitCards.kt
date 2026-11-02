@@ -72,6 +72,7 @@ import com.mandrecode.tempo.core.ui.components.selectedTintOverlayColor
 import com.mandrecode.tempo.core.ui.theme.LocalIsDarkTheme
 import com.mandrecode.tempo.core.ui.theme.MutedContentAlpha
 import com.mandrecode.tempo.core.ui.theme.TempoIcon
+import com.mandrecode.tempo.core.ui.theme.TempoSpacing.cardLeadingContentGap
 import com.mandrecode.tempo.core.ui.theme.cardTitle
 import com.mandrecode.tempo.core.ui.theme.resolveColor
 import com.mandrecode.tempo.core.ui.theme.timelineTime
@@ -277,7 +278,7 @@ internal fun HabitItem(
             }
         }
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(cardLeadingContentGap))
 
         Column(
             modifier =

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -59,6 +60,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.mandrecode.tempo.R
+import com.mandrecode.tempo.core.ui.editor.EDITOR_CONTROL_HEIGHT
 import com.mandrecode.tempo.core.ui.theme.LocalIsDarkTheme
 import com.mandrecode.tempo.core.ui.theme.resolveColor
 import com.mandrecode.tempo.core.ui.util.rememberPressableChipAnimation
@@ -153,13 +155,26 @@ fun HabitMultiSelector(
             }
         } else if (selectedHabitIds.isEmpty()) {
             // Only show this if both are empty
-            Text(
-                text = stringResource(R.string.no_habits_available),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(8.dp),
-            )
+            NoAvailableHabitsMessage()
         }
+    }
+}
+
+/**
+ * A control's height, so it centres on the row's icon the way the chips it stands in for do, and no
+ * inset, so it starts where the rows' content does.
+ */
+@Composable
+private fun NoAvailableHabitsMessage() {
+    Box(
+        modifier = Modifier.fillMaxWidth().heightIn(min = EDITOR_CONTROL_HEIGHT),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Text(
+            text = stringResource(R.string.no_habits_available),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

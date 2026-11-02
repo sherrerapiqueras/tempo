@@ -43,6 +43,9 @@ object TempoSpacing {
     // Card content padding
     val cardContentPadding = 16.dp
 
+    /** Between a card row's leading checkbox and its title: Material's `ListTokens.ItemBetweenSpace`. */
+    val cardLeadingContentGap = 12.dp
+
     // Bottom navigation height
     val bottomNavHeight = 80.dp
 

@@ -27,12 +27,12 @@ import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.core.domain.model.DayOfWeek
 import com.mandrecode.tempo.core.domain.model.VacationPeriod
 import com.mandrecode.tempo.core.ui.adaptive.SheetPlacement
+import com.mandrecode.tempo.core.ui.adaptive.adaptiveHorizontalMargin
 import com.mandrecode.tempo.core.ui.components.HandleReminderPermissions
 import com.mandrecode.tempo.core.ui.components.TempoTimePickerDialog
 import com.mandrecode.tempo.core.ui.editor.EDITOR_AUTO_SAVE_DEBOUNCE_MS
 import com.mandrecode.tempo.core.ui.editor.canAutosaveEditorTitle
 import com.mandrecode.tempo.core.ui.editor.editorSaveableKey
-import com.mandrecode.tempo.core.ui.editor.editorSheetHorizontalPadding
 import com.mandrecode.tempo.core.ui.editor.rememberEditorAutosaveController
 import com.mandrecode.tempo.core.ui.editor.resolveEditorTitleEdit
 import com.mandrecode.tempo.core.ui.theme.LocalIsDarkTheme
@@ -502,7 +502,7 @@ internal fun HabitBottomSheetContent(
                 Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = editorSheetHorizontalPadding())
+                    .padding(horizontal = adaptiveHorizontalMargin())
                     .padding(top = 8.dp, bottom = 32.dp),
         ) {
             HabitBottomSheetBody(

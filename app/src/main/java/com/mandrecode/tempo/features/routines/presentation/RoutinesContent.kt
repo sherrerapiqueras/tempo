@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
 import com.mandrecode.tempo.core.domain.model.VacationPeriod
+import com.mandrecode.tempo.core.ui.adaptive.adaptiveHorizontalMargin
 import com.mandrecode.tempo.core.ui.components.FirstLoadCrossfade
 import com.mandrecode.tempo.core.ui.components.TempoLoadingIndicator
 import com.mandrecode.tempo.core.ui.components.WavyDivider
@@ -89,6 +90,7 @@ fun RoutinesContent(
     val density = LocalDensity.current
     val listState = rememberLazyListState()
     val listBottomPadding = floatingNavigationBottomClearancePadding(defaultPadding = 16.dp)
+    val horizontalMargin = adaptiveHorizontalMargin()
 
     Box(
         // Transparent: the page's ambient backdrop is painted once by the screen around this
@@ -152,8 +154,8 @@ fun RoutinesContent(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding =
                                 PaddingValues(
-                                    start = 16.dp,
-                                    end = 16.dp,
+                                    start = horizontalMargin,
+                                    end = horizontalMargin,
                                     top = 16.dp,
                                     bottom = listBottomPadding,
                                 ),

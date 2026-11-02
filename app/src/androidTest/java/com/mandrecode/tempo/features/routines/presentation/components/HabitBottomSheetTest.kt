@@ -718,6 +718,34 @@ class HabitBottomSheetTest {
     }
 
     @Test
+    fun noAvailableHabitsMessage_alignsWithItsRow_whenThereAreNoHabits() {
+        renderNewHabitChainSheet(habits = emptyList())
+        val targetContext = InstrumentationRegistry.getInstrumentation().targetContext
+
+        val icon =
+            composeTestRule
+                .onNodeWithContentDescription(selectHabits, useUnmergedTree = true)
+                .fetchSemanticsNode()
+                .boundsInRoot
+        val message =
+            composeTestRule
+                .onNodeWithText(targetContext.getString(R.string.no_habits_available), useUnmergedTree = true)
+                .fetchSemanticsNode()
+                .boundsInRoot
+        val density = targetContext.resources.displayMetrics.density
+
+        assertTrue(
+            "Expected the message centred on the icon; icon=$icon message=$message",
+            abs((icon.top + icon.bottom) / 2f - (message.top + message.bottom) / 2f) <= density,
+        )
+        // The icon sits 8dp into the row's 48dp slot, so the row's content starts 40dp after it.
+        assertTrue(
+            "Expected the message to start where the row's content does; icon=$icon message=$message",
+            abs(message.left - icon.left - 40f * density) <= density,
+        )
+    }
+
+    @Test
     fun habitSelectorIcon_remainsAlignedWithFirstSelectedHabit() {
         renderEditHabitChainSheet(
             chain = chainContainingHabit().copy(habitIds = listOf(1L, 2L)),

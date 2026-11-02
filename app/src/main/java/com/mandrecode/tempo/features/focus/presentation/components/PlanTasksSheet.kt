@@ -58,6 +58,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
 import com.mandrecode.tempo.core.ui.adaptive.SheetPlacement
+import com.mandrecode.tempo.core.ui.adaptive.adaptiveHorizontalMargin
 import com.mandrecode.tempo.core.ui.components.TempoLoadingIndicator
 import com.mandrecode.tempo.core.ui.components.TempoModalBottomSheet
 import com.mandrecode.tempo.core.ui.components.WavyDivider
@@ -217,7 +218,7 @@ private fun ColumnScope.PlanSheetBody(
             Modifier
                 .fillMaxWidth()
                 .heightIn(max = maxBodyHeight)
-                .padding(horizontal = 20.dp)
+                .padding(horizontal = adaptiveHorizontalMargin())
                 // The sheet is only as tall as this column, so every row that changes section
                 // resizes the whole surface. Left to itself that is a snap — the sheet jumps, and
                 // at the top of its range the corners and status-bar inset change with it. Animated

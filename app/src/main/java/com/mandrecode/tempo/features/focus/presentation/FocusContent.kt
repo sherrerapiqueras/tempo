@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
+import com.mandrecode.tempo.core.ui.adaptive.adaptiveHorizontalMargin
 import com.mandrecode.tempo.core.ui.components.FirstLoadCrossfade
 import com.mandrecode.tempo.core.ui.components.TempoLinkButton
 import com.mandrecode.tempo.core.ui.components.TempoLoadingIndicator
@@ -100,7 +101,7 @@ fun FocusContent(
                         Modifier
                             .fillMaxWidth()
                             .onSizeChanged { onContentBlockTopChange(with(density) { it.height.toDp() }) }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                            .padding(horizontal = adaptiveHorizontalMargin(), vertical = 12.dp),
                 )
 
                 Box(
@@ -149,8 +150,10 @@ private fun FocusAgendaList(
     bottomPadding: Dp,
     selectedTaskId: Long?,
 ) {
+    val horizontalMargin = adaptiveHorizontalMargin()
     LazyColumn(
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = bottomPadding),
+        contentPadding =
+            PaddingValues(start = horizontalMargin, end = horizontalMargin, top = 12.dp, bottom = bottomPadding),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxSize(),
     ) {

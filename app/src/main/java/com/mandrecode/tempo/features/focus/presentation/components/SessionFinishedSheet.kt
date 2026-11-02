@@ -13,6 +13,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
+import com.mandrecode.tempo.core.ui.adaptive.adaptiveHorizontalMargin
 import com.mandrecode.tempo.core.ui.components.TempoModalBottomSheet
 import com.mandrecode.tempo.features.focus.presentation.FocusContract
 
@@ -38,7 +39,11 @@ internal fun SessionFinishedSheet(
         onDismissRequest = { onEvent(FocusContract.UiEvent.DismissFinishedSession) },
     ) { _ ->
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = adaptiveHorizontalMargin())
+                    .padding(top = 12.dp, bottom = 8.dp),
         ) {
             FinishedHeading(finished = finished)
             FinishedChoices(

@@ -1,6 +1,7 @@
 package com.mandrecode.tempo.features.tasks.presentation.components.sections
 
 import android.content.res.Configuration
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -24,9 +25,11 @@ private fun SortBottomSheetItemsPreview() {
     TempoTheme {
         Surface {
             Column(
+                verticalArrangement = Arrangement.spacedBy(TasksSheetRowSpacing),
                 modifier =
                     Modifier
                         .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
                         .padding(bottom = 32.dp),
             ) {
                 SortOption.entries.forEach { sortOption ->
