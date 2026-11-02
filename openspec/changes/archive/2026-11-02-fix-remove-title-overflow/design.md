@@ -22,10 +22,12 @@ See proposal.md for why. `splitEditorTitle` and `descriptionWithTitleOverflow` d
 
 **Warn on closing a title that autosave can't store.** Autosaving editors skip the discard prompt because everything is already saved, which isn't true past the validation limit.
 
+**Show up to five title lines.** The three-line cap suited a 65-character title. Five matches the description and fits nearly any real title, while a cap keeps a very long title from pushing the options off screen. One value works at every window size because the sheet itself scrolls.
+
 **Flatten pasted line breaks to spaces.** The title has no second line to keep, and moving lines to the description is the behaviour being removed. Nothing is discarded.
 
 ## Risks / Trade-offs
 
 - Long titles are now reachable in practice, where the editor capped them at 65. Cards and Focus already cap their lines, and the chain selector's chips sit in a row that scrolls sideways. Mitigation: check a long title on the emulator.
-- A long title shows three lines in the editor and scrolls while focused, with no sign of more text when it isn't focused. Accepted: it's uncommon and nothing is lost.
+- A title past five lines scrolls while focused, with no sign of more text when it isn't focused. Accepted: five lines fits about 150 characters on a phone, so it's uncommon, and nothing is lost.
 - Autosave of a title over 500 characters reports the same error as a manual save. Accepted.

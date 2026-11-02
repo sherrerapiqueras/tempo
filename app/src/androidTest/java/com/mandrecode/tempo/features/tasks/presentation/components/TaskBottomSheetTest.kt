@@ -538,6 +538,21 @@ class TaskBottomSheetTest {
     }
 
     @Test
+    fun givenVeryLongTitle_whenEntered_thenFieldShowsFiveLines() {
+        renderSheet()
+
+        val title = composeTestRule.onNodeWithTag(TASK_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG)
+        val oneLineHeight = title.getBoundsInRoot().let { it.bottom - it.top }
+        title.performTextInput("word ".repeat(100))
+
+        // A line of titleLarge is 28dp, and the field's insets are the same at any height.
+        title
+            .getBoundsInRoot()
+            .let { it.bottom - it.top }
+            .assertIsEqualTo(oneLineHeight + 28.dp * 4, "five-line title field height", tolerance = 4.dp)
+    }
+
+    @Test
     fun givenPastedLineBreak_whenEntered_thenLinesJoinInTitle() {
         renderSheet()
 

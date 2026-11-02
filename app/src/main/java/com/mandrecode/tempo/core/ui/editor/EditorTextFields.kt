@@ -39,7 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
 import com.mandrecode.tempo.core.ui.theme.inputTitle
 
-private const val TITLE_MAX_LINES = 3
+private const val TITLE_MAX_LINES = 5
 private const val DESCRIPTION_MAX_LINES = 5
 
 /**

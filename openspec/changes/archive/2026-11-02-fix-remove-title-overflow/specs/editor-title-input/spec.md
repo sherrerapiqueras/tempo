@@ -20,6 +20,15 @@ The system SHALL keep all typed and pasted title text in the title field, and SH
 - **WHEN** a user pastes text longer than the title field can show
 - **THEN** all of the text is in the title and the field scrolls to show it
 
+### Requirement: Long titles show up to five lines
+
+The system SHALL grow the title field with its text up to five visible lines, and SHALL scroll within the field past that.
+
+#### Scenario: A title longer than five lines
+
+- **WHEN** a title needs more than five lines
+- **THEN** the field shows five lines and scrolls to reach the rest
+
 ### Requirement: Titles over the validation limit are rejected on save
 
 When a title is longer than the 500-character validation limit, the system SHALL show the title-too-long error on save and SHALL keep the text in the field.
