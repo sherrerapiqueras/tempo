@@ -1,10 +1,14 @@
 package com.mandrecode.tempo.features.focus.presentation
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTextInput
+import com.google.common.truth.Truth.assertThat
 import com.mandrecode.tempo.core.data.preferences.TasksScreenPreferencesRepository
 import com.mandrecode.tempo.core.ui.adaptive.SheetPlacement
 import com.mandrecode.tempo.core.ui.theme.TempoTheme
@@ -12,6 +16,7 @@ import com.mandrecode.tempo.features.tasks.domain.model.Category
 import com.mandrecode.tempo.features.tasks.domain.repository.CategoryRepository
 import com.mandrecode.tempo.features.tasks.domain.repository.TaskRepository
 import com.mandrecode.tempo.features.tasks.domain.usecase.TaskSectionUseCases
+import com.mandrecode.tempo.features.tasks.presentation.TasksContract
 import com.mandrecode.tempo.features.tasks.presentation.TasksViewModel
 import com.mandrecode.tempo.features.tasks.presentation.components.TASK_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG
 import io.mockk.coEvery
@@ -37,6 +42,36 @@ class FocusTaskEditorTest {
     /** The same holds beside the agenda on a large window (#502). */
     @Test
     fun recreatingTheScreen_keepsTheDraftInTheDockedPane() = recreatingTheScreenKeepsTheDraft(SheetPlacement.DockedPane)
+
+    /** The pane slides out holding the same target, so reopening that task must still ask (#502). */
+    @Test
+    fun askingForTheSameTaskAgainDuringThePanesExit_reopensTheForm() {
+        val viewModel = tasksViewModel()
+        var isRequested by mutableStateOf(true)
+        composeTestRule.setContent {
+            TempoTheme {
+                FocusTaskEditor(
+                    target = FocusContract.TaskEditorTarget.NewTask,
+                    onDismiss = {},
+                    placement = SheetPlacement.DockedPane,
+                    dismissRequestKey = 0,
+                    isRequested = isRequested,
+                    viewModel = viewModel,
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        viewModel.onEvent(TasksContract.UiEvent.HideTaskDialog)
+        isRequested = false
+        composeTestRule.waitForIdle()
+        assertThat(viewModel.uiState.value.taskForm.isVisible).isFalse()
+
+        isRequested = true
+        composeTestRule.waitForIdle()
+
+        assertThat(viewModel.uiState.value.taskForm.isVisible).isTrue()
+    }
 
     private fun recreatingTheScreenKeepsTheDraft(placement: SheetPlacement) {
         val viewModel = tasksViewModel()

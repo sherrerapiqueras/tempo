@@ -61,7 +61,7 @@ fun FocusSessionRoute(
     // screen the moment it opened. Raw ids, not the resolved entry, for the same reason — the
     // agenda the task is looked up in loads later still.
     val subject = rememberSaveable { mutableStateOf<Long?>(null) }
-    subject.value = subject.value ?: uiState.sessionTaskId
+    subject.value = nextSessionSubject(placement == SheetPlacement.DockedPane, subject.value, uiState.sessionTaskId)
     val subjectTaskId = subject.value
     val hasSomethingToShow = subjectTaskId != null && uiState.sessionTaskId == subjectTaskId
     LaunchedEffect(subjectTaskId, hasSomethingToShow) {

@@ -26,7 +26,8 @@ import com.mandrecode.tempo.features.tasks.presentation.components.dialogs.Delet
  *
  * [placement] is where the screen shows it: docked beside the agenda on a large window, as in
  * Tasks (#502), otherwise a bottom sheet. [dismissRequestKey] closes a docked editor through its
- * guarded dismiss when the open task's card is tapped again.
+ * guarded dismiss when the open task's card is tapped again. [isRequested] goes false while the
+ * pane slides out holding the last target, so asking for that same task again still reopens it.
  */
 @Composable
 internal fun FocusTaskEditor(
@@ -34,6 +35,7 @@ internal fun FocusTaskEditor(
     onDismiss: () -> Unit,
     placement: SheetPlacement,
     dismissRequestKey: Int,
+    isRequested: Boolean = true,
     viewModel: TasksViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -43,7 +45,8 @@ internal fun FocusTaskEditor(
     // change but this composable does not, and asking it to open again would reset the form the
     // user is half-way through — and the session its draft is saved under.
     var openedFor by rememberSaveable { mutableStateOf<String?>(null) }
-    LaunchedEffect(target) {
+    LaunchedEffect(target, isRequested) {
+        if (!isRequested) return@LaunchedEffect
         val key = target.editorKey()
         if (openedFor == key && viewModel.uiState.value.taskForm.isVisible) return@LaunchedEffect
         openedFor = key

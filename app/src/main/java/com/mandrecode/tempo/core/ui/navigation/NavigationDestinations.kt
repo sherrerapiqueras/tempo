@@ -32,6 +32,7 @@ internal fun FocusDestination(
     onFloatingBarStateChange: (FocusFloatingBarState) -> Unit,
     onOpenTaskInTasks: (Long) -> Unit,
 ) {
+    val closeSession = { if (navigator.currentRoute == FocusSessionRoute) navigator.pop() }
     FocusScreen(
         viewModel = tabViewModel<FocusViewModel>(),
         topBar = { isVacationModeActive ->
@@ -48,9 +49,12 @@ internal fun FocusDestination(
         },
         onOpenSession = { navigator.navigate(FocusSessionRoute) },
         onFloatingBarStateChange = onFloatingBarStateChange,
-        isSessionOpen = navigator.currentRoute == FocusSessionRoute,
-        onCloseSession = { if (navigator.currentRoute == FocusSessionRoute) navigator.pop() },
-        onOpenTaskInTasks = onOpenTaskInTasks,
+        isSessionRouteOpen = navigator.currentRoute == FocusSessionRoute,
+        onCloseSession = { closeSession() },
+        onOpenTaskInTasks = { taskId ->
+            closeSession()
+            onOpenTaskInTasks(taskId)
+        },
     )
 }
 

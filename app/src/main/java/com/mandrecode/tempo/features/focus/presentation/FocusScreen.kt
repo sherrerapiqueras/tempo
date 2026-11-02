@@ -61,10 +61,10 @@ fun FocusScreen(
     /** Hands the floating bar its add action, which opens the task form over Focus (#434). */
     onFloatingBarStateChange: (FocusFloatingBarState) -> Unit = {},
     /**
-     * Whether the session is open. On a large window Focus docks it beside the agenda (#502), and
+     * Whether the session's route is open. On a large window Focus docks it beside the agenda (#502), and
      * [onCloseSession] closes it; otherwise the app shows it as a sheet and this screen ignores it.
      */
-    isSessionOpen: Boolean = false,
+    isSessionRouteOpen: Boolean = false,
     onCloseSession: () -> Unit = {},
     onOpenTaskInTasks: (Long) -> Unit = {},
     viewModel: FocusViewModel = viewModel(),
@@ -82,8 +82,8 @@ fun FocusScreen(
     val railContentClearance = floatingRailContentClearance()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val editor = focusEditorHost(uiState, viewModel::onEvent, isSessionOpen, onCloseSession)
-    val contentBias = animatedDockedContentBias(editor.isPaneVisible)
+    val pane = focusPaneHost(uiState, viewModel::onEvent, isSessionRouteOpen, onCloseSession)
+    val contentBias = animatedDockedContentBias(pane.isPaneVisible)
     var contentBlockTop by remember { mutableStateOf(0.dp) }
 
     FocusEffects(
@@ -119,24 +119,24 @@ fun FocusScreen(
             Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
                 FocusContent(
                     uiState = uiState,
-                    onEvent = editor.onContentEvent,
-                    selectedTaskId = editor.selectedTaskId,
+                    onEvent = pane.onContentEvent,
+                    selectedTaskId = pane.selectedTaskId,
                     onContentBlockTopChange = { contentBlockTop = it },
                 )
 
                 FocusSnackbarHost(snackbarHostState)
             }
         }
-        DockedEditorPane(visible = editor.isPaneVisible, contentBlockTop = contentBlockTop) {
+        DockedEditorPane(visible = pane.isPaneVisible, contentBlockTop = contentBlockTop) {
             // Only while docking is possible: past the breakpoint the editor moves to the sheet in
             // the same frame the pane starts its exit, and must not be in both places.
-            if (editor.canDock) {
-                FocusPaneContent(editor, onCloseSession, onOpenTaskInTasks, viewModel::onEvent)
+            if (pane.canDock) {
+                FocusPaneContent(pane, onCloseSession, onOpenTaskInTasks, viewModel::onEvent)
             }
         }
     }
 
-    FocusOverlays(uiState = uiState, editor = editor, onEvent = viewModel::onEvent)
+    FocusOverlays(uiState = uiState, pane = pane, onEvent = viewModel::onEvent)
 }
 
 /**
@@ -160,13 +160,13 @@ private fun FocusSnackbarHost(snackbarHostState: SnackbarHostState) {
 
 @Composable
 private fun FocusPaneContent(
-    editor: FocusEditorHost,
+    pane: FocusPaneHost,
     onCloseSession: () -> Unit,
     onOpenTaskInTasks: (Long) -> Unit,
     onEvent: (FocusContract.UiEvent) -> Unit,
 ) {
-    when (editor.shownPane) {
-        FocusPane.EDITOR -> editor.shownTarget?.let { editor.content(it, SheetPlacement.DockedPane) }
+    when (pane.shownPane) {
+        FocusPane.EDITOR -> pane.shownTarget?.let { pane.content(it, SheetPlacement.DockedPane) }
         // Its own view model, as the session sheet has: the state it shows comes from the
         // repositories both observe. A subtask it opens goes to the agenda's editor, which takes
         // over the pane.
@@ -188,7 +188,7 @@ private const val DOCKED_SESSION_VIEW_MODEL_KEY = "tempo.focus.dockedSession"
 @Composable
 private fun FocusOverlays(
     uiState: FocusContract.UiState,
-    editor: FocusEditorHost,
+    pane: FocusPaneHost,
     onEvent: (FocusContract.UiEvent) -> Unit,
 ) {
     uiState.pendingStart?.let { pending ->
@@ -201,8 +201,8 @@ private fun FocusOverlays(
         PlanTasksSheet(state = planSheet, onEvent = onEvent)
     }
 
-    if (!editor.canDock) {
-        uiState.taskEditor?.let { editor.content(it, SheetPlacement.BottomSheet) }
+    if (!pane.canDock) {
+        uiState.taskEditor?.let { pane.content(it, SheetPlacement.BottomSheet) }
     }
 }
 

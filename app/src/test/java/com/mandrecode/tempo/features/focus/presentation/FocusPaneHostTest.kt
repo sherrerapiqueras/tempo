@@ -6,7 +6,7 @@ import com.mandrecode.tempo.features.tasks.domain.model.Task
 import org.junit.Test
 
 /** What Focus's docked pane holds on a large window, and what closes it there (#502). */
-class FocusEditorHostTest {
+class FocusPaneHostTest {
     private val openTask = Task(id = 7, title = "Reply to client emails", description = "")
     private val otherTask = Task(id = 8, title = "Book the dentist", description = "")
 
@@ -26,20 +26,34 @@ class FocusEditorHostTest {
     private val editing = FocusContract.UiState(taskEditor = FocusContract.TaskEditorTarget.Existing(openTask))
 
     @Test
-    fun givenLargeWindow_whenNothingElseIsOpen_thenTheEditorDocks() {
-        assertThat(canDockFocusEditor(SheetPlacement.DockedPane, FocusContract.UiState())).isTrue()
+    fun givenLargeWindow_whenNothingElseIsOpen_thenThePaneIsAvailable() {
+        assertThat(canDockFocusPane(SheetPlacement.DockedPane, isEditorOverPlanSheet = false)).isTrue()
     }
 
     @Test
-    fun givenLargeWindow_whenPlanningIsOpen_thenTheEditorStaysASheetOverIt() {
-        val planning = FocusContract.UiState(planSheet = FocusContract.PlanSheetState())
-
-        assertThat(canDockFocusEditor(SheetPlacement.DockedPane, planning)).isFalse()
+    fun givenLargeWindow_whenATaskOpensFromPlanning_thenItStaysASheetOverIt() {
+        assertThat(canDockFocusPane(SheetPlacement.DockedPane, isEditorOverPlanSheet = true)).isFalse()
     }
 
     @Test
-    fun givenSmallerWindow_whenChoosing_thenTheEditorIsASheet() {
-        assertThat(canDockFocusEditor(SheetPlacement.BottomSheet, FocusContract.UiState())).isFalse()
+    fun givenSmallerWindow_whenChoosing_thenThereIsNoPane() {
+        assertThat(canDockFocusPane(SheetPlacement.BottomSheet, isEditorOverPlanSheet = false)).isFalse()
+    }
+
+    @Test
+    fun givenASheet_whenAnotherTaskBecomesTheSubject_thenItStaysOnTheFirst() {
+        assertThat(nextSessionSubject(isDocked = false, subject = 1, sessionTaskId = 2)).isEqualTo(1L)
+        assertThat(nextSessionSubject(isDocked = false, subject = null, sessionTaskId = 2)).isEqualTo(2L)
+    }
+
+    @Test
+    fun givenDockedSession_whenAnotherTaskIsChosen_thenThePaneFollowsIt() {
+        assertThat(nextSessionSubject(isDocked = true, subject = 1, sessionTaskId = 2)).isEqualTo(2L)
+    }
+
+    @Test
+    fun givenDockedSession_whenTheSessionEnds_thenItKeepsTheSubjectSoItCanClose() {
+        assertThat(nextSessionSubject(isDocked = true, subject = 1, sessionTaskId = null)).isEqualTo(1L)
     }
 
     @Test

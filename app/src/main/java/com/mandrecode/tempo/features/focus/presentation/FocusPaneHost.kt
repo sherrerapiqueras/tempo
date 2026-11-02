@@ -19,7 +19,7 @@ import com.mandrecode.tempo.core.ui.util.rememberFrozenWhileHidden
  * Otherwise each is a bottom sheet. An edit opened from the Plan tasks sheet stays a sheet over it,
  * so closing the form returns to planning.
  */
-internal class FocusEditorHost(
+internal class FocusPaneHost(
     /** Whether the pane is available right now; when false, editors and the session are sheets. */
     val canDock: Boolean,
     /** Whether the pane is showing, with a task or the session in it. */
@@ -39,11 +39,25 @@ internal class FocusEditorHost(
 /** What Focus's docked pane holds. */
 internal enum class FocusPane { NONE, EDITOR, SESSION }
 
-/** Whether a task editor docks: only on a large window, and never over the Plan tasks sheet. */
-internal fun canDockFocusEditor(
+/**
+ * Whether the pane is available: only on a large window, and not for a task opened from the Plan
+ * tasks sheet. What was already docked when planning began stays there, behind the sheet.
+ */
+internal fun canDockFocusPane(
     placement: SheetPlacement,
-    uiState: FocusContract.UiState,
-): Boolean = placement == SheetPlacement.DockedPane && uiState.planSheet == null
+    isEditorOverPlanSheet: Boolean,
+): Boolean = placement == SheetPlacement.DockedPane && !isEditorOverPlanSheet
+
+/**
+ * The task the session surface is about. A sheet latches the first one it hears of, since nothing
+ * behind it can be tapped. Docked, the agenda stays live, so the pane follows a newly chosen task,
+ * and keeps the last one once there is none, which is how it knows to close.
+ */
+internal fun nextSessionSubject(
+    isDocked: Boolean,
+    subject: Long?,
+    sessionTaskId: Long?,
+): Long? = if (isDocked) sessionTaskId ?: subject else subject ?: sessionTaskId
 
 /** What the pane shows: a task when one is open, else the session when it is, else nothing. */
 internal fun focusPane(
@@ -87,19 +101,25 @@ internal fun closesDockedEditor(
 ): Boolean = isDocked && event is FocusContract.UiEvent.EditTask && event.task.id == editingTaskId
 
 @Composable
-internal fun focusEditorHost(
+internal fun focusPaneHost(
     uiState: FocusContract.UiState,
     onEvent: (FocusContract.UiEvent) -> Unit,
-    isSessionOpen: Boolean,
+    isSessionRouteOpen: Boolean,
     onCloseSession: () -> Unit,
-): FocusEditorHost {
-    val canDock = canDockFocusEditor(rememberSheetPlacement(), uiState)
+): FocusPaneHost {
+    // Decided when the editor opens, so planning doesn't disturb a task already docked.
+    val isEditorOverPlanSheet =
+        remember(uiState.taskEditor) { uiState.taskEditor != null && uiState.planSheet != null }
+    val canDock = canDockFocusPane(rememberSheetPlacement(), isEditorOverPlanSheet)
     val isEditorOpen = uiState.taskEditor != null
+    // The route alone isn't enough: restored after the session ended, it has nothing to show, and
+    // an empty pane would have no way to close.
+    val isSessionOpen = isSessionRouteOpen && uiState.sessionTaskId != null
     val pane = focusPane(canDock, isEditorOpen, isSessionOpen)
     val isEditorDocked = pane == FocusPane.EDITOR
     val editingTaskId = uiState.editingTaskId()
     var dismissRequestKey by remember { mutableIntStateOf(0) }
-    val currentDismissRequestKey by rememberUpdatedState(dismissRequestKey)
+    val currentIsEditorOpen by rememberUpdatedState(isEditorOpen)
     val currentOnEvent by rememberUpdatedState(onEvent)
     val currentOnCloseSession by rememberUpdatedState(onCloseSession)
     // The pane holds one thing, the one opened last. A task opened while the session is docked
@@ -126,11 +146,12 @@ internal fun focusEditorHost(
                     target = target,
                     onDismiss = { currentOnEvent(FocusContract.UiEvent.DismissEditor) },
                     placement = placement,
-                    dismissRequestKey = currentDismissRequestKey,
+                    dismissRequestKey = dismissRequestKey,
+                    isRequested = currentIsEditorOpen,
                 )
             }
         }
-    return FocusEditorHost(
+    return FocusPaneHost(
         canDock = canDock,
         isPaneVisible = pane != FocusPane.NONE,
         shownPane = rememberFrozenWhileHidden(pane, isLive = pane != FocusPane.NONE),
