@@ -24,7 +24,6 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.core.domain.model.DayOfWeek
@@ -36,8 +35,10 @@ import com.mandrecode.tempo.core.ui.components.HandleReminderPermissions
 import com.mandrecode.tempo.core.ui.components.TempoTimePickerDialog
 import com.mandrecode.tempo.core.ui.editor.EDITOR_AUTO_SAVE_DEBOUNCE_MS
 import com.mandrecode.tempo.core.ui.editor.EDITOR_MAX_TITLE_LENGTH
+import com.mandrecode.tempo.core.ui.editor.descriptionWithTitleOverflow
 import com.mandrecode.tempo.core.ui.editor.editorSaveableKey
 import com.mandrecode.tempo.core.ui.editor.rememberEditorAutosaveController
+import com.mandrecode.tempo.core.ui.editor.splitEditorTitle
 import com.mandrecode.tempo.core.ui.util.DebouncedSnapshotEffect
 import com.mandrecode.tempo.core.ui.util.DescriptionEditorState
 import com.mandrecode.tempo.core.ui.util.IncrementalLinkVisualTransformation
@@ -393,12 +394,12 @@ internal fun TaskBottomSheetContent(
                             if (newValue.contains("\n")) {
                                 focusManager.clearFocus()
                             } else if (newValue.length > EDITOR_MAX_TITLE_LENGTH) {
-                                val overflow = newValue.substring(EDITOR_MAX_TITLE_LENGTH)
-                                taskTitle = newValue.substring(0, EDITOR_MAX_TITLE_LENGTH)
+                                val split = splitEditorTitle(newValue)
+                                taskTitle = split.title
                                 updateDescription(
-                                    TextFieldValue(
-                                        text = overflow + descriptionState.value.text,
-                                        selection = TextRange(overflow.length),
+                                    descriptionWithTitleOverflow(
+                                        overflow = split.overflow,
+                                        description = descriptionState.value.text,
                                     ),
                                 )
                                 isDescriptionDirty = descriptionState.value.text != initialDescription
