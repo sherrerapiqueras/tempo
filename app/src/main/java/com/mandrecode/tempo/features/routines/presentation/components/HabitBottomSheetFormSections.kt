@@ -14,10 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.InputChip
-import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -39,12 +35,11 @@ import com.mandrecode.tempo.core.ui.components.DayOfWeekSelector
 import com.mandrecode.tempo.core.ui.components.HabitCompletionCheckbox
 import com.mandrecode.tempo.core.ui.components.IconPicker
 import com.mandrecode.tempo.core.ui.components.SelectorButtonGroup
-import com.mandrecode.tempo.core.ui.editor.EDITOR_CONTROL_HEIGHT
 import com.mandrecode.tempo.core.ui.editor.EDITOR_PROPERTY_ROW_GAP
-import com.mandrecode.tempo.core.ui.editor.EDITOR_SET_ITEM_CORNER_RADIUS
 import com.mandrecode.tempo.core.ui.editor.EDITOR_TEXT_FIELD_BOTTOM_INSET
 import com.mandrecode.tempo.core.ui.editor.EditorAddButton
 import com.mandrecode.tempo.core.ui.editor.EditorPropertyRow
+import com.mandrecode.tempo.core.ui.editor.EditorValueChip
 import com.mandrecode.tempo.core.ui.editor.editorTransparentTextFieldColors
 import com.mandrecode.tempo.core.ui.theme.inputTitle
 import com.mandrecode.tempo.core.ui.theme.resolveColor
@@ -553,41 +548,11 @@ private fun HabitReminderSection(
         iconContentDescription = stringResource(R.string.reminder_label),
     ) {
         if (formattedReminder != null) {
-            val chipShape =
-                androidx.compose.foundation.shape
-                    .RoundedCornerShape(EDITOR_SET_ITEM_CORNER_RADIUS)
-            InputChip(
-                selected = true,
+            EditorValueChip(
+                label = formattedReminder,
                 onClick = onSetReminderClick,
-                shape = chipShape,
-                label = {
-                    Text(
-                        text = formattedReminder,
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.padding(vertical = 12.dp),
-                    )
-                },
-                trailingIcon = {
-                    IconButton(onClick = onClearReminder) {
-                        Icon(
-                            painterResource(R.drawable.ic_close),
-                            contentDescription = stringResource(R.string.clear_reminder),
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
-                },
-                colors =
-                    InputChipDefaults.inputChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                        selectedLeadingIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                        selectedTrailingIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    ),
-                border = null,
-                modifier =
-                    Modifier
-                        .padding(start = 4.dp)
-                        .height(EDITOR_CONTROL_HEIGHT),
+                onClear = onClearReminder,
+                clearContentDescription = stringResource(R.string.clear_reminder),
             )
         } else {
             EditorAddButton(

@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import com.google.common.truth.Truth.assertThat
 import com.mandrecode.tempo.core.domain.model.DayOfWeek
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import org.junit.Test
 
@@ -115,5 +116,19 @@ class ConvertersTest {
         val csv = converters.fromDayOfWeekSet(original)
         val restored = converters.toDayOfWeekSet(csv)
         assertThat(restored).isEqualTo(original)
+    }
+
+    @Test
+    fun `LocalDate round-trip preserves value`() {
+        val date = LocalDate(2027, 3, 31)
+
+        assertThat(converters.localDateToString(date)).isEqualTo("2027-03-31")
+        assertThat(converters.fromLocalDateString("2027-03-31")).isEqualTo(date)
+    }
+
+    @Test
+    fun `LocalDate converters pass null through`() {
+        assertThat(converters.localDateToString(null)).isNull()
+        assertThat(converters.fromLocalDateString(null)).isNull()
     }
 }

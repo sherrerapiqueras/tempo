@@ -184,6 +184,9 @@
     <string name="add_reminder">Add Reminder</string>
     <string name="add_reminder_time">Add reminder time</string>
     <string name="clear_reminder">Clear Reminder</string>
+    <string name="add_end_date">Add end date</string>
+    <string name="periodicity_until">Until %1$s</string>
+    <string name="clear_end_date">Clear end date</string>
     <string name="select_time">Select time</string>
     <string name="mark_as_completed">Mark as completed</string>
     <string name="task_reminder_start_session">Start session</string>
@@ -241,11 +244,11 @@
     <string name="msg_permission_needed">Permission needed for reminders.</string>
     <string name="msg_task_added_success">Task added successfully</string>
     <string name="msg_task_added_reminder_advanced">Task added. Reminder adjusted to next occurrence</string>
-    <string name="msg_task_added_past_reminder_no_periodicity">Task added. Reminder is in the past and won\'t fire without periodicity</string>
+    <string name="msg_task_added_past_reminder">Task added. Reminder is in the past and won\'t fire</string>
     <string name="msg_task_added_failed_scheduling">Task added, but reminder scheduling failed</string>
     <string name="msg_task_updated_success">Task updated successfully</string>
     <string name="msg_task_updated_reminder_advanced">Task updated. Reminder adjusted to next occurrence</string>
-    <string name="msg_task_updated_past_reminder_no_periodicity">Task updated. Reminder is in the past and won\'t fire without periodicity</string>
+    <string name="msg_task_updated_past_reminder">Task updated. Reminder is in the past and won\'t fire</string>
     <string name="msg_task_updated_failed_scheduling">Task updated, but reminder scheduling failed</string>
     <string name="msg_task_add_failed">Failed to add task: %1$s</string>
     <string name="msg_task_update_failed">Failed to update task: %1$s</string>

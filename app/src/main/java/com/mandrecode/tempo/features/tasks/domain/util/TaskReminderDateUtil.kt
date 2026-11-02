@@ -25,16 +25,56 @@ object TaskReminderDateUtil {
     /**
      * If the task has a reminder date in the past and a periodicity is configured,
      * advances the reminder date to the next future occurrence so the first alarm
-     * is actually scheduled instead of silently skipped.
+     * is actually scheduled instead of silently skipped. A reminder is left where it is when the
+     * next future occurrence would fall after the series' end date.
      */
     fun advanceReminderIfNeeded(
         task: Task,
         now: LocalDateTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()),
     ): Task {
-        val reminderDate = task.reminderDate ?: return task
-        val periodicity = task.periodicity ?: return task
+        val advanced = advancePastNow(task, now)
+        return if (advanced.isWithinEndDate()) advanced else task
+    }
 
-        if (reminderDate >= now) return task
+    /**
+     * The date of the occurrence that follows [task], skipping any already past [now], or null
+     * when that would fall after the series' end date, meaning [task] is its last occurrence.
+     *
+     * The end date has to be checked after skipping ahead: an occurrence that is within the end
+     * date but already past would otherwise be created, and then roll over again, until the
+     * series ran out.
+     */
+    fun nextOccurrenceWithinEnd(
+        task: Task,
+        now: LocalDateTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()),
+    ): LocalDateTime? {
+        val periodicity = task.periodicity ?: return null
+        val next =
+            calculateNextOccurrence(
+                from = task.reminderDate ?: now,
+                periodicity = periodicity,
+                interval = task.periodicityInterval,
+                repeatDays = task.repeatDays,
+                monthDayOption = task.monthDayOption,
+            )
+        return advancePastNow(task.copy(reminderDate = next), now)
+            .takeIf { it.isWithinEndDate() }
+            ?.reminderDate
+    }
+
+    private fun Task.isWithinEndDate(): Boolean {
+        val endDate = periodicityEndDate
+        val date = reminderDate?.date
+        return endDate == null || date == null || date <= endDate
+    }
+
+    private fun advancePastNow(
+        task: Task,
+        now: LocalDateTime,
+    ): Task {
+        val reminderDate = task.reminderDate
+        val periodicity = task.periodicity
+        if (reminderDate == null || periodicity == null || reminderDate >= now) return task
 
         val zone = TimeZone.currentSystemDefault()
         val nextDate =
@@ -54,7 +94,8 @@ object TaskReminderDateUtil {
      * Computes the next reminder date after [from], taking into account the full
      * recurrence configuration (periodicity type, interval, repeat-days, month-day option).
      *
-     * Used by [ToggleTaskCompletionUseCase] to compute the next instance's reminder.
+     * Knows nothing of the end date, or of [now][Clock]: to decide what a series does next, use
+     * [nextOccurrenceWithinEnd].
      */
     fun calculateNextOccurrence(
         from: LocalDateTime,
@@ -93,14 +134,16 @@ object TaskReminderDateUtil {
     }
 
     /**
-     * Returns true when the task has a past reminder but no periodicity,
-     * so the caller can inform the user that the reminder won't fire.
+     * Returns true when the task's reminder is in the past and has nowhere to go: it has no
+     * periodicity, or its next occurrence would fall after the end date. The caller can then tell
+     * the user that the reminder won't fire.
      */
-    fun isPastReminderWithoutPeriodicity(task: Task): Boolean {
+    fun isPastReminderThatWontFire(
+        task: Task,
+        now: LocalDateTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()),
+    ): Boolean {
         val reminderDate = task.reminderDate ?: return false
-        if (task.periodicity != null) return false
-        val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-        return reminderDate < now
+        return reminderDate < now && (task.periodicity == null || !advancePastNow(task, now).isWithinEndDate())
     }
 
     // ── private helpers ─────────────────────────────────────────────────

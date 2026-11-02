@@ -54,7 +54,7 @@ interface TaskDao {
 
     @Query(
         "UPDATE tasks SET reminderDate = NULL, periodicity = NULL, " +
-            "periodicityInterval = 1, repeatDays = NULL, monthDayOption = NULL",
+            "periodicityInterval = 1, repeatDays = NULL, monthDayOption = NULL, periodicityEndDate = NULL",
     )
     suspend fun clearAllReminders()
 

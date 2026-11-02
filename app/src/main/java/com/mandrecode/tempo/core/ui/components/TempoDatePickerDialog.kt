@@ -32,6 +32,7 @@ fun TempoDatePickerDialog(
     onConfirm: (LocalDate) -> Unit,
     onDismiss: () -> Unit,
     selectableDates: SelectableDates = DatePickerDefaults.AllDates,
+    initialDisplayedDate: LocalDate? = null,
 ) {
     val haptic = LocalHapticFeedback.current
 
@@ -41,6 +42,8 @@ fun TempoDatePickerDialog(
     val datePickerState =
         rememberDatePickerState(
             initialSelectedDateMillis = initialMillis,
+            initialDisplayedMonthMillis =
+                initialMillis ?: initialDisplayedDate?.atStartOfDayIn(TimeZone.UTC)?.toEpochMilliseconds(),
             selectableDates = selectableDates,
         )
 

@@ -24,9 +24,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.InputChip
-import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -57,12 +54,11 @@ import com.mandrecode.tempo.core.ui.components.DayOfWeekSelector
 import com.mandrecode.tempo.core.ui.components.SelectorButtonGroup
 import com.mandrecode.tempo.core.ui.components.TaskCompletionCheckbox
 import com.mandrecode.tempo.core.ui.components.selectorButtonColors
-import com.mandrecode.tempo.core.ui.editor.EDITOR_CONTROL_HEIGHT
 import com.mandrecode.tempo.core.ui.editor.EDITOR_PROPERTY_ROW_GAP
-import com.mandrecode.tempo.core.ui.editor.EDITOR_SET_ITEM_CORNER_RADIUS
 import com.mandrecode.tempo.core.ui.editor.EDITOR_TEXT_FIELD_BOTTOM_INSET
 import com.mandrecode.tempo.core.ui.editor.EditorAddButton
 import com.mandrecode.tempo.core.ui.editor.EditorPropertyRow
+import com.mandrecode.tempo.core.ui.editor.EditorValueChip
 import com.mandrecode.tempo.core.ui.editor.editorTransparentTextFieldColors
 import com.mandrecode.tempo.core.ui.theme.TempoIcon
 import com.mandrecode.tempo.core.ui.theme.inputTitle
@@ -477,43 +473,11 @@ private fun TaskReminderAndPeriodicitySection(
                 iconPainter = painterResource(R.drawable.ic_reminder),
                 iconContentDescription = stringResource(R.string.reminder_label),
             ) {
-                val chipShape =
-                    androidx.compose.foundation.shape
-                        .RoundedCornerShape(EDITOR_SET_ITEM_CORNER_RADIUS)
-                InputChip(
-                    selected = true,
+                EditorValueChip(
+                    label = state.formattedReminder,
                     onClick = actions.onSetReminderClicked,
-                    shape = chipShape,
-                    label = {
-                        Text(
-                            text = state.formattedReminder,
-                            style = MaterialTheme.typography.labelLarge,
-                            modifier = Modifier.padding(vertical = 12.dp),
-                        )
-                    },
-                    trailingIcon = {
-                        if (state.task == null || !state.task.isCompleted) {
-                            IconButton(onClick = actions.onClearReminder) {
-                                Icon(
-                                    painterResource(R.drawable.ic_close),
-                                    contentDescription = stringResource(R.string.clear_reminder),
-                                    modifier = Modifier.size(18.dp),
-                                )
-                            }
-                        }
-                    },
-                    colors =
-                        InputChipDefaults.inputChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                            selectedLeadingIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                            selectedTrailingIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                        ),
-                    border = null,
-                    modifier =
-                        Modifier
-                            .padding(start = 4.dp)
-                            .height(EDITOR_CONTROL_HEIGHT),
+                    onClear = actions.onClearReminder.takeIf { state.task == null || !state.task.isCompleted },
+                    clearContentDescription = stringResource(R.string.clear_reminder),
                 )
             }
 
@@ -735,5 +699,18 @@ private fun TaskPeriodicitySection(
 
             else -> { /* No sub-options for DAILY / YEARLY */ }
         }
+    }
+
+    AnimatedVisibility(
+        visible = state.formState.periodicity != null,
+        enter = expandVertically() + fadeIn(),
+        exit = shrinkVertically() + fadeOut(),
+    ) {
+        PeriodicityEndDateRow(
+            endDate = state.formState.periodicityEndDate,
+            reminderDate = state.formState.reminderDate?.date,
+            enabled = !isPeriodicityReadOnly,
+            onEndDateChange = actions.onSetPeriodicityEndDate,
+        )
     }
 }

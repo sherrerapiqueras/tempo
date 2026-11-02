@@ -383,6 +383,36 @@ class RescheduleRemindersWorkerTest {
         }
 
     @Test
+    fun `doWork leaves the reminder alone when rollover ends the series`() =
+        runTest {
+            val systemZone = TimeZone.currentSystemDefault()
+            val nowTime = LocalDateTime(2020, 1, 3, 12, 0)
+            coEvery { clock.now() } returns nowTime.toInstant(systemZone)
+
+            val task =
+                Task(
+                    id = 1L,
+                    title = "Task 1",
+                    description = "",
+                    reminderDate = LocalDateTime(2020, 1, 1, 12, 0),
+                    periodicity = Periodicity.DAILY,
+                    periodicityEndDate = LocalDate(2020, 1, 1),
+                )
+
+            coEvery { taskRepository.getTasksWithReminders() } returns listOf(task)
+            coEvery { habitRepository.getHabitsWithReminders() } returns emptyList()
+            coEvery { habitChainRepository.getHabitChainsWithReminders() } returns emptyList()
+            coEvery { rollOverduePeriodicTaskUseCase(task, nowTime) } returns
+                RollOverduePeriodicTaskUseCase.Result.SeriesEnded
+
+            val result = worker.doWork()
+
+            assertTrue(result is ListenableWorker.Result.Success)
+            coVerify(exactly = 0) { taskRepository.updateTaskReminderDate(any(), any()) }
+            coVerify(exactly = 0) { taskReminderScheduler.schedule(any()) }
+        }
+
+    @Test
     fun `doWork resyncs live activity for each active chain recorded for today`() =
         runTest {
             val systemZone = TimeZone.currentSystemDefault()

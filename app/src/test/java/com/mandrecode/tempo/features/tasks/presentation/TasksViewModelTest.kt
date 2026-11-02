@@ -698,6 +698,120 @@ class TasksViewModelTest {
         }
 
     @Test
+    fun `save keeps the end date across a periodicity switch`() =
+        runTest {
+            coEvery { createTaskUseCase.invoke(any()) } returns
+                CreateTaskUseCase.Result.Success(1L, ScheduleResult.Skipped)
+            val endDate = LocalDate(2030, 3, 31)
+
+            viewModel.onEvent(TasksContract.UiEvent.SetReminder(2030, 1, 1, 10, 0))
+            viewModel.onEvent(TasksContract.UiEvent.SetPeriodicity(Periodicity.DAILY))
+            viewModel.onEvent(TasksContract.UiEvent.SetPeriodicityEndDate(endDate))
+            viewModel.onEvent(TasksContract.UiEvent.SetPeriodicity(Periodicity.WEEKLY))
+            viewModel.onEvent(TasksContract.UiEvent.CreateOrUpdateTask("Test", "Desc", 1L))
+            advanceUntilIdle()
+
+            coVerify {
+                createTaskUseCase.invoke(match { it.periodicityEndDate == endDate })
+            }
+        }
+
+    @Test
+    fun `save carries the end date onto an edited task`() =
+        runTest {
+            val task =
+                Task(
+                    id = 5L,
+                    title = "Test",
+                    description = "Desc",
+                    categoryId = 1L,
+                    reminderDate = LocalDateTime(2030, 1, 1, 10, 0),
+                    periodicity = Periodicity.DAILY,
+                )
+            val endDate = LocalDate(2030, 3, 31)
+            coEvery { updateTaskUseCase.invoke(any()) } returns
+                UpdateTaskUseCase.Result.Success(ScheduleResult.Skipped)
+
+            viewModel.onEvent(TasksContract.UiEvent.ShowTaskDialog(task))
+            advanceUntilIdle()
+            viewModel.onEvent(TasksContract.UiEvent.SetPeriodicityEndDate(endDate))
+            viewModel.onEvent(TasksContract.UiEvent.CreateOrUpdateTask("Test", "Desc", 1L))
+            advanceUntilIdle()
+
+            coVerify {
+                updateTaskUseCase.invoke(match { it.id == 5L && it.periodicityEndDate == endDate })
+            }
+        }
+
+    @Test
+    fun `opening a task loads its end date into the form`() =
+        runTest {
+            val endDate = LocalDate(2030, 3, 31)
+            val task =
+                Task(
+                    id = 5L,
+                    title = "Test",
+                    description = "Desc",
+                    reminderDate = LocalDateTime(2030, 1, 1, 10, 0),
+                    periodicity = Periodicity.DAILY,
+                    periodicityEndDate = endDate,
+                )
+
+            viewModel.onEvent(TasksContract.UiEvent.ShowTaskDialog(task))
+            advanceUntilIdle()
+
+            assertThat(viewModel.uiState.value.taskForm.periodicityEndDate).isEqualTo(endDate)
+        }
+
+    @Test
+    fun `clearing the periodicity discards the end date`() =
+        runTest {
+            viewModel.onEvent(TasksContract.UiEvent.SetPeriodicity(Periodicity.DAILY))
+            viewModel.onEvent(TasksContract.UiEvent.SetPeriodicityEndDate(LocalDate(2030, 3, 31)))
+
+            viewModel.onEvent(TasksContract.UiEvent.ClearPeriodicity)
+
+            assertThat(viewModel.uiState.value.taskForm.periodicityEndDate).isNull()
+        }
+
+    @Test
+    fun `clearing the reminder discards the end date`() =
+        runTest {
+            viewModel.onEvent(TasksContract.UiEvent.SetReminder(2030, 1, 1, 10, 0))
+            viewModel.onEvent(TasksContract.UiEvent.SetPeriodicity(Periodicity.DAILY))
+            viewModel.onEvent(TasksContract.UiEvent.SetPeriodicityEndDate(LocalDate(2030, 3, 31)))
+
+            viewModel.onEvent(TasksContract.UiEvent.ClearReminder)
+
+            assertThat(viewModel.uiState.value.taskForm.periodicityEndDate).isNull()
+        }
+
+    @Test
+    fun `moving the reminder past the end date discards it`() =
+        runTest {
+            viewModel.onEvent(TasksContract.UiEvent.SetReminder(2030, 1, 1, 10, 0))
+            viewModel.onEvent(TasksContract.UiEvent.SetPeriodicity(Periodicity.DAILY))
+            viewModel.onEvent(TasksContract.UiEvent.SetPeriodicityEndDate(LocalDate(2030, 3, 31)))
+
+            viewModel.onEvent(TasksContract.UiEvent.SetReminder(2030, 4, 5, 10, 0))
+
+            assertThat(viewModel.uiState.value.taskForm.periodicityEndDate).isNull()
+        }
+
+    @Test
+    fun `moving the reminder onto the end date keeps it`() =
+        runTest {
+            val endDate = LocalDate(2030, 3, 31)
+            viewModel.onEvent(TasksContract.UiEvent.SetReminder(2030, 1, 1, 10, 0))
+            viewModel.onEvent(TasksContract.UiEvent.SetPeriodicity(Periodicity.DAILY))
+            viewModel.onEvent(TasksContract.UiEvent.SetPeriodicityEndDate(endDate))
+
+            viewModel.onEvent(TasksContract.UiEvent.SetReminder(2030, 3, 31, 10, 0))
+
+            assertThat(viewModel.uiState.value.taskForm.periodicityEndDate).isEqualTo(endDate)
+        }
+
+    @Test
     fun `save sanitizes stale monthDayOption when periodicity is weekly`() =
         runTest {
             coEvery { createTaskUseCase.invoke(any()) } returns

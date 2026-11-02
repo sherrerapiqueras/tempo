@@ -76,6 +76,7 @@ class RescheduleRemindersWorker
                         when (rollOverduePeriodicTaskUseCase(task, now)) {
                             is RollOverduePeriodicTaskUseCase.Result.CreatedNextInstance,
                             is RollOverduePeriodicTaskUseCase.Result.ReusedNextInstance,
+                            RollOverduePeriodicTaskUseCase.Result.SeriesEnded,
                             RollOverduePeriodicTaskUseCase.Result.FailedToCreate,
                             RollOverduePeriodicTaskUseCase.Result.MissingOriginal,
                             -> return@forEach

@@ -12,6 +12,7 @@ import com.mandrecode.tempo.features.tasks.domain.model.Category
 import com.mandrecode.tempo.features.tasks.domain.model.Task
 import com.mandrecode.tempo.features.tasks.domain.model.TaskSection
 import com.mandrecode.tempo.features.tasks.presentation.TasksContract
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.format.FormatStringsInDatetimeFormats
 
 @OptIn(ExperimentalMaterial3Api::class, FormatStringsInDatetimeFormats::class)
@@ -42,6 +43,7 @@ fun TaskBottomSheet(
     attachmentActions: TaskAttachmentActions? = null,
     sectionsByCategory: Map<Long, List<TaskSection>> = emptyMap(),
     onSelectSection: (Long?) -> Unit = {},
+    onSetPeriodicityEndDate: (LocalDate?) -> Unit = {},
 ) {
     TaskBottomSheetContent(
         categories = categories,
@@ -69,5 +71,6 @@ fun TaskBottomSheet(
         attachmentActions = attachmentActions,
         sectionsByCategory = sectionsByCategory,
         onSelectSection = onSelectSection,
+        onSetPeriodicityEndDate = onSetPeriodicityEndDate,
     )
 }

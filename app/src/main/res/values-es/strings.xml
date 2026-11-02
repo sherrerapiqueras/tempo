@@ -201,6 +201,9 @@
     <string name="add_reminder">Añadir recordatorio</string>
     <string name="add_reminder_time">Añadir hora de recordatorio</string>
     <string name="clear_reminder">Borrar recordatorio</string>
+    <string name="add_end_date">Añadir fecha de fin</string>
+    <string name="periodicity_until">Hasta el %1$s</string>
+    <string name="clear_end_date">Quitar fecha de fin</string>
     <string name="select_time">Seleccionar hora</string>
     <string name="mark_as_completed">Marcar como completado</string>
     <string name="task_reminder_start_session">Empezar sesión</string>
@@ -259,11 +262,11 @@
     <string name="msg_permission_needed">Permiso necesario para recordatorios.</string>
     <string name="msg_task_added_success">Tarea añadida con éxito</string>
     <string name="msg_task_added_reminder_advanced">Tarea añadida. Recordatorio ajustado a la próxima fecha</string>
-    <string name="msg_task_added_past_reminder_no_periodicity">Tarea añadida. El recordatorio está en el pasado y no se activará sin periodicidad</string>
+    <string name="msg_task_added_past_reminder">Tarea añadida. El recordatorio está en el pasado y no se activará</string>
     <string name="msg_task_added_failed_scheduling">Tarea añadida, pero la programación del recordatorio falló</string>
     <string name="msg_task_updated_success">Tarea actualizada con éxito</string>
     <string name="msg_task_updated_reminder_advanced">Tarea actualizada. Recordatorio ajustado a la próxima fecha</string>
-    <string name="msg_task_updated_past_reminder_no_periodicity">Tarea actualizada. El recordatorio está en el pasado y no se activará sin periodicidad</string>
+    <string name="msg_task_updated_past_reminder">Tarea actualizada. El recordatorio está en el pasado y no se activará</string>
     <string name="msg_task_updated_failed_scheduling">Tarea actualizada, pero la programación del recordatorio falló</string>
     <string name="msg_task_add_failed">Error al añadir la tarea: %1$s</string>
     <string name="msg_task_update_failed">Error al actualizar la tarea: %1$s</string>

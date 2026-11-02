@@ -212,6 +212,7 @@ class TasksViewModel
                 is TasksContract.UiEvent.SetPeriodicityInterval -> onSetPeriodicityInterval(event.interval)
                 is TasksContract.UiEvent.SetRepeatDays -> onSetRepeatDays(event.days)
                 is TasksContract.UiEvent.SetMonthDayOption -> onSetMonthDayOption(event.option)
+                is TasksContract.UiEvent.SetPeriodicityEndDate -> onSetPeriodicityEndDate(event.endDate)
                 is TasksContract.UiEvent.SetSortOption -> setSortOption(event.sortOption)
                 is TasksContract.UiEvent.ShowSortMenu -> showSortMenu()
                 is TasksContract.UiEvent.HideSortMenu -> hideSortMenu()
