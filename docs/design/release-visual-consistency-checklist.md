@@ -44,8 +44,7 @@ drag to reorder, open/dismiss every editor and dialog — not just static screen
 - [ ] Non-editor sheets (sort, reorder sections, plan tasks, session finished, icon picker) start
       with their title 12dp below the drag handle's area, in `sheetTitle`. Session finished's
       `headlineSmall` heading is the one exception so far. Sort and reorder rows share one card
-      (`TasksSheetRow`, `subtaskTitle` labels); the selected sort option squares off
-      (`SquaredSelection`)
+      (`TasksSheetRow`, `subtaskTitle` labels), 24dp when idle and 16dp when selected
 - [ ] Gaps between surfaces stay 16dp at every width: rail to content block, content block to
       docked editor, docked editor to window edge. They frame surfaces; the margin above is the
       space inside them

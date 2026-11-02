@@ -28,7 +28,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
 import com.mandrecode.tempo.core.ui.adaptive.adaptiveHorizontalMargin
-import com.mandrecode.tempo.core.ui.components.SquaredSelection
 import com.mandrecode.tempo.core.ui.components.TempoModalBottomSheet
 import com.mandrecode.tempo.core.ui.theme.sheetTitle
 import com.mandrecode.tempo.core.ui.theme.subtaskTitle
@@ -37,7 +36,8 @@ import com.mandrecode.tempo.features.tasks.presentation.model.SortOption
 
 internal val TasksSheetRowHeight = 56.dp
 internal val TasksSheetRowSpacing = 6.dp
-private val TasksSheetRowCornerRadius = 20.dp
+private val TasksSheetRowCornerRadius = 24.dp
+private val TasksSheetRowSelectedCornerRadius = 16.dp
 
 @Composable
 fun SortBottomSheet(
@@ -96,8 +96,8 @@ internal fun SortOptionItem(
     val colors = MaterialTheme.colorScheme
     TasksSheetRow(
         color = if (isSelected) colors.primaryContainer else colors.surfaceContainerHighest,
-        // The app's mark for a choice standing alone with gaps around it: it squares off.
-        cornerRadius = if (isSelected) SquaredSelection else TasksSheetRowCornerRadius,
+        // Marked the way a completed card is: 8dp squarer than its idle self.
+        cornerRadius = if (isSelected) TasksSheetRowSelectedCornerRadius else TasksSheetRowCornerRadius,
         contentModifier = Modifier.selectable(selected = isSelected, role = Role.RadioButton, onClick = onClick),
     ) {
         Icon(
