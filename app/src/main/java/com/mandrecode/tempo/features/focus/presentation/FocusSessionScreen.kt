@@ -131,14 +131,30 @@ fun FocusSessionSheet(
         val task = uiState.sessionEntry?.task
 
         // The style the task and habit editors give their titles, so a session reads as another
-        // sheet about one item rather than a screen with its own heading.
+        // sheet about one item rather than a screen with its own heading. Docked there is no drag
+        // handle above it, so it takes the docked task editor's place instead: start-aligned, with
+        // the same room above it (#502).
+        val isDocked = placement == SheetPlacement.DockedPane
         Text(
             text = title,
             style = MaterialTheme.typography.inputTitle,
-            textAlign = TextAlign.Center,
+            textAlign = if (isDocked) TextAlign.Start else TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = SheetTitlePadding),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .then(
+                        if (isDocked) {
+                            Modifier.padding(
+                                start = DockedTitleHorizontalPadding,
+                                end = DockedTitleHorizontalPadding,
+                                top = DockedTitleTopPadding,
+                            )
+                        } else {
+                            Modifier.padding(horizontal = SheetTitlePadding)
+                        },
+                    ),
         )
 
         SessionBody(
@@ -171,3 +187,7 @@ fun FocusSessionSheet(
 }
 
 private val SheetTitlePadding = 16.dp
+
+/** Where the docked task editor's title text starts and how far below the pane's top edge. */
+private val DockedTitleHorizontalPadding = 40.dp
+private val DockedTitleTopPadding = 24.dp
