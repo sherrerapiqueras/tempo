@@ -1445,10 +1445,10 @@ class HabitBottomSheetTest {
         composeTestRule.onNodeWithText("1.").assertDoesNotExist()
     }
 
-    // --- Regression test for #518: the description lines up with the option rows ---
+    // --- Regression test for #518: the description has no inset of its own, unlike a TextField ---
 
     @Test
-    fun givenEmptyDescription_whenShown_thenPlaceholderStartsWithOptionRows() {
+    fun givenEmptyDescription_whenShown_thenPlaceholderStartsWithItsField() {
         composeTestRule.setContent {
             TempoTheme {
                 HabitBottomSheet(
@@ -1480,7 +1480,7 @@ class HabitBottomSheetTest {
             .left
             .assertIsEqualTo(
                 composeTestRule
-                    .onNodeWithText(targetContext.getString(R.string.add_reminder))
+                    .onNodeWithTag(HABIT_BOTTOM_SHEET_DESCRIPTION_FIELD_TEST_TAG)
                     .getBoundsInRoot()
                     .left,
                 "description placeholder start",
