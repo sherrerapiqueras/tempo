@@ -25,7 +25,7 @@ import kotlinx.collections.immutable.persistentMapOf
 import org.junit.Rule
 import org.junit.Test
 
-/** A sectioned category on a wide pane, and the section shortcuts (#61). */
+/** A sectioned category stays in one column at any pane width (#510), and the section shortcuts (#61). */
 class TasksSectionedWideLayoutTest {
     @get:Rule
     val composeTestRule = createComposeRule()
@@ -69,23 +69,25 @@ class TasksSectionedWideLayoutTest {
         }
     }
 
-    @Test
-    fun widePane_putsSectionsSideBySide() {
-        setContent(width = 1000)
-
+    private fun assertSectionsShareOneColumn() {
         val cat = composeTestRule.onNodeWithText("Buy litter").getUnclippedBoundsInRoot()
         val chores = composeTestRule.onNodeWithText("Descale").getUnclippedBoundsInRoot()
-        assertThat(chores.left).isGreaterThan(cat.right)
+        assertThat(chores.left).isEqualTo(cat.left)
+        assertThat(chores.top).isGreaterThan(cat.bottom)
+    }
+
+    @Test
+    fun widePane_keepsOneColumn() {
+        setContent(width = 1000)
+
+        assertSectionsShareOneColumn()
     }
 
     @Test
     fun narrowerPane_asWithADockedEditor_keepsOneColumn() {
         setContent(width = 840)
 
-        val cat = composeTestRule.onNodeWithText("Buy litter").getUnclippedBoundsInRoot()
-        val chores = composeTestRule.onNodeWithText("Descale").getUnclippedBoundsInRoot()
-        assertThat(chores.left).isEqualTo(cat.left)
-        assertThat(chores.top).isGreaterThan(cat.bottom)
+        assertSectionsShareOneColumn()
     }
 
     @Test
