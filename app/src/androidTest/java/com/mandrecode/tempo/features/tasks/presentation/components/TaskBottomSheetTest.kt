@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEqualTo
@@ -24,15 +25,18 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import com.mandrecode.tempo.R
 import com.mandrecode.tempo.core.domain.model.Periodicity
 import com.mandrecode.tempo.core.domain.model.Priority
+import com.mandrecode.tempo.core.domain.util.ValidationUtils
 import com.mandrecode.tempo.core.ui.components.TASK_COMPLETION_CHECKBOX_TEST_TAG
 import com.mandrecode.tempo.core.ui.editor.EDITOR_AUTO_SAVE_DEBOUNCE_MS
 import com.mandrecode.tempo.core.ui.editor.EDITOR_PROPERTY_ROW_GAP
@@ -520,93 +524,108 @@ class TaskBottomSheetTest {
             .left
 
     @Test
-    fun titleOverflow_at65Chars_movesExcessTextToDescription() {
+    fun givenTitleTypedPast65Chars_whenEntered_thenAllStaysInTitle() {
         renderSheet()
 
-        val titlePart = "A".repeat(65)
-        val overflowPart = "OVERFLOW"
+        val longTitle = "A".repeat(65) + " STILL THE TITLE"
         composeTestRule
             .onNodeWithTag(TASK_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG)
-            .performTextInput(titlePart + overflowPart)
+            .performTextInput(longTitle)
 
-        // The overflow text should now appear in the description field
-        composeTestRule
-            .onNodeWithText(overflowPart, substring = true)
-            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag(TASK_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG).assertTextContains(longTitle)
+        composeTestRule.onNodeWithTag(TASK_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG).assertIsFocused()
+        composeTestRule.onNodeWithText(addDetailsPlaceholder, useUnmergedTree = true).assertExists()
     }
 
     @Test
-    fun titleOverflow_midWord_movesWholeWordToDescription() {
+    fun givenVeryLongTitle_whenEntered_thenFieldShowsFiveLines() {
         renderSheet()
 
-        val titlePart = "A".repeat(60)
-        val overflowWord = "OVERFLOWING"
-        composeTestRule
-            .onNodeWithTag(TASK_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG)
-            .performTextInput("$titlePart $overflowWord")
+        val title = composeTestRule.onNodeWithTag(TASK_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG)
+        val oneLineHeight = title.getBoundsInRoot().let { it.bottom - it.top }
+        title.performTextInput("word ".repeat(100))
 
-        // Exact matches: a mid-word split would leave part of the word in each field
-        composeTestRule.onNodeWithText(titlePart).assertIsDisplayed()
-        composeTestRule.onNodeWithText(overflowWord).assertIsDisplayed()
+        // A line of titleLarge is 28dp, and the field's insets are the same at any height.
+        title
+            .getBoundsInRoot()
+            .let { it.bottom - it.top }
+            .assertIsEqualTo(oneLineHeight + 28.dp * 4, "five-line title field height", tolerance = 4.dp)
     }
 
     @Test
-    fun titlePaste_withLineBreak_movesLaterLinesToDescription() {
+    fun givenPastedLineBreak_whenEntered_thenLinesJoinInTitle() {
         renderSheet()
 
         composeTestRule
             .onNodeWithTag(TASK_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG)
             .performTextInput("First line\nSecond line")
 
-        composeTestRule.onNodeWithText("First line").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Second line").assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(TASK_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG)
+            .assertTextContains("First line Second line")
     }
 
     @Test
-    fun titleOverflow_sameKeystrokeTwice_movesBothToDescription() {
+    fun givenOnlyLineBreaksPasted_whenEntered_thenBlankTitleErrorShows() {
+        renderSheet()
+
+        composeTestRule.onNodeWithTag(TASK_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG).performTextInput(" \n ")
+
+        composeTestRule
+            .onNodeWithText(
+                InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.task_title_required),
+                useUnmergedTree = true,
+            ).assertExists()
+    }
+
+    @Test
+    fun givenEnterPressedTwice_whenTitleFocused_thenLeavesTitleEachTime() {
         renderSheet()
 
         val title = composeTestRule.onNodeWithTag(TASK_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG)
-        title.performTextInput("A".repeat(65))
-        title.performTextInput("b")
-        title.performTextInput("b")
-
-        composeTestRule.onNodeWithText("b b").assertIsDisplayed()
+        repeat(2) {
+            title.performClick()
+            title.assertIsFocused()
+            title.performKeyInput { pressKey(Key.Enter) }
+            title.assertIsNotFocused()
+        }
     }
 
     @Test
-    fun longTitle_nearLimit_displaysCorrectly() {
-        renderSheet()
+    fun givenTitleOverValidationLimit_whenClosingAutosavingSheet_thenWarnsBeforeDiscarding() {
+        composeTestRule.setContent {
+            TempoTheme {
+                TaskBottomSheet(
+                    task = sampleTask(),
+                    categories = listOf(DEFAULT_INBOX_CATEGORY),
+                    selectedCategoryIdFromFilter = null,
+                    formState = defaultFormState(),
+                    onSetPriority = {},
+                    onClearPriority = {},
+                    onSetReminder = { _, _, _, _, _ -> },
+                    onClearReminder = {},
+                    onSetPeriodicity = {},
+                    onClearPeriodicity = {},
+                    onSetPeriodicityInterval = {},
+                    onSetRepeatDays = {},
+                    onSetMonthDayOption = {},
+                    onDismiss = {},
+                    onClearErrors = {},
+                    onConfirm = { _, _, _ -> },
+                    onAutoSave = { _, _, _ -> },
+                )
+            }
+        }
+        val title = composeTestRule.onNodeWithTag(TASK_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG)
+        title.performClick()
+        title.performTextReplacement("a".repeat(ValidationUtils.MAX_TITLE_LENGTH + 1))
+        composeTestRule.waitUntil(timeoutMillis = 5000) { isSoftKeyboardShown() }
 
-        val longTitle = "B".repeat(60)
-        composeTestRule
-            .onNodeWithTag(TASK_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG)
-            .performTextInput(longTitle)
+        sendSystemBackKey()
+        composeTestRule.waitUntil(timeoutMillis = 5000) { !isSoftKeyboardShown() }
+        sendSystemBackKey()
 
-        composeTestRule
-            .onNodeWithTag(TASK_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG)
-            .assertTextContains(longTitle)
-    }
-
-    @Test
-    fun titleAtExactLimit_doesNotOverflowToDescription() {
-        renderSheet()
-
-        val exactTitle = "C".repeat(65)
-        composeTestRule
-            .onNodeWithTag(TASK_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG)
-            .performTextInput(exactTitle)
-
-        // Title should contain all 65 chars
-        composeTestRule
-            .onNodeWithText(exactTitle, substring = true)
-            .assertIsDisplayed()
-
-        // Description placeholder should still be visible (no overflow text)
-        composeTestRule
-            .onNodeWithText(addDetailsPlaceholder, substring = true)
-            .performScrollTo()
-            .assertIsDisplayed()
+        composeTestRule.onNodeWithText(discardChangesLabel).assertIsDisplayed()
     }
 
     @Test

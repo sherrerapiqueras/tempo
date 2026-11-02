@@ -109,8 +109,7 @@ internal fun Modifier.taskTitleFocus(focusConfig: TaskBottomSheetFocusConfig): M
         .legacyImeBack(focusConfig)
 
 internal fun Modifier.taskDescriptionFocus(focusConfig: TaskBottomSheetFocusConfig): Modifier =
-    focusRequester(focusConfig.descriptionFocusRequester)
-        .onFocusChanged { focusConfig.focusState.onDescriptionFocusChanged(it.isFocused) }
+    onFocusChanged { focusConfig.focusState.onDescriptionFocusChanged(it.isFocused) }
         .legacyImeBack(focusConfig)
 
 private fun Modifier.legacyImeBack(focusConfig: TaskBottomSheetFocusConfig): Modifier =

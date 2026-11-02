@@ -21,6 +21,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.error
@@ -34,7 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
 import com.mandrecode.tempo.core.ui.theme.inputTitle
 
-private const val TITLE_MAX_LINES = 3
+private const val TITLE_MAX_LINES = 5
 private const val DESCRIPTION_MAX_LINES = 5
 
 /**
@@ -47,8 +52,8 @@ private const val DESCRIPTION_MAX_LINES = 5
  */
 @Composable
 internal fun EditorTitleField(
-    value: TextFieldValue,
-    onValueChange: (TextFieldValue) -> Unit,
+    value: String,
+    onValueChange: (String) -> Unit,
     placeholder: String,
     error: String?,
     besideCheckbox: Boolean,
@@ -72,7 +77,12 @@ internal fun EditorTitleField(
             onValueChange = onValueChange,
             modifier =
                 fieldModifier
-                    .fillMaxWidth()
+                    .onPreviewKeyEvent { event ->
+                        // Before the field sees it: Enter leaves the title, and never replaces a selection.
+                        val isEnter = event.key == Key.Enter || event.key == Key.NumPadEnter
+                        if (isEnter && event.type == KeyEventType.KeyDown) focusManager.clearFocus()
+                        isEnter
+                    }.fillMaxWidth()
                     .semantics { if (error != null) error(error) },
             textStyle = textStyle.withFieldColor(colors, error != null, interactionSource),
             cursorBrush = SolidColor(colors.cursorColor(error != null)),
@@ -92,7 +102,7 @@ internal fun EditorTitleField(
             maxLines = TITLE_MAX_LINES,
             decorationBox = { innerTextField ->
                 EditorFieldDecoration(
-                    value = value.text,
+                    value = value,
                     innerTextField = innerTextField,
                     placeholder = placeholder,
                     placeholderStyle = textStyle,
