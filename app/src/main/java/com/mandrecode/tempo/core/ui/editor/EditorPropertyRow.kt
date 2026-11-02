@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -35,12 +36,13 @@ internal fun EditorPropertyRow(
     ) {
         Box(
             modifier = iconBoxModifier,
-            contentAlignment = Alignment.Center,
+            contentAlignment = Alignment.CenterStart,
         ) {
             Icon(
                 painter = iconPainter,
                 contentDescription = iconContentDescription,
                 tint = iconTint,
+                modifier = Modifier.padding(start = EDITOR_ICON_START_INSET),
             )
         }
         content()

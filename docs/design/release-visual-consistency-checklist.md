@@ -37,8 +37,9 @@ drag to reorder, open/dismiss every editor and dialog — not just static screen
 
 ### Spacing & alignment
 - [ ] Screen gutters, list item spacing, and card content padding match across tabs (see gap G3)
-- [ ] Values come from the `Spacing` scale (2/4/8/16/24/32/64dp); off-scale values
-      (10, 14, 18dp…) need a reason
+- [ ] Values come from the `Spacing` scale (2/4/8/16/24/32/64dp) or Material's own tokens, such
+      as the 12dp between a list item's leading element and its content; other values
+      (14, 18dp…) need a reason
 - [ ] Titles, checkboxes, and trailing icons align on a shared axis inside cards; group headers
       align with card content edges
 
@@ -53,7 +54,8 @@ drag to reorder, open/dismiss every editor and dialog — not just static screen
 
 ### Editors (bottom sheets / docked pane)
 - [ ] Task and habit editors share structure: title field (`inputTitle`), description
-      (`bodyLarge`), section order, footer actions, 24dp horizontal padding
+      (`bodyLarge`), section order, footer actions, horizontal padding of 16dp on compact
+      windows and 24dp on larger ones
 - [ ] Same editor renders correctly as bottom sheet (compact) and docked pane (expanded);
       dismiss, discard-confirm, and keyboard behavior equivalent in both placements
 - [ ] Top-origin sheets (category edit) keep their direction and match modal styling

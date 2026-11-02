@@ -37,6 +37,7 @@ import com.mandrecode.tempo.core.ui.editor.EDITOR_AUTO_SAVE_DEBOUNCE_MS
 import com.mandrecode.tempo.core.ui.editor.EDITOR_MAX_TITLE_LENGTH
 import com.mandrecode.tempo.core.ui.editor.descriptionWithTitleOverflow
 import com.mandrecode.tempo.core.ui.editor.editorSaveableKey
+import com.mandrecode.tempo.core.ui.editor.editorSheetHorizontalPadding
 import com.mandrecode.tempo.core.ui.editor.rememberEditorAutosaveController
 import com.mandrecode.tempo.core.ui.editor.splitEditorTitle
 import com.mandrecode.tempo.core.ui.util.DebouncedSnapshotEffect
@@ -368,7 +369,7 @@ internal fun TaskBottomSheetContent(
                 Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp)
+                    .padding(horizontal = editorSheetHorizontalPadding())
                     .padding(top = 8.dp, bottom = 32.dp),
         ) {
             TaskBottomSheetBody(

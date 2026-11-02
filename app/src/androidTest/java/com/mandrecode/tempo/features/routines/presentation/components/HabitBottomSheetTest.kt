@@ -6,9 +6,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsEqualTo
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -20,6 +22,7 @@ import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import com.mandrecode.tempo.R
 import com.mandrecode.tempo.core.ui.components.HABIT_COMPLETION_CHECKBOX_TEST_TAG
@@ -1455,5 +1458,70 @@ class HabitBottomSheetTest {
         renderEditHabitChainSheet()
 
         composeTestRule.onNodeWithText("1.").assertDoesNotExist()
+    }
+
+    // --- Regression test for #518: the description has no inset of its own, unlike a TextField ---
+
+    @Test
+    fun givenEmptyDescription_whenShown_thenPlaceholderStartsWithItsField() {
+        composeTestRule.setContent {
+            TempoTheme {
+                HabitBottomSheet(
+                    formState = defaultFormState(),
+                    selectedDate = today(),
+                    habits = emptyList(),
+                    habitChains = emptyList(),
+                    onSelectTab = {},
+                    onSetReminder = { _, _, _, _, _ -> },
+                    onClearReminder = {},
+                    onSetColorKey = {},
+                    onClearColor = {},
+                    onSetIcon = {},
+                    onClearIcon = {},
+                    onDismiss = {},
+                    onClearErrors = {},
+                    onConfirmHabit = { _, _ -> },
+                    onConfirmHabitChain = { _, _, _ -> },
+                    onSetHabitType = {},
+                )
+            }
+        }
+        val targetContext = InstrumentationRegistry.getInstrumentation().targetContext
+
+        composeTestRule
+            // Unmerged: merged, the placeholder reports the bounds of its field instead of its own.
+            .onNodeWithText(targetContext.getString(R.string.add_details), useUnmergedTree = true)
+            .getBoundsInRoot()
+            .left
+            .assertIsEqualTo(
+                composeTestRule
+                    .onNodeWithTag(HABIT_BOTTOM_SHEET_DESCRIPTION_FIELD_TEST_TAG)
+                    .getBoundsInRoot()
+                    .left,
+                "description placeholder start",
+                tolerance = 1.dp,
+            )
+    }
+
+    @Test
+    fun givenChainWithCheckbox_whenShown_thenTitleStartsWithDescription() {
+        renderEditHabitChainSheet(
+            chain = chainContainingHabit().copy(title = "", description = ""),
+            onToggleHabitCompletion = { _, _ -> },
+        )
+        val targetContext = InstrumentationRegistry.getInstrumentation().targetContext
+
+        composeTestRule
+            .onNodeWithText(targetContext.getString(R.string.habit_chain_title_placeholder), useUnmergedTree = true)
+            .getBoundsInRoot()
+            .left
+            .assertIsEqualTo(
+                composeTestRule
+                    .onNodeWithText(targetContext.getString(R.string.add_details), useUnmergedTree = true)
+                    .getBoundsInRoot()
+                    .left,
+                "title placeholder start",
+                tolerance = 1.dp,
+            )
     }
 }
