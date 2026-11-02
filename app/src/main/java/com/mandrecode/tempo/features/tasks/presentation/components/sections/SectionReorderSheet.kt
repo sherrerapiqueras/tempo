@@ -4,6 +4,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
@@ -140,6 +141,8 @@ private fun SectionReorderRow(
         shadowElevation = if (isDragged) 6.dp else 0.dp,
         modifier =
             Modifier
+                // Fixed, unlike the sort sheet's rows: a drag counts rows by this exact step.
+                .height(TasksSheetRowHeight)
                 .zIndex(if (isDragged) 1f else 0f)
                 // Opaque while lifted: a translucent row lets its own shadow show through its
                 // rounded edges as artifacts. Elevation and the stronger tint mark it instead.

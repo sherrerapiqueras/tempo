@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mandrecode.tempo.core.ui.adaptive.SheetPlacement
+import com.mandrecode.tempo.core.ui.adaptive.adaptiveHorizontalMargin
 import com.mandrecode.tempo.core.ui.components.TempoModalBottomSheet
 import com.mandrecode.tempo.core.ui.theme.inputTitle
 import com.mandrecode.tempo.features.focus.domain.model.FocusSession
@@ -152,7 +153,7 @@ fun FocusSessionSheet(
                                 top = DockedTitleTopPadding,
                             )
                         } else {
-                            Modifier.padding(horizontal = SheetTitlePadding)
+                            Modifier.padding(horizontal = adaptiveHorizontalMargin())
                         },
                     ),
         )
@@ -185,8 +186,6 @@ fun FocusSessionSheet(
         )
     }
 }
-
-private val SheetTitlePadding = 16.dp
 
 /** Where the docked task editor's title text starts and how far below the pane's top edge. */
 private val DockedTitleHorizontalPadding = 40.dp

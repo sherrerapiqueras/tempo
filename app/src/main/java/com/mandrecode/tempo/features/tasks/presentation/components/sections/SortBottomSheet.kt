@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
@@ -135,7 +135,7 @@ internal fun TasksSheetRow(
         shape = RoundedCornerShape(cornerRadius),
         color = color,
         shadowElevation = shadowElevation,
-        modifier = modifier.fillMaxWidth().height(TasksSheetRowHeight),
+        modifier = modifier.fillMaxWidth().heightIn(min = TasksSheetRowHeight),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
