@@ -1,5 +1,6 @@
 package com.mandrecode.tempo.features.tasks.presentation.components.sections
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,12 +16,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -32,6 +37,7 @@ import com.mandrecode.tempo.core.ui.components.TempoModalBottomSheet
 import com.mandrecode.tempo.core.ui.theme.sheetTitle
 import com.mandrecode.tempo.core.ui.theme.subtaskTitle
 import com.mandrecode.tempo.core.ui.util.getIconForSortOption
+import com.mandrecode.tempo.core.ui.util.rememberPressableChipAnimation
 import com.mandrecode.tempo.features.tasks.presentation.model.SortOption
 
 internal val TasksSheetRowHeight = 56.dp
@@ -94,11 +100,29 @@ internal fun SortOptionItem(
     onClick: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
+    val haptic = LocalHapticFeedback.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val cornerRadius by rememberPressableChipAnimation(
+        isSelected = isSelected,
+        interactionSource = interactionSource,
+        selectedRadius = TasksSheetRowSelectedCornerRadius,
+        unselectedRadius = TasksSheetRowCornerRadius,
+    )
     TasksSheetRow(
         color = if (isSelected) colors.primaryContainer else colors.surfaceContainerHighest,
         // Marked the way a completed card is: 8dp squarer than its idle self.
-        cornerRadius = if (isSelected) TasksSheetRowSelectedCornerRadius else TasksSheetRowCornerRadius,
-        contentModifier = Modifier.selectable(selected = isSelected, role = Role.RadioButton, onClick = onClick),
+        cornerRadius = cornerRadius,
+        contentModifier =
+            Modifier.selectable(
+                selected = isSelected,
+                interactionSource = interactionSource,
+                indication = ripple(),
+                role = Role.RadioButton,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onClick()
+                },
+            ),
     ) {
         Icon(
             painter = painterResource(getIconForSortOption(sortOption)),
