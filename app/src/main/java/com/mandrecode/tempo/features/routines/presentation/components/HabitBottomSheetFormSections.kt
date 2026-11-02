@@ -37,6 +37,7 @@ import com.mandrecode.tempo.core.ui.editor.EditorAddButton
 import com.mandrecode.tempo.core.ui.editor.EditorDescriptionField
 import com.mandrecode.tempo.core.ui.editor.EditorPropertyRow
 import com.mandrecode.tempo.core.ui.editor.EditorTitleField
+import com.mandrecode.tempo.core.ui.editor.EditorTitleFieldState
 import com.mandrecode.tempo.core.ui.editor.EditorValueChip
 import com.mandrecode.tempo.core.ui.theme.resolveColor
 import com.mandrecode.tempo.core.ui.util.DescriptionEditorState
@@ -335,9 +336,10 @@ private fun HabitTitleField(
     besideCheckbox: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val titleField = remember { EditorTitleFieldState() }
     EditorTitleField(
-        value = state.title,
-        onValueChange = actions.onTitleChanged,
+        value = titleField.displayed(state.title),
+        onValueChange = { titleField.onValueChange(it, state.title, actions.onTitleChanged) },
         placeholder =
             when (state.formState.selectedTab) {
                 HabitSheetTab.HABIT ->

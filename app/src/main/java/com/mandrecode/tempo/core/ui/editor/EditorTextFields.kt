@@ -47,8 +47,8 @@ private const val DESCRIPTION_MAX_LINES = 5
  */
 @Composable
 internal fun EditorTitleField(
-    value: String,
-    onValueChange: (String) -> Unit,
+    value: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
     placeholder: String,
     error: String?,
     besideCheckbox: Boolean,
@@ -92,7 +92,7 @@ internal fun EditorTitleField(
             maxLines = TITLE_MAX_LINES,
             decorationBox = { innerTextField ->
                 EditorFieldDecoration(
-                    value = value,
+                    value = value.text,
                     innerTextField = innerTextField,
                     placeholder = placeholder,
                     placeholderStyle = textStyle,

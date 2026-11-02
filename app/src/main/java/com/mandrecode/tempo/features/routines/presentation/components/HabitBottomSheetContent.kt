@@ -31,12 +31,10 @@ import com.mandrecode.tempo.core.ui.adaptive.SheetPlacement
 import com.mandrecode.tempo.core.ui.components.HandleReminderPermissions
 import com.mandrecode.tempo.core.ui.components.TempoTimePickerDialog
 import com.mandrecode.tempo.core.ui.editor.EDITOR_AUTO_SAVE_DEBOUNCE_MS
-import com.mandrecode.tempo.core.ui.editor.EDITOR_MAX_TITLE_LENGTH
-import com.mandrecode.tempo.core.ui.editor.descriptionWithTitleOverflow
 import com.mandrecode.tempo.core.ui.editor.editorSaveableKey
 import com.mandrecode.tempo.core.ui.editor.editorSheetHorizontalPadding
 import com.mandrecode.tempo.core.ui.editor.rememberEditorAutosaveController
-import com.mandrecode.tempo.core.ui.editor.splitEditorTitle
+import com.mandrecode.tempo.core.ui.editor.resolveEditorTitleChange
 import com.mandrecode.tempo.core.ui.theme.LocalIsDarkTheme
 import com.mandrecode.tempo.core.ui.theme.TempoIcon
 import com.mandrecode.tempo.core.ui.theme.getMaterialYouColors
@@ -540,23 +538,18 @@ internal fun HabitBottomSheetContent(
                         onSelectTab = onSelectTab,
                         onSetHabitType = onSetHabitType,
                         onTitleChanged = { newValue ->
-                            if (newValue.contains("\n")) {
+                            val change = resolveEditorTitleChange(newValue, title, descriptionState.value.text)
+                            if (change == null) {
                                 focusManager.clearFocus()
-                            } else if (newValue.length > EDITOR_MAX_TITLE_LENGTH) {
-                                val split = splitEditorTitle(newValue)
-                                title = split.title
-                                updateDescription(
-                                    descriptionWithTitleOverflow(
-                                        overflow = split.overflow,
-                                        description = descriptionState.value.text,
-                                    ),
-                                )
-                                isDescriptionDirty = descriptionState.value.text != initialDescription
-                                focusDescriptionTrigger++
                             } else {
-                                title = newValue
-                                isTitleError = newValue.isBlank()
+                                title = change.title
+                                isTitleError = change.title.isBlank()
                                 onClearErrors()
+                                change.description?.let {
+                                    updateDescription(it)
+                                    isDescriptionDirty = descriptionState.value.text != initialDescription
+                                    focusDescriptionTrigger++
+                                }
                             }
                         },
                         onDescriptionChanged = {
