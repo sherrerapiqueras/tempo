@@ -1,10 +1,6 @@
 package com.mandrecode.tempo.core.ui.editor
 
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.mandrecode.tempo.core.ui.adaptive.WindowWidthClass
-import com.mandrecode.tempo.core.ui.adaptive.currentWindowWidthClass
 
 internal const val EDITOR_AUTO_SAVE_DEBOUNCE_MS = 350L
 internal val EDITOR_PROPERTY_ROW_GAP = 20.dp
@@ -43,10 +39,3 @@ internal val EDITOR_TEXT_FIELD_BOTTOM_INSET = 16.dp
  */
 internal val EDITOR_TEXT_FIELD_TOP_INSET = 10.dp
 internal val EDITOR_DELETE_BUTTON_CORNER_RADIUS = 24.dp
-
-/** The side margin of an editor sheet's content: 16dp on a compact window, otherwise 24dp. */
-@Composable
-internal fun editorSheetHorizontalPadding(): Dp {
-    val isCompact = currentWindowWidthClass() == WindowWidthClass.COMPACT
-    return if (isCompact) 16.dp else 24.dp
-}

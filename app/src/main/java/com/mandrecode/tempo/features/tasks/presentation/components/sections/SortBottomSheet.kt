@@ -1,30 +1,43 @@
 package com.mandrecode.tempo.features.tasks.presentation.components.sections
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
+import com.mandrecode.tempo.core.ui.adaptive.adaptiveHorizontalMargin
+import com.mandrecode.tempo.core.ui.components.SquaredSelection
 import com.mandrecode.tempo.core.ui.components.TempoModalBottomSheet
 import com.mandrecode.tempo.core.ui.theme.sheetTitle
+import com.mandrecode.tempo.core.ui.theme.subtaskTitle
 import com.mandrecode.tempo.core.ui.util.getIconForSortOption
 import com.mandrecode.tempo.features.tasks.presentation.model.SortOption
+
+internal val TasksSheetRowHeight = 56.dp
+internal val TasksSheetRowSpacing = 6.dp
+private val TasksSheetRowCornerRadius = 20.dp
 
 @Composable
 fun SortBottomSheet(
@@ -47,21 +60,28 @@ fun SortBottomSheet(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp)
                     .padding(bottom = 32.dp),
         ) {
             TasksSheetHeader(title = stringResource(R.string.sort_by))
 
-            // Sort options
-            SortOption.entries.forEach { sortOption ->
-                SortOptionItem(
-                    sortOption = sortOption,
-                    isSelected = currentSortOption == sortOption,
-                    onClick = {
-                        pendingSortOption.value = sortOption
-                        onRequestDismiss()
-                    },
-                )
+            Column(
+                verticalArrangement = Arrangement.spacedBy(TasksSheetRowSpacing),
+                modifier =
+                    Modifier
+                        .selectableGroup()
+                        .padding(horizontal = adaptiveHorizontalMargin())
+                        .padding(top = 8.dp),
+            ) {
+                SortOption.entries.forEach { sortOption ->
+                    SortOptionItem(
+                        sortOption = sortOption,
+                        isSelected = currentSortOption == sortOption,
+                        onClick = {
+                            pendingSortOption.value = sortOption
+                            onRequestDismiss()
+                        },
+                    )
+                }
             }
         }
     }
@@ -73,41 +93,56 @@ internal fun SortOptionItem(
     isSelected: Boolean,
     onClick: () -> Unit,
 ) {
-    ListItem(
-        headlineContent = {
-            Text(
-                text = stringResource(sortOption.labelResId),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
+    val colors = MaterialTheme.colorScheme
+    TasksSheetRow(
+        color = if (isSelected) colors.primaryContainer else colors.surfaceContainerHighest,
+        // The app's mark for a choice standing alone with gaps around it: it squares off.
+        cornerRadius = if (isSelected) SquaredSelection else TasksSheetRowCornerRadius,
+        contentModifier = Modifier.selectable(selected = isSelected, role = Role.RadioButton, onClick = onClick),
+    ) {
+        Icon(
+            painter = painterResource(getIconForSortOption(sortOption)),
+            contentDescription = null,
+            tint = if (isSelected) colors.onPrimaryContainer else colors.onSurfaceVariant,
+            modifier = Modifier.size(48.dp).padding(12.dp),
+        )
+        Text(
+            text = stringResource(sortOption.labelResId),
+            style = MaterialTheme.typography.subtaskTitle,
+            modifier = Modifier.weight(1f),
+        )
+        if (isSelected) {
+            Icon(
+                painter = painterResource(R.drawable.ic_check),
+                contentDescription = null,
+                modifier = Modifier.size(48.dp).padding(12.dp),
             )
-        },
-        leadingContent = {
-            Box(modifier = Modifier.padding(start = 16.dp)) {
-                Icon(
-                    painter = painterResource(getIconForSortOption(sortOption)),
-                    contentDescription = sortOption.value,
-                    tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(24.dp),
-                )
-            }
-        },
-        trailingContent = {
-            Box(modifier = Modifier.padding(end = 16.dp)) {
-                RadioButton(
-                    selected = isSelected,
-                    onClick = onClick,
-                )
-            }
-        },
-        colors =
-            ListItemDefaults.colors(
-                containerColor = Color.Transparent,
-            ),
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick),
-    )
+        }
+    }
+}
+
+/** The card of a Tasks bottom sheet's row (sort, reorder sections), so every one reads the same. */
+@Composable
+internal fun TasksSheetRow(
+    color: Color,
+    modifier: Modifier = Modifier,
+    contentModifier: Modifier = Modifier,
+    cornerRadius: Dp = TasksSheetRowCornerRadius,
+    shadowElevation: Dp = 0.dp,
+    content: @Composable RowScope.() -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(cornerRadius),
+        color = color,
+        shadowElevation = shadowElevation,
+        modifier = modifier.fillMaxWidth().height(TasksSheetRowHeight),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = contentModifier.padding(horizontal = 12.dp),
+            content = content,
+        )
+    }
 }
 
 /** The title of a Tasks bottom sheet (sort, reorder sections), so every one reads the same. */
@@ -116,17 +151,13 @@ internal fun TasksSheetHeader(
     title: String,
     modifier: Modifier = Modifier,
 ) {
-    ListItem(
-        headlineContent = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.sheetTitle,
-            )
-        },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+    Text(
+        text = title,
+        style = MaterialTheme.typography.sheetTitle,
         modifier =
             modifier
-                .padding(top = 12.dp)
-                .padding(horizontal = 16.dp),
+                .fillMaxWidth()
+                .padding(horizontal = adaptiveHorizontalMargin())
+                .padding(top = 12.dp, bottom = 8.dp),
     )
 }

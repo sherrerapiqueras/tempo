@@ -32,6 +32,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
+import com.mandrecode.tempo.core.ui.adaptive.adaptiveHorizontalMargin
 import com.mandrecode.tempo.core.ui.components.ConnectedSelectorButton
 import com.mandrecode.tempo.core.ui.components.selectorButtonColors
 import kotlinx.collections.immutable.ImmutableList
@@ -73,7 +74,7 @@ internal fun SectionShortcutGroup(
         modifier = modifier,
     ) { (_, shownShortcuts) ->
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 12.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = adaptiveHorizontalMargin()).padding(bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {

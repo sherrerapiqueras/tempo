@@ -57,10 +57,10 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
 import com.mandrecode.tempo.core.domain.util.ValidationUtils
+import com.mandrecode.tempo.core.ui.adaptive.adaptiveHorizontalMargin
 import com.mandrecode.tempo.core.ui.components.ColorPicker
 import com.mandrecode.tempo.core.ui.components.IconPicker
 import com.mandrecode.tempo.core.ui.components.TempoModalTopSheet
-import com.mandrecode.tempo.core.ui.editor.editorSheetHorizontalPadding
 import com.mandrecode.tempo.core.ui.glass.glassButtonContainer
 import com.mandrecode.tempo.core.ui.theme.LocalIsDarkTheme
 import com.mandrecode.tempo.core.ui.theme.TempoIcon
@@ -198,7 +198,7 @@ fun CategoryEditSheet(
                 Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = editorSheetHorizontalPadding())
+                    .padding(horizontal = adaptiveHorizontalMargin())
                     .padding(top = 8.dp, bottom = 32.dp),
         ) {
             TextField(

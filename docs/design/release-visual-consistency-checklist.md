@@ -36,10 +36,27 @@ drag to reorder, open/dismiss every editor and dialog — not just static screen
       metadata labels, dialog actions)
 
 ### Spacing & alignment
-- [ ] Screen gutters, list item spacing, and card content padding match across tabs (see gap G3)
-- [ ] Values come from the `Spacing` scale (2/4/8/16/24/32/64dp) or Material's own tokens, such
-      as the 12dp between a list item's leading element and its content; other values
-      (14, 18dp…) need a reason
+- [ ] Side margins of sheets and of Tasks, Routines and Focus come from
+      `adaptiveHorizontalMargin()`: 16dp on compact windows, 24dp on larger ones. Chip rows, the
+      day filter, section shortcuts and the Focus summary use it too, so they line up with the
+      list below them
+- [ ] List item spacing and card content padding (16dp) match across tabs (see gap G3)
+- [ ] Non-editor sheets (sort, reorder sections, plan tasks, session finished, icon picker) start
+      with their title 12dp below the drag handle's area, in `sheetTitle`. Session finished's
+      `headlineSmall` heading is the one exception so far. Sort and reorder rows share one card
+      (`TasksSheetRow`, `subtaskTitle` labels); the selected sort option squares off
+      (`SquaredSelection`)
+- [ ] Gaps between surfaces stay 16dp at every width: rail to content block, content block to
+      docked editor, docked editor to window edge. They frame surfaces; the margin above is the
+      space inside them
+- [ ] A card's checkbox and its title are 12dp apart (`TempoSpacing.cardLeadingContentGap`, from
+      Material's `ListTokens.ItemBetweenSpace`) on task, habit and chain rows
+- [ ] Values come from the `Spacing` scale (2/4/8/16/24/32/64dp) or Material's own tokens; other
+      values need a reason. Known exceptions: the 20dp end margin of Routines' Add FAB, which is
+      placed against the screen rather than a content edge, and 14dp vertical padding on Focus
+      cards, which sets their height rather than a margin
+- [ ] Top-bar titles keep `TopAppBar`'s own inset, about 24dp at every width. They line up with
+      the list on larger windows and sit about 8dp further in on compact ones
 - [ ] Titles, checkboxes, and trailing icons align on a shared axis inside cards; group headers
       align with card content edges
 
@@ -54,8 +71,8 @@ drag to reorder, open/dismiss every editor and dialog — not just static screen
 
 ### Editors (bottom sheets / docked pane)
 - [ ] Task and habit editors share structure: title field (`inputTitle`), description
-      (`bodyLarge`), section order, footer actions, horizontal padding of 16dp on compact
-      windows and 24dp on larger ones
+      (`bodyLarge`), section order, footer actions, and the side margin every sheet uses
+      (`adaptiveHorizontalMargin()`)
 - [ ] Same editor renders correctly as bottom sheet (compact) and docked pane (expanded);
       dismiss, discard-confirm, and keyboard behavior equivalent in both placements
 - [ ] Top-origin sheets (category edit) keep their direction and match modal styling

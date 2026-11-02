@@ -76,6 +76,7 @@ import com.mandrecode.tempo.core.ui.components.glassCardElevation
 import com.mandrecode.tempo.core.ui.components.selectedContainerColor
 import com.mandrecode.tempo.core.ui.theme.MutedContentAlpha
 import com.mandrecode.tempo.core.ui.theme.TempoSpacing.cardContentPadding
+import com.mandrecode.tempo.core.ui.theme.TempoSpacing.cardLeadingContentGap
 import com.mandrecode.tempo.core.ui.theme.cardTitle
 import com.mandrecode.tempo.core.ui.util.EnhancedDescriptionText
 import com.mandrecode.tempo.core.ui.util.color
@@ -366,7 +367,7 @@ fun TaskItem(
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(cardLeadingContentGap))
 
                     Column(
                         modifier =

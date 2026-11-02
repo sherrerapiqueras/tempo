@@ -59,6 +59,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
+import com.mandrecode.tempo.core.ui.adaptive.adaptiveHorizontalMargin
 import com.mandrecode.tempo.core.ui.theme.LocalIsDarkTheme
 import com.mandrecode.tempo.core.ui.theme.TempoIcon
 import com.mandrecode.tempo.core.ui.theme.categoryChipSelected
@@ -124,7 +125,7 @@ fun CategoryChipRow(
                 .fillMaxWidth()
                 .height(84.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(horizontal = 16.dp),
+        contentPadding = PaddingValues(horizontal = adaptiveHorizontalMargin()),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         itemsIndexed(categories, key = { _, cat -> cat.id }) { index, category ->

@@ -51,6 +51,7 @@ import androidx.compose.ui.zIndex
 import com.mandrecode.tempo.R
 import com.mandrecode.tempo.core.domain.model.Priority
 import com.mandrecode.tempo.core.ui.adaptive.WindowWidthClass
+import com.mandrecode.tempo.core.ui.adaptive.adaptiveHorizontalMargin
 import com.mandrecode.tempo.core.ui.adaptive.currentWindowWidthClass
 import com.mandrecode.tempo.core.ui.components.CardGroupPosition
 import com.mandrecode.tempo.core.ui.components.ConnectedCardGap
@@ -111,6 +112,7 @@ fun TasksContent(
     val density = LocalDensity.current
     val listState = rememberLazyListState()
     val listBottomPadding = floatingNavigationBottomClearancePadding(defaultPadding = 16.dp)
+    val horizontalMargin = adaptiveHorizontalMargin()
 
     val activeTaskGroups = uiState.activeTasks
     val completedTaskGroups = uiState.completedTaskGroups
@@ -264,14 +266,14 @@ fun TasksContent(
                     } else {
                         LazyColumn(
                             state = listState,
-                            // 16dp at the top, the same as the sides and the same as Routines,
-                            // which is the same block with the same 28dp corners. The first card
-                            // starts inside that curve, so anything less reads as the card being
-                            // shoved against the seam rather than sitting in the panel.
+                            // 16dp at the top, the same as Routines, which is the same block with
+                            // the same 28dp corners. The first card starts inside that curve, so
+                            // anything less reads as the card being shoved against the seam rather
+                            // than sitting in the panel.
                             contentPadding =
                                 PaddingValues(
-                                    start = 16.dp,
-                                    end = 16.dp,
+                                    start = horizontalMargin,
+                                    end = horizontalMargin,
                                     top = 16.dp,
                                     bottom = listBottomPadding,
                                 ),
