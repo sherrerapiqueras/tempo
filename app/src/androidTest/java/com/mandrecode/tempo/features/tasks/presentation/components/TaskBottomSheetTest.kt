@@ -536,6 +536,21 @@ class TaskBottomSheetTest {
     }
 
     @Test
+    fun titleOverflow_midWord_movesWholeWordToDescription() {
+        renderSheet()
+
+        val titlePart = "A".repeat(60)
+        val overflowWord = "OVERFLOWING"
+        composeTestRule
+            .onNodeWithTag(TASK_BOTTOM_SHEET_TITLE_FIELD_TEST_TAG)
+            .performTextInput("$titlePart $overflowWord")
+
+        // Exact matches: a mid-word split would leave part of the word in each field
+        composeTestRule.onNodeWithText(titlePart).assertIsDisplayed()
+        composeTestRule.onNodeWithText(overflowWord).assertIsDisplayed()
+    }
+
+    @Test
     fun longTitle_nearLimit_displaysCorrectly() {
         renderSheet()
 

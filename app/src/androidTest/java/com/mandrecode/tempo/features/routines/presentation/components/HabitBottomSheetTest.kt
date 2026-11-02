@@ -549,6 +549,21 @@ class HabitBottomSheetTest {
     }
 
     @Test
+    fun titleOverflow_midWord_movesWholeWordToDescription() {
+        renderNewHabitSheet()
+
+        val titlePart = "A".repeat(60)
+        val overflowWord = "OVERFLOWING"
+        composeTestRule
+            .onNodeWithText("Go for a walk")
+            .performTextInput("$titlePart $overflowWord")
+
+        // Exact matches: a mid-word split would leave part of the word in each field
+        composeTestRule.onNodeWithText(titlePart).assertIsDisplayed()
+        composeTestRule.onNodeWithText(overflowWord).assertIsDisplayed()
+    }
+
+    @Test
     fun longTitle_nearLimit_displaysCorrectly() {
         renderNewHabitSheet()
 
