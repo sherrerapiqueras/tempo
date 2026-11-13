@@ -180,7 +180,7 @@ Activating the linked task SHALL open that task's own sheet over the session she
 - **THEN** the task's sheet opens over it, and closing it returns to the session sheet
 
 ### Requirement: The session sheet is laid out as the app's other sheets are
-The session sheet SHALL start-align its title, with the task's description beneath it, SHALL be as tall as its content up to the full height, and SHALL show the countdown inside a filled expressive shape with the time left traced round its edge, using a different shape while resting.
+The session sheet SHALL start-align its title, with the task's description and the session's status beneath it, and show the countdown beside the title inside a filled expressive shape with the time left traced round its edge, using a different shape while resting. The linked task SHALL be a row among the sheet's other rows, with the task's category, priority and time as one line beneath it. The sheet SHALL be as tall as its content up to the full height.
 
 #### Scenario: Short session
 - **WHEN** a session with no task is opened

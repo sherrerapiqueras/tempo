@@ -11,26 +11,22 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
@@ -41,7 +37,6 @@ import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
 import com.mandrecode.tempo.core.ui.editor.EditorBottomSheetFooter
 import com.mandrecode.tempo.core.ui.util.color
-import com.mandrecode.tempo.core.ui.util.containerColor
 import com.mandrecode.tempo.core.ui.util.titleResId
 import com.mandrecode.tempo.features.focus.domain.model.FocusSession
 import com.mandrecode.tempo.features.focus.domain.model.TaskFocusToday
@@ -50,14 +45,17 @@ import com.mandrecode.tempo.features.tasks.presentation.components.cards.Subtask
 import com.mandrecode.tempo.util.DateTimeFormatter
 import kotlin.time.Clock
 
-private val DialSize = 208.dp
+/** Small enough to share a line with the title, large enough to read the time across a desk. */
+private val DialSize = 104.dp
+
+/** Where an editor row's icon starts, so the hero's text stands on the same line as the rows. */
+private val HeroTextStartInset = 8.dp
 
 /** The gap between the body's rows, as the task and habit editors space theirs. */
 private val RowGap = 20.dp
 
 /** Where an editor row's control starts, so what hangs under a row lines up with it. */
 private val MetadataStartInset = 52.dp
-private const val FULLY_ROUNDED = 50
 
 /**
  * What the session screen's body can do, as one value: starting and saving before it runs, the
@@ -120,6 +118,8 @@ internal fun SessionBody(
     actions: SessionBodyActions,
     modifier: Modifier = Modifier,
     clock: Clock = Clock.System,
+    /** The title — a name field or plain text — and anything under it, beside the dial. */
+    heading: @Composable ColumnScope.() -> Unit,
 ) {
     val counted by rememberSessionCountdown(session, clock)
     // Before it starts there is nothing to count down, so the ring shows the whole session ahead —
@@ -145,24 +145,19 @@ internal fun SessionBody(
                 // Matches the inset the top app bar gives its title, so the description below it
                 // starts on the same line rather than stepping in.
                 .padding(horizontal = SessionHorizontalPadding),
-        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        SessionSubject(
+        SessionHero(
             session = session,
             focusToday = focusToday,
             progress = progress,
             countdownLabel = remaining.asCountdownLabel(),
             rounds = session?.let { SessionRounds.of(it.cycle, it.isBreak) } ?: SessionRounds.planned(form.rounds),
+            heading = heading,
         )
 
         // The task the session is for, in the same place whether the session was opened from the
         // task or had it linked: its row, then what the row's task carries.
-        SessionLinkedTask(
-            task = task,
-            categoryName = categoryName,
-            minutesToday = focusToday.minutes,
-            link = actions.link,
-        )
+        SessionLinkedTask(task = task, categoryName = categoryName, link = actions.link)
 
         SessionSubtasks(subtasks = subtasks, actions = actions)
 
@@ -305,28 +300,33 @@ private fun ColumnScope.WorkedOnControls(
     )
 }
 
-/** The countdown and, under it, how far through its rounds the session is. */
+/**
+ * The top of the sheet: what the session is and where it stands, with its countdown beside it.
+ *
+ * Start-aligned text on one side, the dial on the other — the Focus tab's own summary card, turned
+ * to one session. The dial stood alone in the middle of the sheet once, the only centred thing on
+ * a sheet whose heading and rows all start at the same edge; here everything shares that edge and
+ * the dial closes the line the title opens.
+ *
+ * Under the title, what the dial cannot say: whether it is running, what the task has already had
+ * out of today, and how far through its rounds the session is.
+ */
 @Composable
-private fun SessionSubject(
+private fun SessionHero(
     session: FocusSession?,
     focusToday: TaskFocusToday,
     progress: Float,
     countdownLabel: String,
     rounds: SessionRounds?,
+    heading: @Composable ColumnScope.() -> Unit,
 ) {
-    SessionDial(
-        progress = progress,
-        isRunning = session?.isPaused == false,
-        isBreak = session?.isBreak == true,
-        colors = sessionSheetDialColors(),
-        modifier = Modifier.padding(top = 20.dp).size(DialSize),
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = countdownLabel,
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Bold,
-            )
+        Column(modifier = Modifier.weight(1f).padding(start = HeroTextStartInset)) {
+            heading()
             SessionRingStatus(
                 // The same line the card carries, so what the day has already put into this task
                 // reads the same whether you are glancing at the row or standing in the session.
@@ -344,25 +344,42 @@ private fun SessionSubject(
                     ),
                 iconRes = R.drawable.ic_coffee.takeIf { session?.isBreak == true },
             )
+            // How many rounds, and how far through them. Shown before starting too, so setting
+            // four rounds is seen as four before it is agreed to.
+            AnimatedVisibility(visible = rounds != null) {
+                rounds?.let {
+                    SessionRoundPips(
+                        rounds = it,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 10.dp),
+                    )
+                }
+            }
         }
-    }
-
-    // Under the dial, where the eye already is: how many rounds, and how far through them. Shown
-    // before starting too, so setting four rounds is seen as four before it is agreed to.
-    AnimatedVisibility(visible = rounds != null) {
-        rounds?.let {
-            SessionRoundPips(
-                rounds = it,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(top = 14.dp),
+        SessionDial(
+            progress = progress,
+            isRunning = session?.isPaused == false,
+            isBreak = session?.isBreak == true,
+            colors = sessionSheetDialColors(),
+            modifier = Modifier.size(DialSize),
+            strokeWidth = 4.dp,
+        ) {
+            Text(
+                text = countdownLabel,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
             )
         }
     }
 }
 
 /**
- * The linked task: its row, and under it what that task carries — time already spent on it today,
- * category, priority and reminder — set in from the row's icon so they read as belonging to it.
+ * The linked task as a row among the session's other rows: the chip that names it, and under the
+ * chip one quiet line of what the task carries — its category, its priority, when it is due.
+ *
+ * A line rather than a row of coloured pills. The pills were three more shapes competing with the
+ * dial for the eye, for facts that are there to be glanced at; the task's own sheet, one tap on
+ * the chip away, is where they are shown in full.
  *
  * One block for a session opened from a task and for one that had a task linked to it. They are
  * the same thing once the link is there, and showing them two ways said otherwise.
@@ -371,7 +388,6 @@ private fun SessionSubject(
 private fun SessionLinkedTask(
     task: Task?,
     categoryName: String?,
-    minutesToday: Int,
     link: SessionLinkActions,
 ) {
     LinkedTaskRow(
@@ -381,16 +397,37 @@ private fun SessionLinkedTask(
         onClear = link.onUnlink,
         modifier = Modifier.padding(top = RowGap),
     )
-    AnimatedVisibility(visible = task != null) {
-        task?.let {
-            SessionTaskMetadata(
-                task = it,
-                categoryName = categoryName,
-                minutesToday = minutesToday,
-                modifier = Modifier.padding(start = MetadataStartInset, top = 8.dp),
-            )
-        }
+    val summary = task?.let { sessionTaskSummary(it, categoryName) }
+    AnimatedVisibility(visible = summary != null) {
+        Text(
+            text = summary.orEmpty(),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth().padding(start = MetadataStartInset, top = 4.dp),
+        )
     }
+}
+
+/**
+ * `Inbox · High · 2:00 PM`, or `null` when the task carries none of them.
+ *
+ * The reminder shows its time alone: the date is already implied by the session being set up now.
+ */
+@Composable
+private fun sessionTaskSummary(
+    task: Task,
+    categoryName: String?,
+): String? {
+    val context = LocalContext.current
+    val parts =
+        listOfNotNull(
+            categoryName?.takeIf { it.isNotBlank() },
+            task.priority?.let { stringResource(it.titleResId) },
+            task.reminderDate?.let { DateTimeFormatter.formatTimeOfDay(it.time, context) },
+        )
+    return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
 }
 
 @Composable
@@ -399,6 +436,7 @@ private fun SessionRingStatus(
     iconRes: Int?,
 ) {
     Row(
+        modifier = Modifier.padding(top = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -407,12 +445,14 @@ private fun SessionRingStatus(
                 painter = painterResource(it),
                 contentDescription = null,
                 modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -469,100 +509,6 @@ private fun ColumnScope.RunningControls(
             colors = colors,
             modifier = Modifier.padding(top = 8.dp),
         )
-    }
-}
-
-/**
- * Category, priority and reminder for the task under way, as the full pills the task editor uses
- * rather than the compact badges its card shows — this screen has the room, and the editor's
- * vocabulary is the one that names each property outright.
- *
- * The reminder is the exception: the date is already implied by the session being under way, so it
- * shows the time alone.
- */
-@Composable
-private fun SessionTaskMetadata(
-    task: Task,
-    categoryName: String?,
-    minutesToday: Int,
-    modifier: Modifier = Modifier,
-) {
-    val context = LocalContext.current
-
-    FlowRow(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        // Leads the row: what this task has already taken out of the day is the one thing here the
-        // task's own card cannot tell you, and it is the reason you might choose a longer session
-        // or call it finished.
-        if (minutesToday > 0) {
-            SessionMetadataPill(
-                iconRes = R.drawable.ic_timer,
-                label = stringResource(R.string.focus_today_minutes, minutesToday),
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
-        }
-        categoryName?.takeIf { it.isNotBlank() }?.let { name ->
-            SessionMetadataPill(
-                iconRes = R.drawable.ic_category,
-                label = name,
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-            )
-        }
-        task.priority?.let { priority ->
-            SessionMetadataPill(
-                iconRes = R.drawable.ic_flag,
-                label = stringResource(priority.titleResId),
-                containerColor = priority.containerColor,
-                contentColor = priority.color,
-            )
-        }
-        task.reminderDate?.let { reminder ->
-            SessionMetadataPill(
-                iconRes = R.drawable.ic_notifications,
-                label = DateTimeFormatter.formatTimeOfDay(reminder.time, context),
-                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-            )
-        }
-    }
-}
-
-@Composable
-private fun SessionMetadataPill(
-    iconRes: Int,
-    label: String,
-    containerColor: Color,
-    contentColor: Color,
-) {
-    val pillShape = RoundedCornerShape(percent = FULLY_ROUNDED)
-    Surface(
-        shape = pillShape,
-        color = containerColor,
-        contentColor = contentColor,
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Icon(
-                painter = painterResource(iconRes),
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
     }
 }
 

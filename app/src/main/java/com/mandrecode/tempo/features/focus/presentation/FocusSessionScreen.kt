@@ -4,7 +4,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -172,16 +172,20 @@ fun FocusSessionSheet(
         // The task the session is for: the one it is running on or was opened from, or the one
         // just chosen for a session still being set up.
         val linked = if (target != null) uiState.taskEntry(form.linkedTaskId) else uiState.sessionEntry
-        SessionSheetHeading(
-            title = session?.title ?: linked?.task?.title.orEmpty(),
-            description = linked?.task?.description.takeIf { target == null },
-            form = form.takeIf { target != null },
-            isDocked = placement == SheetPlacement.DockedPane,
-        )
-
+        val topRoom = if (placement == SheetPlacement.DockedPane) DockedTitleTopPadding else 0.dp
         val setup = target?.let { sessionSetupActions(it, form, dialogs, onEvent, onRequestDismiss) }
         SessionBody(
             session = session,
+            // Docked there is no drag handle above the sheet, so it takes the room the docked task
+            // editor leaves above its own title (#502).
+            modifier = Modifier.padding(top = topRoom),
+            heading = {
+                SessionSheetHeading(
+                    title = session?.title ?: linked?.task?.title.orEmpty(),
+                    description = linked?.task?.description.takeIf { target == null },
+                    form = form.takeIf { target != null },
+                )
+            },
             form = form,
             focusToday = linked?.focusToday ?: TaskFocusToday(),
             subtasks = linked?.subtasks.orEmpty(),
@@ -331,62 +335,44 @@ private fun sessionLinkActions(
  * place when a session starts.
  *
  * Start-aligned and in the style the task and habit editors give their titles, with the description
- * directly beneath as theirs is, so a session reads as another sheet about one item. It was centred
- * over the timer once, which made it the only sheet in the app with a heading of its own. Docked
- * there is no drag handle above it, so it takes the docked task editor's room above (#502).
+ * directly beneath as theirs is, so a session reads as another sheet about one item. It stands
+ * beside the dial, in the body's hero, which is what places it.
  */
 @Composable
-private fun SessionSheetHeading(
+private fun ColumnScope.SessionSheetHeading(
     title: String,
     description: String?,
     form: SessionEditorForm?,
-    isDocked: Boolean,
 ) {
-    val padding =
-        if (isDocked) {
-            Modifier.padding(
-                start = DockedTitleHorizontalPadding,
-                end = DockedTitleHorizontalPadding,
-                top = DockedTitleTopPadding,
-            )
+    AnimatedContent(
+        targetState = form != null,
+        transitionSpec = { fadeIn() togetherWith fadeOut() },
+        label = "session_title",
+        modifier = Modifier.fillMaxWidth(),
+    ) { isEditable ->
+        if (isEditable && form != null) {
+            SessionNameField(form = form, textAlign = TextAlign.Start)
         } else {
-            Modifier.padding(horizontal = HeadingHorizontalPadding)
-        }
-    Column(modifier = Modifier.fillMaxWidth().then(padding)) {
-        AnimatedContent(
-            targetState = form != null,
-            transitionSpec = { fadeIn() togetherWith fadeOut() },
-            label = "session_title",
-            modifier = Modifier.fillMaxWidth(),
-        ) { isEditable ->
-            if (isEditable && form != null) {
-                SessionNameField(form = form, textAlign = TextAlign.Start)
-            } else {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.inputTitle,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-        description?.takeIf { it.isNotBlank() }?.let {
             Text(
-                text = it,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 3,
+                text = title,
+                style = MaterialTheme.typography.inputTitle,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }
+    description?.takeIf { it.isNotBlank() }?.let {
+        Text(
+            text = it,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
+        )
+    }
 }
 
-/** Where the body's rows start their icons, so the heading stands on the same line. */
-private val HeadingHorizontalPadding = 24.dp
-
-/** Where the docked task editor's title text starts and how far below the pane's top edge. */
-private val DockedTitleHorizontalPadding = 40.dp
+/** How far below the pane's top edge the docked task editor's title starts. */
 private val DockedTitleTopPadding = 24.dp
