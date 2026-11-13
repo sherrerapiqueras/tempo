@@ -9,6 +9,8 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import com.google.common.truth.Truth.assertThat
 import com.mandrecode.tempo.core.ui.theme.TempoTheme
@@ -43,6 +45,16 @@ class SessionEditorSheetTest {
         }
     }
 
+    /**
+     * Types the name and puts the keyboard away. A new sheet opens with the name focused, and on a
+     * small screen the keyboard sits over the buttons the test goes on to press.
+     */
+    private fun nameIt(name: String) {
+        composeTestRule.onNodeWithTag(SESSION_EDITOR_TITLE_FIELD_TEST_TAG).performTextInput(name)
+        composeTestRule.onNodeWithTag(SESSION_EDITOR_TITLE_FIELD_TEST_TAG).performImeAction()
+        composeTestRule.waitForIdle()
+    }
+
     @Test
     fun newSession_startsFromTheConfiguredLengthsAndCannotBeAddedWithoutAName() {
         setSheet()
@@ -66,11 +78,15 @@ class SessionEditorSheetTest {
     fun namedSession_isHandedBackWithWhatWasSet() {
         setSheet()
 
-        composeTestRule.onNodeWithTag(SESSION_EDITOR_TITLE_FIELD_TEST_TAG).performTextInput("Study")
+        nameIt("Study")
         composeTestRule.onNodeWithContentDescription("More rounds").performClick()
         composeTestRule.onNodeWithContentDescription("Longer session").performClick()
         composeTestRule.onNodeWithContentDescription("Shorter rest").performClick()
-        composeTestRule.onNodeWithText("Add session").assertIsEnabled().performClick()
+        composeTestRule
+            .onNodeWithText("Add session")
+            .assertIsEnabled()
+            .performScrollTo()
+            .performClick()
 
         assertThat(events)
             .containsExactly(
@@ -91,10 +107,10 @@ class SessionEditorSheetTest {
     fun linkingATask_putsItOnTheSessionAndStartSavesAndStarts() {
         setSheet()
 
-        composeTestRule.onNodeWithTag(SESSION_EDITOR_TITLE_FIELD_TEST_TAG).performTextInput("Study")
+        nameIt("Study")
         composeTestRule.onNodeWithText("Link a task").performClick()
         composeTestRule.onNodeWithText("Read chapter 3").performClick()
-        composeTestRule.onNodeWithText("Start 25 min").performClick()
+        composeTestRule.onNodeWithText("Start 25 min").performScrollTo().performClick()
 
         val save = events.single() as FocusContract.UiEvent.SaveSession
         assertThat(save.startNow).isTrue()
