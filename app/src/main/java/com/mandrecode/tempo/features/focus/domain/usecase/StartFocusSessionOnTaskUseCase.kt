@@ -38,11 +38,13 @@ class StartFocusSessionOnTaskUseCase
             // Pressing start on the work already under way is carrying on, not starting over —
             // restarting would throw away the time already on the clock. A paused one is picked
             // back up, since start is what was asked for.
-            val running = sessionRepository.activeSession.value
-            val alreadyRunning = running != null && !running.isBreak && running.taskId == taskId
-            if (alreadyRunning) {
+            //
+            // In the rest between this task's rounds it is the next round that is asked for: the
+            // run is the task's own, and a fresh single session would throw its rounds away.
+            val running = sessionRepository.activeSession.value?.takeIf { it.taskId == taskId }
+            if (running != null && !running.isBreak) {
                 focusSessionUseCases.resume()
-            } else {
+            } else if (running == null || !focusSessionUseCases.skipBreak()) {
                 focusSessionUseCases.start(taskId = task.id, title = task.title)
                 // The same as starting from the card: once running, the task is no longer a preview.
                 sessionRepository.setPreviewTaskId(null)

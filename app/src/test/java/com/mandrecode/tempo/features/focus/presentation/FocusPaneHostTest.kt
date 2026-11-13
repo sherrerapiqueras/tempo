@@ -175,4 +175,11 @@ class FocusPaneHostTest {
         assertThat(latchedSessionSubject("task:1", setupSessionId = 0)).isNull()
         assertThat(latchedSessionSubject("session:4", setupSessionId = 0)).isNull()
     }
+
+    @Test
+    fun givenASessionBeingSetUp_whenItsTaskIsOpened_thenThePaneIsNotGivenUpAndTheDraftSurvives() {
+        assertThat(handsTaskToPane(setupSessionId = 0)).isFalse()
+        assertThat(handsTaskToPane(setupSessionId = 12)).isFalse()
+        assertThat(handsTaskToPane(setupSessionId = null)).isTrue()
+    }
 }

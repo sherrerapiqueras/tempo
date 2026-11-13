@@ -156,7 +156,14 @@ internal fun SessionBody(
 
         // The task the session is for, in the same place whether the session was opened from the
         // task or had it linked: its row, then what the row's task carries.
-        SessionLinkedTask(task = task, categoryName = categoryName, link = actions.link)
+        SessionLinkedTask(
+            task = task,
+            categoryName = categoryName,
+            // While the status line is saying which round it is, what the task has already had out
+            // of today has nowhere else to be said.
+            spentToday = focusToday.takeIf { session?.cycle?.hasRounds == true },
+            link = actions.link,
+        )
 
         SessionSubtasks(subtasks = subtasks, actions = actions)
 
@@ -388,6 +395,7 @@ private fun SessionHero(
 private fun SessionLinkedTask(
     task: Task?,
     categoryName: String?,
+    spentToday: TaskFocusToday?,
     link: SessionLinkActions,
 ) {
     LinkedTaskRow(
@@ -395,13 +403,14 @@ private fun SessionLinkedTask(
         onOpen = link.onOpenTask,
         onPick = link.onPick,
         onClear = link.onUnlink,
-        supporting = task?.let { sessionTaskSummary(it, categoryName) },
+        supporting = task?.let { sessionTaskSummary(it, categoryName, spentToday) },
         modifier = Modifier.padding(top = RowGap),
     )
 }
 
 /**
- * `Inbox · High · 2:00 PM`, or `null` when the task carries none of them.
+ * `Inbox · High · 2:00 PM`, or `null` when the task carries none of them. [spentToday] adds what
+ * the task has already had out of today, when the status line is not the one saying it.
  *
  * The reminder shows its time alone: the date is already implied by the session being set up now.
  */
@@ -409,6 +418,7 @@ private fun SessionLinkedTask(
 private fun sessionTaskSummary(
     task: Task,
     categoryName: String?,
+    spentToday: TaskFocusToday?,
 ): String? {
     val context = LocalContext.current
     val parts =
@@ -416,6 +426,7 @@ private fun sessionTaskSummary(
             categoryName?.takeIf { it.isNotBlank() },
             task.priority?.let { stringResource(it.titleResId) },
             task.reminderDate?.let { DateTimeFormatter.formatTimeOfDay(it.time, context) },
+            spentToday?.soFarTodayLabel(),
         )
     return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
 }

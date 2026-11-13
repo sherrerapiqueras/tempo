@@ -4,13 +4,11 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import com.google.common.truth.Truth.assertThat
 import com.mandrecode.tempo.features.focus.domain.model.SavedSession
-import com.mandrecode.tempo.features.tasks.domain.model.Task
 import org.junit.Test
 
 /** What the session sheet makes of what is typed into it, and what it saves as it closes. */
 class SessionEditorFormTest {
     private val study = SavedSession(3, "Study", focusMinutes = 50, breakMinutes = 10, rounds = 4, taskId = 7)
-    private val chapter = Task(id = 7, title = "Read chapter 3", description = "")
 
     private fun formOf(original: SavedSession?) =
         SessionEditorForm(
@@ -68,18 +66,5 @@ class SessionEditorFormTest {
         form.title = " Study "
 
         assertThat(form.savesOnClose).isFalse()
-    }
-
-    @Test
-    fun `the linked task comes from the list, or from the session until the list has loaded`() {
-        val form = formOf(study)
-        val renamed = chapter.copy(title = "Read chapter 4")
-
-        assertThat(form.linkedTask(emptyList(), chapter)).isEqualTo(chapter)
-        assertThat(form.linkedTask(listOf(renamed), chapter)).isEqualTo(renamed)
-        form.linkedTaskId = 99
-        assertThat(form.linkedTask(listOf(renamed), chapter)).isNull()
-        form.linkedTaskId = null
-        assertThat(form.linkedTask(listOf(renamed), chapter)).isNull()
     }
 }

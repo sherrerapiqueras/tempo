@@ -87,6 +87,15 @@ internal fun latchedSessionSubject(
     return latched.takeUnless { hasBecomeReal || hasBecomeNew }
 }
 
+/**
+ * Whether a task opened from the docked session goes to the pane, taking the session's place.
+ *
+ * Not while a session is being set up. Giving up the pane closes the session surface, and with it
+ * whatever had been typed into a session not yet saved — so there the task opens as a sheet over
+ * the pane instead, and the draft is still underneath when it closes.
+ */
+internal fun handsTaskToPane(setupSessionId: Long?): Boolean = setupSessionId == null
+
 /** What the pane shows: a task when one is open, else the session when it is, else nothing. */
 internal fun focusPane(
     canDock: Boolean,

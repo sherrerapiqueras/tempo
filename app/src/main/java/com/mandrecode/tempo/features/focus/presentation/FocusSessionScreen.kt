@@ -20,13 +20,13 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mandrecode.tempo.core.ui.adaptive.SheetPlacement
 import com.mandrecode.tempo.core.ui.components.TempoModalBottomSheet
+import com.mandrecode.tempo.core.ui.editor.EDITOR_TEXT_FIELD_TOP_INSET
 import com.mandrecode.tempo.core.ui.theme.inputTitle
 import com.mandrecode.tempo.features.focus.domain.model.TaskFocusToday
 import com.mandrecode.tempo.features.focus.presentation.components.DeleteSessionDialog
@@ -102,7 +102,11 @@ fun FocusSessionRoute(
 
     val onEvent: (FocusContract.UiEvent) -> Unit = { event ->
         val editTask = event as? FocusContract.UiEvent.EditTask
-        if (onEditTask != null && editTask != null) onEditTask(editTask.task) else viewModel.onEvent(event)
+        if (onEditTask != null && editTask != null && handsTaskToPane(uiState.setupSessionId)) {
+            onEditTask(editTask.task)
+        } else {
+            viewModel.onEvent(event)
+        }
     }
 
     uiState.taskEditor?.let { target ->
@@ -351,14 +355,16 @@ private fun ColumnScope.SessionSheetHeading(
         modifier = Modifier.fillMaxWidth(),
     ) { isEditable ->
         if (isEditable && form != null) {
-            SessionNameField(form = form, textAlign = TextAlign.Start)
+            SessionNameField(form = form)
         } else {
             Text(
                 text = title,
                 style = MaterialTheme.typography.inputTitle,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.fillMaxWidth(),
+                // The room the title field keeps round its text, so the heading does not move when
+                // a session starts and the field gives way to this.
+                modifier = Modifier.fillMaxWidth().padding(vertical = EDITOR_TEXT_FIELD_TOP_INSET),
             )
         }
     }

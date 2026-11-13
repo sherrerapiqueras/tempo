@@ -15,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,6 +28,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -74,46 +78,54 @@ internal fun SessionDial(
     content: @Composable BoxScope.() -> Unit,
 ) {
     val shape = (if (isBreak) MaterialShapes.Flower else MaterialShapes.Cookie12Sided).toShape()
-    val breath by rememberInfiniteTransition(label = "session_dial").animateFloat(
-        initialValue = RESTING_SCALE,
-        targetValue = BREATH_SCALE,
-        animationSpec = infiniteRepeatable(tween(BREATH_MILLIS), RepeatMode.Reverse),
-        label = "session_dial_breath",
-    )
-    // Chased rather than read directly, so pausing eases back to rest instead of snapping there.
-    val scale by animateFloatAsState(if (isRunning) breath else RESTING_SCALE, label = "session_dial_scale")
-    val shown by animateFloatAsState(progress.coerceIn(0f, 1f), label = "session_dial_progress")
+    // Only while running, and only ever read while drawing: a dial standing still costs nothing,
+    // and one that is breathing redraws itself without being composed again each frame.
+    val breath = if (isRunning) rememberBreath() else null
+    val shown = animateFloatAsState(progress.coerceIn(0f, 1f), label = "session_dial_progress")
 
     Box(
         modifier =
-            modifier.drawWithCache {
-                val stroke = strokeWidth.toPx()
-                // Inset by half the stroke and no more: the trace is centred on the shape's edge, so
-                // its outer side then lands exactly on the dial's bounds, and the dial lines up with
-                // whatever else ends at that edge.
-                val inset = stroke / 2
-                val inner = Size(size.width - stroke, size.height - stroke)
-                val outline = shape.createOutline(inner, layoutDirection, this)
-                val path = (outline as? Outline.Generic)?.path ?: Path()
-                val measure = PathMeasure().apply { setPath(path, forceClosed = true) }
-                val traced = Path()
-                onDrawBehind {
-                    scale(scale) {
-                        translate(inset, inset) {
-                            drawPath(path, colors.fill)
-                            drawPath(path, colors.track, style = Stroke(stroke))
-                            traced.rewind()
-                            measure.getSegment(0f, measure.length * shown, traced, startWithMoveTo = true)
-                            drawPath(traced, colors.progress, style = Stroke(stroke, cap = StrokeCap.Round))
+            modifier
+                // What the ring this replaced said for itself: how far through the countdown is.
+                .semantics { progressBarRangeInfo = ProgressBarRangeInfo(progress.coerceIn(0f, 1f), 0f..1f) }
+                .drawWithCache {
+                    val stroke = strokeWidth.toPx()
+                    // Inset by half the stroke and no more: the trace is centred on the shape's edge, so
+                    // its outer side then lands exactly on the dial's bounds, and the dial lines up with
+                    // whatever else ends at that edge.
+                    val inset = stroke / 2
+                    val inner = Size(size.width - stroke, size.height - stroke)
+                    val outline = shape.createOutline(inner, layoutDirection, this)
+                    val path = (outline as? Outline.Generic)?.path ?: Path()
+                    val measure = PathMeasure().apply { setPath(path, forceClosed = true) }
+                    val traced = Path()
+                    onDrawBehind {
+                        scale(breath?.value ?: RESTING_SCALE) {
+                            translate(inset, inset) {
+                                drawPath(path, colors.fill)
+                                drawPath(path, colors.track, style = Stroke(stroke))
+                                traced.rewind()
+                                measure.getSegment(0f, measure.length * shown.value, traced, startWithMoveTo = true)
+                                drawPath(traced, colors.progress, style = Stroke(stroke, cap = StrokeCap.Round))
+                            }
                         }
                     }
-                }
-            },
+                },
         contentAlignment = Alignment.Center,
     ) {
         CompositionLocalProvider(LocalContentColor provides colors.content) { content() }
     }
 }
+
+/** The dial's slow breath in and out, for as long as it is composed. */
+@Composable
+private fun rememberBreath(): State<Float> =
+    rememberInfiniteTransition(label = "session_dial").animateFloat(
+        initialValue = RESTING_SCALE,
+        targetValue = BREATH_SCALE,
+        animationSpec = infiniteRepeatable(tween(BREATH_MILLIS), RepeatMode.Reverse),
+        label = "session_dial_breath",
+    )
 
 private val DialStrokeWidth = 6.dp
 private const val TRACK_ALPHA = 0.22f

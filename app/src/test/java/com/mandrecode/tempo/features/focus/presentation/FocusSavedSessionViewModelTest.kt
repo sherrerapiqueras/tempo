@@ -81,7 +81,7 @@ class FocusSavedSessionViewModelTest : FocusViewModelHarness() {
                     .map { it.id },
             ).containsExactly(1L, 2L)
 
-            viewModel.onEvent(FocusContract.UiEvent.DismissSessionEditor)
+            viewModel.onEvent(FocusContract.UiEvent.ClearSessionPreview)
             advanceUntilIdle()
             assertThat(viewModel.uiState.value.linkableTasks).isEmpty()
         }
@@ -651,5 +651,34 @@ class FocusSavedSessionViewModelTest : FocusViewModelHarness() {
                     ?.isNew,
             ).isTrue()
             assertThat(viewModel.uiState.value.sessionSubjectKey).isEqualTo("session:0")
+        }
+
+    @Test
+    fun `a tap that still says new, after the session has its id, updates it instead of adding another`() =
+        runTest {
+            stubDay()
+            coEvery { saveSavedSession(any()) } returns study
+            val viewModel = createViewModel()
+            advanceUntilIdle()
+            // The screen's draft has not caught up: the session is already being set up as 4.
+            setupFlow.value = 4
+
+            viewModel.onEvent(FocusContract.UiEvent.SaveSession(draftOf(id = 0)))
+            advanceUntilIdle()
+
+            coVerify { saveSavedSession(draftOf(id = 4).toSavedSession()) }
+        }
+
+    @Test
+    fun `nothing is saved when no session is being set up`() =
+        runTest {
+            stubDay()
+            val viewModel = createViewModel()
+            advanceUntilIdle()
+
+            viewModel.onEvent(FocusContract.UiEvent.SaveSession(draftOf()))
+            advanceUntilIdle()
+
+            coVerify(exactly = 0) { saveSavedSession(any()) }
         }
 }

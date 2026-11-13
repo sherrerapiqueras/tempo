@@ -27,8 +27,6 @@ internal fun FocusViewModel.onSessionEditorEvent(event: FocusContract.UiEvent) {
         is FocusContract.UiEvent.EditSession ->
             if (savedSession(event.sessionId) != null) openSessionSetup(event.sessionId)
 
-        FocusContract.UiEvent.DismissSessionEditor -> focusSessionRepository.setSetupSessionId(null)
-
         // The screen stays where it is; what it is about becomes a session of its own.
         FocusContract.UiEvent.UnlinkPreviewTask -> focusSessionRepository.setSetupSessionId(SavedSession.NEW_ID)
 
@@ -61,19 +59,26 @@ private fun FocusViewModel.openSessionSetup(sessionId: Long) {
 /**
  * Saves the screen's draft and, with [startNow], runs it.
  *
- * One write at a time: a second tap landing while the first is still on its way to the database
- * would otherwise save the session twice. The write itself is not cancellable — closing the screen
- * is one of the things that saves, and it clears this view model in the same breath.
+ * Only what is being set up can be saved, and under the id it is being set up as. A new session
+ * takes its real id the moment it is first written, a beat before the screen holding the draft
+ * catches up — so a second tap in that beat still carries "new", and is answered by updating the
+ * session just made rather than making another. One write at a time besides, for the tap that
+ * lands while the first is still on its way to the database.
+ *
+ * The write itself is not cancellable: closing the screen is one of the things that saves, and it
+ * clears this view model in the same breath.
  */
 private fun FocusViewModel.saveSession(
     draft: FocusContract.SessionDraft,
     startNow: Boolean,
 ) {
+    val settingUp = focusSessionRepository.setupSessionId.value ?: return
     if (isSavingSession) return
     isSavingSession = true
+    val session = draft.toSavedSession().let { if (it.id == SavedSession.NEW_ID) it.copy(id = settingUp) else it }
     viewModelScope.launch {
         try {
-            val saved = withContext(NonCancellable) { saveSavedSession(draft.toSavedSession()) }
+            val saved = withContext(NonCancellable) { saveSavedSession(session) }
             if (saved != null && startNow) {
                 showSaved(saved)
                 // Under its real id from here on: a new session was being set up under a stand-in,

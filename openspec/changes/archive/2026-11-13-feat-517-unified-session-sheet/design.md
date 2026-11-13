@@ -36,6 +36,9 @@ With the form no longer its own piece of state, "only an open sheet can save" be
 ### Height follows content
 The body is `fillMaxWidth` rather than `fillMaxSize`; the modal sheet already wraps its content up to its maximum height and scrolls beyond it.
 
+### Later revision: side hero and a single summary line
+After the owner tried the build, the centred dial was felt to fight a sheet whose heading and rows all start at one edge. The sheet's top became a hero row — title, status line and round markers start-aligned, the dial beside them at 104dp, as the Focus summary card places its ring — and the linked task became a row among the others, its category, priority and time as one muted line under the chip instead of pills. Every row's content shares one start inset, the line under the chip starts under the chip's label, and the dial is inset by half its stroke so its edge lands on the sheet's right margin. The main spec (`focus-saved-sessions`, "The session sheet is laid out as the app's other sheets are") was updated with these revisions; they were iterated directly on this archived change rather than opened as a third one.
+
 ## Risks / Trade-offs
 
 - [Up next now mixes tasks and sessions] → session cards lead their metadata with a timer icon and their rounds/rest, tasks with priority/category/time; tasks come first.

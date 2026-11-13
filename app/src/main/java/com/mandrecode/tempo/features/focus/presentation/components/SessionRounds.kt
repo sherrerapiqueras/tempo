@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -74,7 +75,13 @@ internal fun SessionRoundPips(
     color: Color,
     modifier: Modifier = Modifier,
 ) {
-    val description = stringResource(R.string.focus_session_round, rounds.current.coerceAtLeast(1), rounds.total)
+    // Before starting no round is under way, so it is how many there are that is said.
+    val description =
+        if (rounds.current > 0) {
+            stringResource(R.string.focus_session_round, rounds.current, rounds.total)
+        } else {
+            pluralStringResource(R.plurals.focus_session_rounds, rounds.total, rounds.total)
+        }
     // One node for the whole row, read as words. The tag is set in the same block: this modifier
     // clears what the ones before it said, a test tag included.
     Row(

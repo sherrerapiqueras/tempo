@@ -141,4 +141,20 @@ class StartFocusSessionOnTaskUseCaseTest {
     private companion object {
         const val TASK_ID = 7L
     }
+
+    @Test
+    fun `in the rest between the task's own rounds, start means the next round, not a fresh session`() =
+        runTest {
+            coEvery { taskRepository.getTaskById(TASK_ID) } returns task(title = "Report")
+            val rounds = FocusSession.adHocCycle(focusMinutes = 25, breakMinutes = 5, rounds = 4)
+            val now = kotlin.time.Instant.fromEpochMilliseconds(1_800_000_000_000)
+            activeSession.value =
+                FocusSession.start(taskId = TASK_ID, title = "Report", now = now, isBreak = true, cycle = rounds)
+            every { focusSessionUseCases.skipBreak() } returns true
+
+            assertThat(useCase(TASK_ID)).isTrue()
+
+            verify { focusSessionUseCases.skipBreak() }
+            coVerify(exactly = 0) { focusSessionUseCases.start(any(), any(), any(), any(), any()) }
+        }
 }

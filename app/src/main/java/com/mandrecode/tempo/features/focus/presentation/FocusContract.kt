@@ -462,8 +462,6 @@ object FocusContract {
             val sessionId: Long,
         ) : UiEvent
 
-        data object DismissSessionEditor : UiEvent
-
         /** Saves the sheet's draft and closes it; with [startNow], starts its timer as well. */
         data class SaveSession(
             val draft: SessionDraft,

@@ -181,7 +181,8 @@ class FocusViewModelTest : FocusViewModelHarness() {
             assertThat(viewModel.uiState.value.sessionSetup).isEqualTo(FocusContract.SessionEditorTarget())
             assertThat(viewModel.uiState.value.taskEditor).isNull()
 
-            viewModel.onEvent(FocusContract.UiEvent.DismissSessionEditor)
+            // Leaving the session screen is what ends the setup.
+            viewModel.onEvent(FocusContract.UiEvent.ClearSessionPreview)
             advanceUntilIdle()
             assertThat(viewModel.uiState.value.sessionSetup).isNull()
         }

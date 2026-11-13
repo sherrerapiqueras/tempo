@@ -3,7 +3,6 @@ package com.mandrecode.tempo.features.focus.presentation.components
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -12,9 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -34,17 +30,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
@@ -55,8 +46,8 @@ import com.mandrecode.tempo.core.ui.components.ValueStepper
 import com.mandrecode.tempo.core.ui.editor.EDITOR_CONTROL_HEIGHT
 import com.mandrecode.tempo.core.ui.editor.EditorAddButton
 import com.mandrecode.tempo.core.ui.editor.EditorPropertyRow
+import com.mandrecode.tempo.core.ui.editor.EditorTitleField
 import com.mandrecode.tempo.core.ui.editor.EditorValueChip
-import com.mandrecode.tempo.core.ui.theme.inputTitle
 import com.mandrecode.tempo.core.ui.theme.subtaskTitle
 import com.mandrecode.tempo.features.focus.domain.model.FocusSession
 import com.mandrecode.tempo.features.focus.domain.model.SavedSession
@@ -125,18 +116,6 @@ internal class SessionEditorForm(
             breakMinutes = breakMinutes,
             rounds = rounds,
         )
-
-    /**
-     * The chosen task, from the list when it is there. The list loads a beat after the sheet
-     * opens, and until then the task the session came with stands in for itself.
-     */
-    fun linkedTask(
-        linkableTasks: List<Task>,
-        originalTask: Task?,
-    ): Task? {
-        val id = linkedTaskId ?: return null
-        return linkableTasks.firstOrNull { it.id == id } ?: originalTask?.takeIf { it.id == id }
-    }
 }
 
 /**
@@ -166,19 +145,18 @@ internal fun rememberSessionEditorForm(
 }
 
 /**
- * A session's name, typed where a running session's title stands and in the same style, so the
- * screen has one heading whether it is being set up or counting down.
+ * A session's name, typed where a running session's title stands.
  *
- * A new session opens here with the keyboard up, as a new task does. One being changed opens at
- * rest: it is as likely the numbers that are wanted.
+ * The editors' own title field, not a field of this sheet's: the same style, the same placeholder
+ * treatment, the same error line, and Enter leaving the field rather than breaking the name in
+ * two. A new session opens here with the keyboard up, as a new task does. One being changed opens
+ * at rest: it is as likely the numbers that are wanted.
  */
 @Composable
 internal fun SessionNameField(
     form: SessionEditorForm,
-    textAlign: TextAlign,
     modifier: Modifier = Modifier,
 ) {
-    val focusManager = LocalFocusManager.current
     val titleFocus = remember { FocusRequester() }
     LaunchedEffect(form.isNew) {
         if (form.isNew && form.title.isEmpty()) titleFocus.requestFocus()
@@ -188,53 +166,19 @@ internal fun SessionNameField(
     LaunchedEffect(form.showsTitleError) {
         if (form.showsTitleError) titleFocus.requestFocus()
     }
-    val style = MaterialTheme.typography.inputTitle.copy(textAlign = textAlign)
-    Column(modifier = modifier.fillMaxWidth()) {
-        BasicTextField(
-            value = form.title,
-            onValueChange = {
-                form.title = it
-                if (it.isNotBlank()) form.showsTitleError = false
-            },
-            textStyle = style.copy(color = MaterialTheme.colorScheme.onSurface),
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            maxLines = 2,
-            keyboardOptions =
-                KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .testTag(SESSION_EDITOR_TITLE_FIELD_TEST_TAG)
-                    .focusRequester(titleFocus),
-            decorationBox = { innerTextField ->
-                // The field is as wide as its text, so it is the box that places it: centred under
-                // the handle as a running session's title is, or at the start when docked.
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = if (textAlign == TextAlign.Center) Alignment.TopCenter else Alignment.TopStart,
-                ) {
-                    if (form.title.isEmpty()) {
-                        Text(
-                            text = stringResource(R.string.session_editor_title_placeholder),
-                            style = style,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = PLACEHOLDER_ALPHA),
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                    innerTextField()
-                }
-            },
-        )
-        if (form.showsTitleError) {
-            Text(
-                text = stringResource(R.string.task_title_required),
-                style = MaterialTheme.typography.labelMedium.copy(textAlign = textAlign),
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-            )
-        }
-    }
+    EditorTitleField(
+        value = form.title,
+        onValueChange = {
+            form.title = it
+            if (it.isNotBlank()) form.showsTitleError = false
+        },
+        placeholder = stringResource(R.string.session_editor_title_placeholder),
+        error = stringResource(R.string.task_title_required).takeIf { form.showsTitleError },
+        // The hero has already placed its text on the rows' start line.
+        besideCheckbox = true,
+        modifier = modifier,
+        fieldModifier = Modifier.testTag(SESSION_EDITOR_TITLE_FIELD_TEST_TAG).focusRequester(titleFocus),
+    )
 }
 
 /**
@@ -509,4 +453,3 @@ private val ChipOwnInset = 4.dp
 
 /** How far inside its own edge an input chip starts its label. */
 private val ChipLabelInset = 12.dp
-private const val PLACEHOLDER_ALPHA = 0.6f
