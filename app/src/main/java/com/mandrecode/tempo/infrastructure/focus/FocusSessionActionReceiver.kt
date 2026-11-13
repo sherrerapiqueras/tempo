@@ -72,7 +72,7 @@ class FocusSessionActionReceiver : BroadcastReceiver() {
     /** Finishing the work finishes the session with it, the same as pressing it in the app. */
     private suspend fun completeSessionTask() {
         val session = sessionRepository.activeSession.value ?: return
-        val task = taskRepository.getTaskById(session.taskId)
+        val task = session.taskId?.let { taskRepository.getTaskById(it) }
         if (task != null && !task.isCompleted) {
             toggleTaskCompletion(task)
         }

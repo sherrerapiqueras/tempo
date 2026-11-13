@@ -49,15 +49,16 @@ internal fun canDockFocusPane(
 ): Boolean = placement == SheetPlacement.DockedPane && !isEditorOverPlanSheet
 
 /**
- * The task the session surface is about. A sheet latches the first one it hears of, since nothing
- * behind it can be tapped. Docked, the agenda stays live, so the pane follows a newly chosen task,
- * and keeps the last one once there is none, which is how it knows to close.
+ * What the session surface is about: a task, or a saved session. A sheet latches the first one it
+ * hears of, since nothing behind it can be tapped. Docked, the agenda stays live, so the pane
+ * follows a newly chosen task, and keeps the last one once there is none, which is how it knows to
+ * close.
  */
-internal fun nextSessionSubject(
+internal fun <T : Any> nextSessionSubject(
     isDocked: Boolean,
-    subject: Long?,
-    sessionTaskId: Long?,
-): Long? = if (isDocked) sessionTaskId ?: subject else subject ?: sessionTaskId
+    subject: T?,
+    current: T?,
+): T? = if (isDocked) current ?: subject else subject ?: current
 
 /** What the pane shows: a task when one is open, else the session when it is, else nothing. */
 internal fun focusPane(
@@ -114,7 +115,7 @@ internal fun focusPaneHost(
     val isEditorOpen = uiState.taskEditor != null
     // The route alone isn't enough: restored after the session ended, it has nothing to show, and
     // an empty pane would have no way to close.
-    val isSessionOpen = isSessionRouteOpen && uiState.sessionTaskId != null
+    val isSessionOpen = isSessionRouteOpen && uiState.sessionSubjectKey != null
     val pane = focusPane(canDock, isEditorOpen, isSessionOpen)
     val isEditorDocked = pane == FocusPane.EDITOR
     val editingTaskId = uiState.editingTaskId()

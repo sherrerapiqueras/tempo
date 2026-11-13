@@ -43,7 +43,7 @@ class StartFocusSessionOnTaskUseCase
             if (alreadyRunning) {
                 focusSessionUseCases.resume()
             } else {
-                focusSessionUseCases.start(taskId = task.id, taskTitle = task.title)
+                focusSessionUseCases.start(taskId = task.id, title = task.title)
                 // The same as starting from the card: once running, the task is no longer a preview.
                 sessionRepository.setPreviewTaskId(null)
             }

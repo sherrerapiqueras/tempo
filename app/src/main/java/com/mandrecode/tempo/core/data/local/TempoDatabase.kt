@@ -16,6 +16,7 @@ import com.mandrecode.tempo.core.data.entity.DailyFocusActivityEntity
 import com.mandrecode.tempo.core.data.entity.HabitChainEntity
 import com.mandrecode.tempo.core.data.entity.HabitChainMemberEntity
 import com.mandrecode.tempo.core.data.entity.HabitEntity
+import com.mandrecode.tempo.core.data.entity.SavedSessionEntity
 import com.mandrecode.tempo.core.data.entity.TaskAttachmentEntity
 import com.mandrecode.tempo.core.data.entity.TaskEntity
 import com.mandrecode.tempo.core.data.entity.TaskSectionEntity
@@ -24,6 +25,7 @@ import com.mandrecode.tempo.core.data.local.dao.DailyFocusActivityDao
 import com.mandrecode.tempo.core.data.local.dao.HabitChainDao
 import com.mandrecode.tempo.core.data.local.dao.HabitChainMemberDao
 import com.mandrecode.tempo.core.data.local.dao.HabitDao
+import com.mandrecode.tempo.core.data.local.dao.SavedSessionDao
 import com.mandrecode.tempo.core.data.local.dao.TaskAttachmentDao
 import com.mandrecode.tempo.core.data.local.dao.TaskDao
 import com.mandrecode.tempo.core.data.local.dao.TaskSectionDao
@@ -45,8 +47,9 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         DailyFocusActivityEntity::class,
         TaskAttachmentEntity::class,
         TaskSectionEntity::class,
+        SavedSessionEntity::class,
     ],
-    version = 13,
+    version = 14,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -66,6 +69,8 @@ abstract class TempoDatabase : RoomDatabase() {
     abstract fun taskAttachmentDao(): TaskAttachmentDao
 
     abstract fun taskSectionDao(): TaskSectionDao
+
+    abstract fun savedSessionDao(): SavedSessionDao
 
     companion object {
         const val DATABASE_NAME = "tempo_database"
@@ -327,6 +332,28 @@ abstract class TempoDatabase : RoomDatabase() {
                 }
             }
 
+        /**
+         * Adds saved focus sessions (#517). A new table and nothing else: no existing row changes,
+         * and a timer already running is stored outside the database.
+         */
+        val MIGRATION_13_14 =
+            object : Migration(13, 14) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `focus_sessions` (" +
+                            "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                            "`title` TEXT NOT NULL, " +
+                            "`focusMinutes` INTEGER NOT NULL, " +
+                            "`breakMinutes` INTEGER NOT NULL, " +
+                            "`rounds` INTEGER NOT NULL, " +
+                            "`taskId` INTEGER)",
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_focus_sessions_taskId` ON `focus_sessions` (`taskId`)",
+                    )
+                }
+            }
+
         val MIGRATIONS =
             arrayOf(
                 MIGRATION_1_2,
@@ -341,6 +368,7 @@ abstract class TempoDatabase : RoomDatabase() {
                 MIGRATION_10_11,
                 MIGRATION_11_12,
                 MIGRATION_12_13,
+                MIGRATION_13_14,
             )
 
         suspend fun getDatabase(

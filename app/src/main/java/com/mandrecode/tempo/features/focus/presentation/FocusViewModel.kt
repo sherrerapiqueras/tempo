@@ -5,12 +5,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mandrecode.tempo.core.domain.model.VacationPeriod
 import com.mandrecode.tempo.core.domain.repository.VacationModeRepository
+import com.mandrecode.tempo.features.focus.domain.model.FocusSession
 import com.mandrecode.tempo.features.focus.domain.repository.FocusSessionRepository
+import com.mandrecode.tempo.features.focus.domain.usecase.DeleteSavedSessionUseCase
 import com.mandrecode.tempo.features.focus.domain.usecase.FocusSessionUseCases
 import com.mandrecode.tempo.features.focus.domain.usecase.GetFocusAgendaUseCase
 import com.mandrecode.tempo.features.focus.domain.usecase.GetFocusHistoryUseCase
 import com.mandrecode.tempo.features.focus.domain.usecase.GetFocusStreakUseCase
+import com.mandrecode.tempo.features.focus.domain.usecase.GetLinkableTasksUseCase
+import com.mandrecode.tempo.features.focus.domain.usecase.GetSavedSessionsUseCase
 import com.mandrecode.tempo.features.focus.domain.usecase.RecordDailyActivityUseCase
+import com.mandrecode.tempo.features.focus.domain.usecase.SaveSavedSessionUseCase
 import com.mandrecode.tempo.features.tasks.domain.usecase.GetUndatedTasksUseCase
 import com.mandrecode.tempo.features.tasks.domain.usecase.RestoreTaskRemindersUseCase
 import com.mandrecode.tempo.features.tasks.domain.usecase.ToggleTaskCompletionUseCase
@@ -47,11 +52,15 @@ class FocusViewModel
         private val getFocusStreak: GetFocusStreakUseCase,
         private val recordDailyActivity: RecordDailyActivityUseCase,
         private val toggleTaskCompletion: ToggleTaskCompletionUseCase,
-        private val focusSessionRepository: FocusSessionRepository,
-        private val focusSessionUseCases: FocusSessionUseCases,
+        internal val focusSessionRepository: FocusSessionRepository,
+        internal val focusSessionUseCases: FocusSessionUseCases,
         internal val getUndatedTasks: GetUndatedTasksUseCase,
         internal val updateTask: UpdateTaskUseCase,
         internal val restoreTaskReminders: RestoreTaskRemindersUseCase,
+        internal val getSavedSessions: GetSavedSessionsUseCase,
+        internal val getLinkableTasks: GetLinkableTasksUseCase,
+        internal val saveSavedSession: SaveSavedSessionUseCase,
+        internal val deleteSavedSession: DeleteSavedSessionUseCase,
         private val vacationModeRepository: VacationModeRepository,
         internal val clock: Clock,
     ) : ViewModel() {
@@ -66,6 +75,9 @@ class FocusViewModel
         /** Cancelled when the sheet closes, so a closed sheet is not still collecting for nobody. */
         internal var planSheetJob: Job? = null
 
+        /** Cancelled when the session sheet closes, for the same reason. */
+        internal var linkableTasksJob: Job? = null
+
         /** Replaced when an interaction finds that the open screen has crossed into a new day. */
         private var observeDayJob: Job? = null
         private var observedDay: LocalDate? = null
@@ -78,6 +90,7 @@ class FocusViewModel
 
         init {
             observeSession()
+            observeSavedSessions()
             refreshDayIfStale()
         }
 
@@ -125,9 +138,6 @@ class FocusViewModel
                         )
                     }
 
-                FocusContract.UiEvent.AddTask ->
-                    mutableUiState.update { it.copy(taskEditor = FocusContract.TaskEditorTarget.NewTask) }
-
                 is FocusContract.UiEvent.AddSubtask ->
                     mutableUiState.update {
                         it.copy(
@@ -144,10 +154,15 @@ class FocusViewModel
                 FocusContract.UiEvent.ConfirmPendingStart -> {
                     val pending = mutableUiState.value.pendingStart ?: return
                     mutableUiState.update { it.copy(pendingStart = null) }
-                    startSessionOn(pending.taskId, pending.lengthMinutes, force = true)
+                    val savedSessionId = pending.savedSessionId
+                    if (savedSessionId != null) {
+                        startSavedSession(savedSessionId, force = true)
+                    } else {
+                        startSessionOn(pending.taskId, pending.lengthMinutes, force = true)
+                    }
                 }
 
-                else -> onSessionEvent(event)
+                else -> onSessionEditorEvent(event)
             }
         }
 
@@ -155,15 +170,12 @@ class FocusViewModel
          * Timer controls. Split from the completion-sheet handling below so neither `when` grows
          * past what is readable, and starting is inlined here because it has exactly one caller.
          */
-        private fun onSessionEvent(event: FocusContract.UiEvent) {
+        internal fun onSessionEvent(event: FocusContract.UiEvent) {
             when (event) {
                 is FocusContract.UiEvent.StartSession ->
                     startSessionOn(event.taskId, event.lengthMinutes)
 
-                FocusContract.UiEvent.BackToWork ->
-                    mutableUiState.value.session
-                        ?.takeIf { it.isBreak }
-                        ?.let { startSessionOn(taskId = it.taskId, lengthMinutes = null) }
+                FocusContract.UiEvent.BackToWork -> backToWork()
 
                 FocusContract.UiEvent.PauseSession -> focusSessionUseCases.pause()
                 FocusContract.UiEvent.ResumeSession -> focusSessionUseCases.resume()
@@ -196,13 +208,13 @@ class FocusViewModel
         /** What the sheet offers once time is up. */
         private fun onCompletionSheetEvent(event: FocusContract.UiEvent) {
             val finished = mutableUiState.value.finishedSession
-            val taskId = mutableUiState.value.lastSessionTaskId
+            val last = mutableUiState.value.lastSession
             when (event) {
                 FocusContract.UiEvent.StartAnotherSession ->
                     viewModelScope.launch {
                         mutableUiState.update { it.copy(finishedSession = null) }
-                        if (finished != null && taskId != null) {
-                            focusSessionUseCases.start(taskId, finished.taskTitle)
+                        if (finished != null && last != null) {
+                            startAgain(last)
                             sendEffect(FocusContract.UiEffect.OpenSessionScreen)
                         }
                     }
@@ -210,10 +222,22 @@ class FocusViewModel
                 FocusContract.UiEvent.TakeBreak ->
                     viewModelScope.launch {
                         mutableUiState.update { it.copy(finishedSession = null) }
-                        if (finished != null && taskId != null) {
+                        if (finished != null && last != null) {
                             // A real countdown, not a dismissal: the break notifies when it is over
                             // so the user is not the one who has to remember to come back.
-                            focusSessionUseCases.start(taskId, finished.taskTitle, isBreak = true)
+                            focusSessionUseCases.start(
+                                taskId = last.taskId,
+                                title = last.title,
+                                isBreak = true,
+                                // A saved session rests for as long as it says it does, and stays
+                                // that session through the rest, so coming back restarts it.
+                                lengthMinutes =
+                                    last.cycle
+                                        ?.breakLength
+                                        ?.inWholeMinutes
+                                        ?.toInt(),
+                                cycle = last.cycle,
+                            )
                         }
                     }
 
@@ -231,9 +255,9 @@ class FocusViewModel
          * need no announcement either — they are already in the hero and the heatmap on the screen
          * this returns to. The sheet belongs to the one ending nobody chose, see [onSessionVanished].
          */
-        private suspend fun finishSession() {
+        internal suspend fun finishSession() {
             val ended = focusSessionUseCases.end() ?: return
-            mutableUiState.update { it.copy(lastSessionTaskId = ended.taskId) }
+            mutableUiState.update { it.copy(lastSession = ended) }
         }
 
         /**
@@ -241,7 +265,7 @@ class FocusViewModel
          * nothing names one. Also the way out of a break: starting replaces whatever is running,
          * and a break banks no minutes, so cutting one short costs nothing.
          */
-        private fun startSessionOn(
+        internal fun startSessionOn(
             taskId: Long?,
             lengthMinutes: Int?,
             force: Boolean = false,
@@ -257,18 +281,20 @@ class FocusViewModel
             // Starting replaces whatever is running and banks only what it earned, so swapping
             // tasks mid-session is a real loss of the current one's remaining time. Ask first —
             // unless it is the same task, where "starting" is just carrying on.
-            // Only a focus session on a different task is at risk of being thrown away; the same
-            // task is carrying on, and a break has nothing to lose.
-            val replaced = state.session?.takeIf { !it.isBreak && it.taskId != task.id }
+            // Only a focus session on something else is at risk of being thrown away; the same
+            // task is carrying on, and a break has nothing to lose. A saved session linked to this
+            // task is something else too: it has rounds of its own that a plain start would drop.
+            val taskKey = FocusSession.subjectKeyOf(taskId = task.id)
+            val replaced = state.session?.takeIf { !it.isBreak && it.subjectKey != taskKey }
             if (!force && replaced != null) {
                 mutableUiState.update {
                     it.copy(
                         pendingStart =
                             FocusContract.PendingStart(
                                 taskId = task.id,
-                                taskTitle = task.title,
+                                title = task.title,
                                 lengthMinutes = lengthMinutes,
-                                replacingTaskTitle = replaced.taskTitle,
+                                replacingTaskTitle = replaced.title,
                             ),
                     )
                 }
@@ -278,7 +304,7 @@ class FocusViewModel
             viewModelScope.launch {
                 focusSessionUseCases.start(
                     taskId = task.id,
-                    taskTitle = task.title,
+                    title = task.title,
                     lengthMinutes = lengthMinutes,
                 )
                 focusSessionRepository.setPreviewTaskId(null)
@@ -323,13 +349,19 @@ class FocusViewModel
                     if (session == null && previous != null && previous.hasExpired(clock.now())) {
                         mutableUiState.update { state ->
                             state.copy(
-                                lastSessionTaskId = previous.taskId,
+                                lastSession = previous,
                                 finishedSession =
                                     FocusContract.FinishedSession(
-                                        taskTitle = previous.taskTitle,
+                                        title = previous.title,
                                         minutes = previous.plannedLength.inWholeMinutes.toInt(),
                                         wasBreak = previous.isBreak,
-                                        breakMinutes = focusSessionRepository.breakLengthMinutes.value,
+                                        breakMinutes =
+                                            previous.cycle
+                                                ?.breakLength
+                                                ?.inWholeMinutes
+                                                ?.toInt()
+                                                ?: focusSessionRepository.breakLengthMinutes.value,
+                                        hasTask = previous.taskId != null,
                                     ),
                             )
                         }

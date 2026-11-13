@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.google.common.truth.Truth.assertThat
 import com.mandrecode.tempo.features.focus.domain.model.FocusSession
+import com.mandrecode.tempo.features.focus.domain.model.SavedSession
 import com.mandrecode.tempo.features.focus.domain.model.TaskFocusToday
 import io.mockk.Runs
 import io.mockk.every
@@ -93,7 +94,7 @@ class FocusSessionRepositoryImplTest {
     fun `a running session round-trips through storage`() {
         val stored = mutableMapOf<String, Any>()
         val session =
-            FocusSession.start(taskId = 7, taskTitle = "Report", now = start, length = 30.minutes)
+            FocusSession.start(taskId = 7, title = "Report", now = start, length = 30.minutes)
 
         createRepository(stored).setActiveSession(session)
 
@@ -105,7 +106,7 @@ class FocusSessionRepositoryImplTest {
         val stored = mutableMapOf<String, Any>()
         val paused =
             FocusSession
-                .start(taskId = 7, taskTitle = "Report", now = start)
+                .start(taskId = 7, title = "Report", now = start)
                 .pause(start + 8.minutes)
 
         createRepository(stored).setActiveSession(paused)
@@ -180,7 +181,7 @@ class FocusSessionRepositoryImplTest {
     fun `a break round-trips as a break`() {
         val stored = mutableMapOf<String, Any>()
         val brk =
-            FocusSession.start(taskId = 7, taskTitle = "Report", now = start, isBreak = true)
+            FocusSession.start(taskId = 7, title = "Report", now = start, isBreak = true)
 
         createRepository(stored).setActiveSession(brk)
 
@@ -336,5 +337,66 @@ class FocusSessionRepositoryImplTest {
 
         assertThat(createRepository(stored).focusToday.value[7L])
             .isEqualTo(TaskFocusToday(sessions = 2, minutes = 0))
+    }
+
+    @Test
+    fun `a saved session's round round-trips with its cycle`() {
+        val stored = mutableMapOf<String, Any>()
+        val session =
+            FocusSession.start(
+                SavedSession(id = 4, title = "Study", focusMinutes = 50, breakMinutes = 10, rounds = 3, taskId = 9),
+                start,
+            )
+
+        createRepository(stored).setActiveSession(session)
+
+        assertThat(createRepository(stored).activeSession.value).isEqualTo(session)
+    }
+
+    @Test
+    fun `a session linked to no task round-trips with no task`() {
+        val stored = mutableMapOf<String, Any>()
+        val session =
+            FocusSession.start(
+                SavedSession(id = 4, title = "Study", focusMinutes = 25, breakMinutes = 5),
+                start,
+            )
+
+        createRepository(stored).setActiveSession(session)
+        val restored = createRepository(stored).activeSession.value
+
+        assertThat(restored?.taskId).isNull()
+        assertThat(restored).isEqualTo(session)
+    }
+
+    @Test
+    fun `a session stored before saved sessions existed reads back with its task and no cycle`() {
+        val stored =
+            mutableMapOf<String, Any>(
+                "session_task_id" to 7L,
+                "session_task_title" to "Report",
+                "session_planned_millis" to 30.minutes.inWholeMilliseconds,
+                "session_completed_millis" to 0L,
+                "session_running_since" to start.toEpochMilliseconds(),
+                "session_is_break" to false,
+            )
+
+        val restored = createRepository(stored).activeSession.value
+
+        assertThat(restored)
+            .isEqualTo(FocusSession.start(taskId = 7, title = "Report", now = start, length = 30.minutes))
+    }
+
+    @Test
+    fun `replacing a saved session's round with a plain timer leaves no cycle behind`() {
+        val stored = mutableMapOf<String, Any>()
+        val repository = createRepository(stored)
+        repository.setActiveSession(
+            FocusSession.start(SavedSession(id = 4, title = "Study", focusMinutes = 25, breakMinutes = 5), start),
+        )
+
+        repository.setActiveSession(FocusSession.start(taskId = 1, title = "Report", now = start))
+
+        assertThat(createRepository(stored).activeSession.value?.cycle).isNull()
     }
 }

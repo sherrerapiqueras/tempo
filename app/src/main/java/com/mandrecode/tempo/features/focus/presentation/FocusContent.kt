@@ -121,7 +121,7 @@ fun FocusContent(
                         )
                     }
 
-                    if (uiState.isDayEmpty) {
+                    if (uiState.showsEmptyState) {
                         FocusEmptyState(
                             undatedTaskCount = uiState.undatedTaskCount,
                             onUndatedClick = { onEvent(FocusContract.UiEvent.UndatedTasksClicked) },
@@ -158,6 +158,8 @@ private fun FocusAgendaList(
         modifier = Modifier.fillMaxSize(),
     ) {
         upNextSection(uiState = uiState, onEvent = onEvent)
+
+        savedSessionsSection(uiState = uiState, onEvent = onEvent)
 
         // Today above Overdue. Both are the day, but only one of them is the day you are in, and
         // opening Focus onto last week's leftovers put the work you came for below the fold.
@@ -272,10 +274,11 @@ private fun LazyListScope.upNextRow(
     onEvent: (FocusContract.UiEvent) -> Unit,
 ) {
     val session = uiState.session
-    val queued = uiState.upNext.filterNot { it.task.id == session?.taskId }
+    val queued = uiState.queuedUpNext
 
     item(key = "up_next_row") {
         val listState = rememberLazyListState()
+        KeepRunningCardInView(subjectKey = session?.subjectKey, listState = listState)
         BoxWithConstraints(modifier = Modifier.fillMaxWidth().animateItem()) {
             val cardCount = queued.size + if (session != null) 1 else 0
             val cardWidth = if (cardCount > 1) maxWidth * SINGLE_PEEK_FRACTION else maxWidth
@@ -364,7 +367,7 @@ private fun UpNextAction(
 }
 
 /** Leaves the next card showing at the edge, so the row reads as a row. */
-private const val SINGLE_PEEK_FRACTION = 0.88f
+internal const val SINGLE_PEEK_FRACTION = 0.88f
 
 @Composable
 private fun AgendaRow(

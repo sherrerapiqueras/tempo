@@ -172,8 +172,8 @@ class FocusContentTest {
         val events = mutableListOf<FocusContract.UiEvent>()
         setContent(stateWith(items = listOf(taskEntry(1, "Write report")), undatedTaskCount = 3)) { events += it }
 
-        composeTestRule.onNodeWithText("Give 3 tasks a day").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Give 3 tasks a day").performClick()
+        composeTestRule.onNodeWithText("Plan 3 tasks").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Plan 3 tasks").performClick()
         composeTestRule.waitForIdle()
 
         assertThat(events).contains(FocusContract.UiEvent.UndatedTasksClicked)
@@ -236,7 +236,7 @@ class FocusContentTest {
         val events = mutableListOf<FocusContract.UiEvent>()
         setContent(stateWith(items = emptyList(), undatedTaskCount = 1)) { events += it }
 
-        composeTestRule.onNodeWithText("Give 1 task a day").performClick()
+        composeTestRule.onNodeWithText("Plan 1 task").performClick()
         composeTestRule.waitForIdle()
 
         assertThat(events).contains(FocusContract.UiEvent.UndatedTasksClicked)

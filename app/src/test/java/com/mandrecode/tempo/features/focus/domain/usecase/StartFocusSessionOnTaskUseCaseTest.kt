@@ -33,7 +33,7 @@ class StartFocusSessionOnTaskUseCaseTest {
 
             assertThat(useCase(TASK_ID)).isTrue()
 
-            coVerify { focusSessionUseCases.start(taskId = TASK_ID, taskTitle = "Renamed report") }
+            coVerify { focusSessionUseCases.start(taskId = TASK_ID, title = "Renamed report") }
             verify { sessionRepository.setPreviewTaskId(null) }
         }
 
@@ -45,7 +45,7 @@ class StartFocusSessionOnTaskUseCaseTest {
 
             assertThat(useCase(TASK_ID)).isTrue()
 
-            coVerify { focusSessionUseCases.start(taskId = TASK_ID, taskTitle = "Report") }
+            coVerify { focusSessionUseCases.start(taskId = TASK_ID, title = "Report") }
         }
 
     @Test
@@ -56,7 +56,7 @@ class StartFocusSessionOnTaskUseCaseTest {
 
             assertThat(useCase(TASK_ID)).isTrue()
 
-            coVerify { focusSessionUseCases.start(taskId = TASK_ID, taskTitle = "Report") }
+            coVerify { focusSessionUseCases.start(taskId = TASK_ID, title = "Report") }
         }
 
     @Test
@@ -95,7 +95,7 @@ class StartFocusSessionOnTaskUseCaseTest {
 
             assertThat(useCase(TASK_ID)).isTrue()
 
-            coVerify { focusSessionUseCases.start(taskId = TASK_ID, taskTitle = "Report") }
+            coVerify { focusSessionUseCases.start(taskId = TASK_ID, title = "Report") }
         }
 
     @Test
@@ -133,7 +133,7 @@ class StartFocusSessionOnTaskUseCaseTest {
         isBreak: Boolean = false,
     ) = FocusSession.start(
         taskId = taskId,
-        taskTitle = "Running",
+        title = "Running",
         now = Instant.fromEpochMilliseconds(1_800_000_000_000),
         isBreak = isBreak,
     )

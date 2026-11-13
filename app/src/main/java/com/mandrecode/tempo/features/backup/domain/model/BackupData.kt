@@ -3,6 +3,7 @@ package com.mandrecode.tempo.features.backup.domain.model
 import com.mandrecode.tempo.core.domain.model.DailyFocusActivity
 import com.mandrecode.tempo.core.domain.model.ThemeMode
 import com.mandrecode.tempo.core.domain.model.VacationPeriod
+import com.mandrecode.tempo.features.focus.domain.model.SavedSession
 import com.mandrecode.tempo.features.routines.domain.model.Habit
 import com.mandrecode.tempo.features.routines.domain.model.HabitChain
 import com.mandrecode.tempo.features.tasks.domain.model.Category
@@ -28,6 +29,8 @@ data class BackupData(
     val settings: BackupSettings? = null,
     val dailyFocusActivity: List<DailyFocusActivity> = emptyList(),
     val sections: List<TaskSection> = emptyList(),
+    /** Saved focus sessions (#517); empty for files written before they existed. */
+    val focusSessions: List<SavedSession> = emptyList(),
 )
 
 /** The app configuration carried by a backup file. */

@@ -61,12 +61,15 @@ fun FocusSessionRoute(
     // ViewModel starts in its own init. Reading "nothing yet" as "nothing to show" would close the
     // screen the moment it opened. Raw ids, not the resolved entry, for the same reason — the
     // agenda the task is looked up in loads later still.
-    val subject = rememberSaveable { mutableStateOf<Long?>(null) }
-    subject.value = nextSessionSubject(placement == SheetPlacement.DockedPane, subject.value, uiState.sessionTaskId)
-    val subjectTaskId = subject.value
-    val hasSomethingToShow = subjectTaskId != null && uiState.sessionTaskId == subjectTaskId
-    LaunchedEffect(subjectTaskId, hasSomethingToShow) {
-        if (subjectTaskId != null && !hasSomethingToShow) currentOnBack()
+    //
+    // A key rather than a task id: the subject may be a saved session, with or without a task (#517).
+    val subject = rememberSaveable { mutableStateOf<String?>(null) }
+    subject.value =
+        nextSessionSubject(placement == SheetPlacement.DockedPane, subject.value, uiState.sessionSubjectKey)
+    val subjectKey = subject.value
+    val hasSomethingToShow = subjectKey != null && uiState.sessionSubjectKey == subjectKey
+    LaunchedEffect(subjectKey, hasSomethingToShow) {
+        if (subjectKey != null && !hasSomethingToShow) currentOnBack()
     }
 
     // The preview is this screen's own state: keeping it alive after leaving would make the next
@@ -97,7 +100,7 @@ fun FocusSessionRoute(
     if (hasSomethingToShow) {
         FocusSessionSheet(
             session = session,
-            title = session?.taskTitle ?: entry?.task?.title.orEmpty(),
+            title = session?.title ?: entry?.task?.title.orEmpty(),
             uiState = uiState,
             onEvent = onEvent,
             onDismiss = currentOnBack,
@@ -178,7 +181,10 @@ fun FocusSessionSheet(
                 )
             },
             onStop = { onEvent(FocusContract.UiEvent.StopSession) },
-            onComplete = { onEvent(FocusContract.UiEvent.CompleteSessionTask) },
+            // A session before it starts is always a task's; one running has a task or it does not.
+            onComplete =
+                { onEvent(FocusContract.UiEvent.CompleteSessionTask) }
+                    .takeIf { session == null || session.taskId != null },
             onBackToWork = { onEvent(FocusContract.UiEvent.BackToWork) },
             onToggleSubtask = { onEvent(FocusContract.UiEvent.ToggleTaskCompletion(it)) },
             onEditSubtask = { onEvent(FocusContract.UiEvent.EditTask(it)) },

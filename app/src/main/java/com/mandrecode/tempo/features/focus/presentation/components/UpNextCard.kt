@@ -30,6 +30,7 @@ import com.mandrecode.tempo.R
 import com.mandrecode.tempo.core.ui.util.rememberPressableButtonAnimation
 import com.mandrecode.tempo.core.ui.util.titleResId
 import com.mandrecode.tempo.features.focus.domain.model.FocusAgendaItem
+import com.mandrecode.tempo.features.focus.domain.model.SavedSessionEntry
 import com.mandrecode.tempo.features.focus.domain.model.TaskFocusToday
 import com.mandrecode.tempo.util.DateTimeFormatter
 import kotlinx.datetime.LocalDate
@@ -159,6 +160,26 @@ internal fun FocusAgendaItem.upNextMetadata(today: LocalDate?): String? {
             }
         }
     return parts.takeIf { it.isNotEmpty() }?.joinToString(SEPARATOR)
+}
+
+/**
+ * A saved session's metadata line: its rounds when it repeats, its rest, then the task it is for.
+ *
+ * The focus length is left to the start button beside it, which already says it. The task comes
+ * last because it is the part that can run long, and what gets cut off at the edge should be the
+ * end of a name rather than how many rounds you are signing up for.
+ */
+@Composable
+internal fun SavedSessionEntry.savedSessionMetadata(): String {
+    val parts =
+        buildList {
+            if (session.rounds > 1) {
+                add(pluralStringResource(R.plurals.focus_session_rounds, session.rounds, session.rounds))
+            }
+            add(stringResource(R.string.focus_session_rest_length, sessionLengthLabel(session.breakMinutes)))
+            linkedTask?.title?.takeIf { it.isNotBlank() }?.let { add(it) }
+        }
+    return parts.joinToString(SEPARATOR) { it.uppercase() }
 }
 
 /**

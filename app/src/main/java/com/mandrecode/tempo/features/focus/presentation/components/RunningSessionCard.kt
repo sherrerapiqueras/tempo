@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
 import com.mandrecode.tempo.features.focus.domain.model.FocusSession
+import com.mandrecode.tempo.features.focus.domain.model.SessionCycle
 import com.mandrecode.tempo.features.focus.domain.model.TaskFocusToday
 import com.mandrecode.tempo.features.tasks.domain.model.Task
 import kotlin.time.Clock
@@ -90,10 +91,11 @@ internal fun RunningSessionCard(
                 SessionRing(progress = progress, session = session, label = remaining.asCountdownLabel())
 
                 SessionTitleBlock(
-                    title = session.taskTitle,
+                    title = session.title,
                     isPaused = session.isPaused,
                     isBreak = session.isBreak,
                     focusToday = focusToday,
+                    cycle = session.cycle,
                     modifier = Modifier.weight(1f),
                 )
 
@@ -109,7 +111,8 @@ internal fun RunningSessionCard(
                 session = session,
                 onPauseResume = onPauseResume,
                 onStop = onStop,
-                onComplete = onComplete,
+                // A saved session linked to no task has nothing to mark done (#517).
+                onComplete = onComplete.takeIf { session.taskId != null },
                 onBackToWork = onBackToWork,
                 modifier = Modifier.padding(top = 12.dp),
             )
@@ -122,7 +125,7 @@ private fun SessionCardActions(
     session: FocusSession,
     onPauseResume: () -> Unit,
     onStop: () -> Unit,
-    onComplete: () -> Unit,
+    onComplete: (() -> Unit)?,
     onBackToWork: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -228,6 +231,7 @@ private fun SessionTitleBlock(
     isPaused: Boolean,
     isBreak: Boolean,
     focusToday: TaskFocusToday,
+    cycle: SessionCycle?,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -254,6 +258,7 @@ private fun SessionTitleBlock(
                             else -> R.string.focus_session_focusing
                         },
                     focusToday = focusToday,
+                    cycle = cycle,
                 ),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.SemiBold,

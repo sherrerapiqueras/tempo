@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import com.mandrecode.tempo.features.focus.domain.model.FocusSession
+import com.mandrecode.tempo.features.focus.domain.model.SessionCycle
 import com.mandrecode.tempo.features.focus.domain.model.TaskFocusToday
 import com.mandrecode.tempo.features.focus.domain.repository.FocusSessionRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -99,15 +100,19 @@ class FocusSessionRepositoryImpl
                     remove(KEY_COMPLETED_MILLIS)
                     remove(KEY_RUNNING_SINCE)
                     remove(KEY_IS_BREAK)
+                    removeCycle()
                 } else {
-                    putLong(KEY_TASK_ID, session.taskId)
-                    putString(KEY_TASK_TITLE, session.taskTitle)
+                    // -1 rather than removing the key, as for a paused session below: "no task" is
+                    // a stored state, and the key's presence is what says a session exists at all.
+                    putLong(KEY_TASK_ID, session.taskId ?: NO_TASK)
+                    putString(KEY_TASK_TITLE, session.title)
                     putLong(KEY_PLANNED_MILLIS, session.plannedLength.inWholeMilliseconds)
                     putLong(KEY_COMPLETED_MILLIS, session.completedBeforeNow.inWholeMilliseconds)
                     // -1 rather than removing the key, so "paused" is a stored state instead of an
                     // absence that could be confused with a partially written record.
                     putLong(KEY_RUNNING_SINCE, session.runningSince?.toEpochMilliseconds() ?: NOT_RUNNING)
                     putBoolean(KEY_IS_BREAK, session.isBreak)
+                    session.cycle?.let { putCycle(it) } ?: removeCycle()
                 }
             }
             sessionFlow.value = session
@@ -136,8 +141,8 @@ class FocusSessionRepositoryImpl
 
             val runningSince = prefs.getLong(KEY_RUNNING_SINCE, NOT_RUNNING)
             return FocusSession(
-                taskId = prefs.getLong(KEY_TASK_ID, 0L),
-                taskTitle = prefs.getString(KEY_TASK_TITLE, null).orEmpty(),
+                taskId = prefs.getLong(KEY_TASK_ID, NO_TASK).takeIf { it != NO_TASK },
+                title = prefs.getString(KEY_TASK_TITLE, null).orEmpty(),
                 plannedLength = plannedMillis.milliseconds,
                 isBreak = prefs.getBoolean(KEY_IS_BREAK, false),
                 completedBeforeNow = prefs.getLong(KEY_COMPLETED_MILLIS, 0L).milliseconds,
@@ -145,6 +150,7 @@ class FocusSessionRepositoryImpl
                     runningSince
                         .takeIf { it != NOT_RUNNING }
                         ?.let { Instant.fromEpochMilliseconds(it) },
+                cycle = prefs.readCycle(),
             )
         }
 
@@ -169,8 +175,47 @@ class FocusSessionRepositoryImpl
             const val KEY_DEFAULT_LENGTH = "session_default_length_minutes"
             const val KEY_BREAK_LENGTH = "session_break_length_minutes"
             const val NOT_RUNNING = -1L
+            const val NO_TASK = -1L
         }
     }
+
+// A saved session's cycle is read and written by the file-level helpers below, so its keys sit
+// where they and the class can both see them.
+private const val KEY_CYCLE_SESSION_ID = "session_cycle_saved_id"
+private const val KEY_CYCLE_ROUND = "session_cycle_round"
+private const val KEY_CYCLE_TOTAL_ROUNDS = "session_cycle_total_rounds"
+private const val KEY_CYCLE_FOCUS_MILLIS = "session_cycle_focus_millis"
+private const val KEY_CYCLE_BREAK_MILLIS = "session_cycle_break_millis"
+private const val NO_CYCLE = -1L
+
+/** A session stored before saved sessions existed has no cycle keys, and reads as none. */
+private fun SharedPreferences.readCycle(): SessionCycle? {
+    val savedSessionId = getLong(KEY_CYCLE_SESSION_ID, NO_CYCLE)
+    if (savedSessionId == NO_CYCLE) return null
+    return SessionCycle(
+        savedSessionId = savedSessionId,
+        round = getInt(KEY_CYCLE_ROUND, 1),
+        totalRounds = getInt(KEY_CYCLE_TOTAL_ROUNDS, 1),
+        focusLength = getLong(KEY_CYCLE_FOCUS_MILLIS, 0L).milliseconds,
+        breakLength = getLong(KEY_CYCLE_BREAK_MILLIS, 0L).milliseconds,
+    )
+}
+
+private fun SharedPreferences.Editor.putCycle(cycle: SessionCycle) {
+    putLong(KEY_CYCLE_SESSION_ID, cycle.savedSessionId)
+    putInt(KEY_CYCLE_ROUND, cycle.round)
+    putInt(KEY_CYCLE_TOTAL_ROUNDS, cycle.totalRounds)
+    putLong(KEY_CYCLE_FOCUS_MILLIS, cycle.focusLength.inWholeMilliseconds)
+    putLong(KEY_CYCLE_BREAK_MILLIS, cycle.breakLength.inWholeMilliseconds)
+}
+
+private fun SharedPreferences.Editor.removeCycle() {
+    remove(KEY_CYCLE_SESSION_ID)
+    remove(KEY_CYCLE_ROUND)
+    remove(KEY_CYCLE_TOTAL_ROUNDS)
+    remove(KEY_CYCLE_FOCUS_MILLIS)
+    remove(KEY_CYCLE_BREAK_MILLIS)
+}
 
 // The day's record is read by the file-level helper below as well as by the class, so its keys sit
 // where both can see them.

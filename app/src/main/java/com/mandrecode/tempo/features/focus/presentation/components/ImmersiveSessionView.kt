@@ -34,6 +34,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
 import com.mandrecode.tempo.core.ui.components.TempoLinkButton
@@ -72,7 +73,8 @@ internal fun SessionBody(
     onStart: (Int) -> Unit,
     onPauseResume: () -> Unit,
     onStop: () -> Unit,
-    onComplete: () -> Unit,
+    /** `null` when there is no task to finish: a saved session linked to none (#517). */
+    onComplete: (() -> Unit)?,
     onBackToWork: () -> Unit,
     onToggleSubtask: (Task) -> Unit,
     onEditSubtask: (Task) -> Unit,
@@ -290,6 +292,7 @@ private fun ColumnScope.SessionSubject(
                         else -> R.string.focus_session_focusing
                     },
                 focusToday = focusToday,
+                cycle = session?.cycle,
             ),
         statusIconRes = R.drawable.ic_coffee.takeIf { session?.isBreak == true },
         modifier = Modifier.padding(top = 24.dp),
@@ -311,6 +314,8 @@ private fun ColumnScope.SessionSubject(
     if (task != null) {
         SessionTaskMetadata(
             task = task,
+            // A saved session runs under its own name, so the task it is for has to be said.
+            showsTaskTitle = session?.cycle != null,
             categoryName = categoryName,
             minutesToday = focusToday.minutes,
             modifier = Modifier.padding(top = 24.dp),
@@ -393,7 +398,7 @@ private fun SessionControls(
     onStart: (Int) -> Unit,
     onPauseResume: () -> Unit,
     onStop: () -> Unit,
-    onComplete: () -> Unit,
+    onComplete: (() -> Unit)?,
     onBackToWork: () -> Unit,
 ) {
     val colors = sessionScreenActionColors()
@@ -405,7 +410,8 @@ private fun SessionControls(
                 colors = colors,
                 sessionsToday = sessionsToday,
                 onStart = onStart,
-                onComplete = onComplete,
+                // Only a task is ever shown before it starts, so there is always one to finish.
+                onComplete = onComplete ?: {},
             )
         } else {
             // Finishing and pausing are the two you reach for while working, so they sit together
@@ -438,6 +444,7 @@ private fun SessionControls(
 @Composable
 private fun SessionTaskMetadata(
     task: Task,
+    showsTaskTitle: Boolean,
     categoryName: String?,
     minutesToday: Int,
     modifier: Modifier = Modifier,
@@ -449,6 +456,14 @@ private fun SessionTaskMetadata(
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        if (showsTaskTitle) {
+            SessionMetadataPill(
+                iconRes = R.drawable.ic_checklist,
+                label = task.title,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            )
+        }
         // Leads the row: what this task has already taken out of the day is the one thing here the
         // task's own card cannot tell you, and it is the reason you might choose a longer session
         // or call it finished.
@@ -514,6 +529,8 @@ private fun SessionMetadataPill(
                 text = label,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }

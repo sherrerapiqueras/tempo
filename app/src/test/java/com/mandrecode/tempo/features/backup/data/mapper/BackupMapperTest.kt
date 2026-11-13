@@ -7,12 +7,15 @@ import com.mandrecode.tempo.core.domain.model.Periodicity
 import com.mandrecode.tempo.core.domain.model.Priority
 import com.mandrecode.tempo.core.domain.model.ThemeMode
 import com.mandrecode.tempo.core.domain.model.VacationPeriod
+import com.mandrecode.tempo.features.backup.data.model.BackupFileDto
+import com.mandrecode.tempo.features.backup.data.model.FocusSessionBackupDto
 import com.mandrecode.tempo.features.backup.data.model.SettingsBackupDto
 import com.mandrecode.tempo.features.backup.data.model.TaskBackupDto
 import com.mandrecode.tempo.features.backup.data.model.VacationPeriodBackupDto
 import com.mandrecode.tempo.features.backup.domain.model.BackupData
 import com.mandrecode.tempo.features.backup.domain.model.BackupSettings
 import com.mandrecode.tempo.features.backup.domain.model.ChainMembership
+import com.mandrecode.tempo.features.focus.domain.model.SavedSession
 import com.mandrecode.tempo.features.routines.domain.model.Habit
 import com.mandrecode.tempo.features.routines.domain.model.HabitChain
 import com.mandrecode.tempo.features.routines.domain.model.HabitType
@@ -217,5 +220,51 @@ class BackupMapperTest {
                 )
 
         assertThrows(IllegalArgumentException::class.java) { dto.toDomain() }
+    }
+
+    @Test
+    fun `saved focus sessions round trip, linked and unlinked`() {
+        val data =
+            BackupData(
+                categories = emptyList(),
+                tasks = emptyList(),
+                habits = emptyList(),
+                habitChains = emptyList(),
+                chainMemberships = emptyList(),
+                focusSessions =
+                    listOf(
+                        SavedSession(1, "Study", focusMinutes = 50, breakMinutes = 10, rounds = 4, taskId = 7),
+                        SavedSession(id = 2, title = "Read", focusMinutes = 25, breakMinutes = 5),
+                    ),
+            )
+
+        val roundTripped =
+            data
+                .toDto(schemaVersion = 1, appVersion = "", exportedAt = LocalDateTime(2026, 11, 13, 0, 0))
+                .toDomain()
+
+        assertThat(roundTripped.focusSessions).isEqualTo(data.focusSessions)
+    }
+
+    @Test
+    fun `a hand-edited focus session is brought into range on decode`() {
+        val dto =
+            BackupFileDto(
+                schemaVersion = 1,
+                focusSessions =
+                    listOf(FocusSessionBackupDto(id = 1, title = " Study ", focusMinutes = 0, rounds = 500)),
+            )
+
+        val session = dto.toDomain().focusSessions.single()
+
+        assertThat(session.title).isEqualTo("Study")
+        assertThat(session.focusMinutes).isEqualTo(1)
+        assertThat(session.breakMinutes).isEqualTo(5)
+        assertThat(session.rounds).isEqualTo(12)
+    }
+
+    @Test
+    fun `a file written before saved sessions existed decodes with none`() {
+        assertThat(BackupFileDto(schemaVersion = 1).toDomain().focusSessions).isEmpty()
     }
 }

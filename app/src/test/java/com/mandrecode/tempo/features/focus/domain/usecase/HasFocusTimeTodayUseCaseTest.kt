@@ -98,7 +98,7 @@ class HasFocusTimeTodayUseCaseTest {
         isBreak: Boolean = false,
     ) = FocusSession(
         taskId = taskId,
-        taskTitle = "Task $taskId",
+        title = "Task $taskId",
         plannedLength = FocusSession.DEFAULT_LENGTH,
         isBreak = isBreak,
         runningSince = clock.now(),

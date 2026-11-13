@@ -2,12 +2,15 @@ package com.mandrecode.tempo.features.focus.domain.usecase
 
 import com.mandrecode.tempo.core.domain.repository.DailyFocusActivityRepository
 import com.mandrecode.tempo.features.focus.domain.model.FocusSession
+import com.mandrecode.tempo.features.focus.domain.model.SavedSession
+import com.mandrecode.tempo.features.focus.domain.model.SessionCycle
 import com.mandrecode.tempo.features.focus.domain.repository.FocusSessionRepository
 import com.mandrecode.tempo.features.focus.domain.scheduler.FocusSessionScheduler
 import jakarta.inject.Inject
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import kotlin.time.Clock
+import kotlin.time.Instant
 
 /**
  * Starting, pausing, resuming and ending the one focus session.
@@ -29,13 +32,15 @@ class FocusSessionUseCases
          * banked, so starting on a second task replaces rather than stacks.
          *
          * [lengthMinutes] overrides the configured length for this start alone, for the times one
-         * session wants to be shorter or longer without changing what every session is.
+         * session wants to be shorter or longer without changing what every session is. [cycle]
+         * keeps a break taken after a saved session's last round tied to that session.
          */
         suspend fun start(
-            taskId: Long,
-            taskTitle: String,
+            taskId: Long?,
+            title: String,
             isBreak: Boolean = false,
             lengthMinutes: Int? = null,
+            cycle: SessionCycle? = null,
         ) {
             end()
             val configured =
@@ -48,12 +53,56 @@ class FocusSessionUseCases
             apply(
                 FocusSession.start(
                     taskId = taskId,
-                    taskTitle = taskTitle,
+                    title = title,
                     now = clock.now(),
                     length = length,
                     isBreak = isBreak,
+                    cycle = cycle,
                 ),
             )
+        }
+
+        /**
+         * Begins [saved] from its first round, replacing whatever is running the way [start] does.
+         */
+        suspend fun startSaved(saved: SavedSession) {
+            end()
+            apply(FocusSession.start(saved.normalized(), clock.now()))
+        }
+
+        /**
+         * The running phase's time is up: moves a saved session on to its rest or its next round,
+         * and ends anything else.
+         *
+         * Acts only on a session that has really run out, so a late or repeated alarm finds the
+         * phase it already started and leaves it alone. The next phase replaces the expired one in
+         * a single write — the session never reads as gone in between, which is what Focus takes as
+         * "finished" and answers with its sheet.
+         */
+        suspend fun timeUp(): TimeUp? {
+            val now = clock.now()
+            val session = sessionRepository.activeSession.value?.takeIf { it.hasExpired(now) } ?: return null
+            val next = session.nextPhase(now)
+            if (next == null) {
+                end()
+            } else {
+                settle(session, now)
+                // Cleared first, so the new phase arrives as news: left in place, the notification
+                // would only update, and it alerts once.
+                scheduler.clearOngoingNotification()
+                apply(next)
+            }
+            return TimeUp(finished = session, next = next)
+        }
+
+        /** Cuts a rest between rounds short and starts the next round now. */
+        fun skipBreak(): Boolean {
+            val next =
+                sessionRepository.activeSession.value
+                    ?.takeIf { it.isBreak }
+                    ?.nextPhase(clock.now())
+            next?.let { apply(it) }
+            return next != null
         }
 
         fun pause() {
@@ -85,30 +134,42 @@ class FocusSessionUseCases
             scheduler.clearOngoingNotification()
             sessionRepository.setActiveSession(null)
 
+            settle(session, now)
+            return session
+        }
+
+        /** Banks what [session] earned up to [now]: the day's minutes, and the task's if it has one. */
+        private suspend fun settle(
+            session: FocusSession,
+            now: Instant,
+        ) {
             // A break is time away from the work, so it is never banked as focus time, and it is
             // not a run at the task either.
+            if (session.isBreak) return
             val today = clock.todayIn(TimeZone.currentSystemDefault())
-            val minutes = if (session.isBreak) 0 else session.bankableMinutes(now)
+            val minutes = session.bankableMinutes(now)
             if (minutes > 0) {
                 activityRepository.addFocusMinutes(today, minutes)
                 // Against the task as well as against the day, so the card can say what this
                 // particular work has already taken rather than only what the day has.
-                sessionRepository.addFocusMinutesFor(session.taskId, minutes, today)
+                session.taskId?.let { sessionRepository.addFocusMinutesFor(it, minutes, today) }
             }
             // A run at the task is one that went the distance. Stopping early is the user saying
             // this was not it, so the card goes back to offering a fresh start rather than
             // reporting a session done — and having run out is the same test the finished-session
             // sheet uses, so the two never disagree about what counted. The minutes still stand:
             // they are what a cut-short session leaves behind.
-            if (!session.isBreak && session.hasExpired(now)) {
-                sessionRepository.recordSessionFor(session.taskId, today)
+            if (session.hasExpired(now)) {
+                session.taskId?.let { sessionRepository.recordSessionFor(it, today) }
             }
-            return session
         }
 
         /**
          * Reconciles a session restored from storage on app start or after a reboot: one whose time
          * already ran out is completed rather than resumed, so no stale countdown is ever shown.
+         *
+         * Ended outright, even with rounds to go: starting a rest for a round that ran out while
+         * the phone was off would be a timer nobody asked for.
          *
          * @return the session that had already finished, or `null` if there was nothing to settle.
          */
@@ -131,3 +192,9 @@ class FocusSessionUseCases
             scheduler.showOngoingNotification(session)
         }
     }
+
+/** What [FocusSessionUseCases.timeUp] did: the phase that ran out, and what it started, if anything. */
+data class TimeUp(
+    val finished: FocusSession,
+    val next: FocusSession?,
+)

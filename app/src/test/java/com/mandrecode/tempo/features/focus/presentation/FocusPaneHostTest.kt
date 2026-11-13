@@ -42,18 +42,26 @@ class FocusPaneHostTest {
 
     @Test
     fun givenASheet_whenAnotherTaskBecomesTheSubject_thenItStaysOnTheFirst() {
-        assertThat(nextSessionSubject(isDocked = false, subject = 1, sessionTaskId = 2)).isEqualTo(1L)
-        assertThat(nextSessionSubject(isDocked = false, subject = null, sessionTaskId = 2)).isEqualTo(2L)
+        assertThat(nextSessionSubject(isDocked = false, subject = 1L, current = 2L)).isEqualTo(1L)
+        assertThat(nextSessionSubject(isDocked = false, subject = null, current = 2L)).isEqualTo(2L)
     }
 
     @Test
     fun givenDockedSession_whenAnotherTaskIsChosen_thenThePaneFollowsIt() {
-        assertThat(nextSessionSubject(isDocked = true, subject = 1, sessionTaskId = 2)).isEqualTo(2L)
+        assertThat(nextSessionSubject(isDocked = true, subject = 1L, current = 2L)).isEqualTo(2L)
+    }
+
+    @Test
+    fun givenASavedSessionAsSubject_whenATaskIsChosen_thenTheKeysAreToldApart() {
+        assertThat(nextSessionSubject(isDocked = true, subject = "session:1", current = "task:1"))
+            .isEqualTo("task:1")
+        assertThat(nextSessionSubject(isDocked = false, subject = "session:1", current = "task:1"))
+            .isEqualTo("session:1")
     }
 
     @Test
     fun givenDockedSession_whenTheSessionEnds_thenItKeepsTheSubjectSoItCanClose() {
-        assertThat(nextSessionSubject(isDocked = true, subject = 1, sessionTaskId = null)).isEqualTo(1L)
+        assertThat(nextSessionSubject(isDocked = true, subject = 1L, current = null)).isEqualTo(1L)
     }
 
     @Test
@@ -62,8 +70,8 @@ class FocusPaneHostTest {
     }
 
     @Test
-    fun givenANewTaskOpen_whenAskingWhichTask_thenThereIsNone() {
-        val adding = FocusContract.UiState(taskEditor = FocusContract.TaskEditorTarget.NewTask)
+    fun givenANewSubtaskOpen_whenAskingWhichTask_thenThereIsNone() {
+        val adding = FocusContract.UiState(taskEditor = FocusContract.TaskEditorTarget.NewSubtask(parentTaskId = 7))
 
         assertThat(adding.editingTaskId()).isNull()
         assertThat(FocusContract.UiState().editingTaskId()).isNull()
@@ -89,7 +97,7 @@ class FocusPaneHostTest {
 
     @Test
     fun givenDockedTask_whenSomethingElseHappens_thenTheEditorStaysOpen() {
-        assertThat(closesDockedEditor(FocusContract.UiEvent.AddTask, isDocked = true, editingTaskId = 7)).isFalse()
+        assertThat(closesDockedEditor(FocusContract.UiEvent.AddSession, isDocked = true, editingTaskId = 7)).isFalse()
     }
 
     @Test

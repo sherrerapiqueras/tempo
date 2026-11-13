@@ -27,6 +27,19 @@ data class BackupFileDto(
     val dailyFocusActivity: List<DailyFocusActivityBackupDto> = emptyList(),
     /** Sections inside categories (#61); absent in files written before sections existed. */
     val taskSections: List<TaskSectionBackupDto> = emptyList(),
+    /** Saved focus sessions (#517); absent in files written before they existed. */
+    val focusSessions: List<FocusSessionBackupDto> = emptyList(),
+)
+
+/** One saved focus session. [taskId] is the task it is linked to, when it has one. */
+@Serializable
+data class FocusSessionBackupDto(
+    val id: Long,
+    val title: String,
+    val focusMinutes: Int = 25,
+    val breakMinutes: Int = 5,
+    val rounds: Int = 1,
+    val taskId: Long? = null,
 )
 
 /** One recorded day of activity. The quiet/some/all state is derived, so it is not stored. */

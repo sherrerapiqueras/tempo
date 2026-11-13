@@ -42,6 +42,7 @@ import com.mandrecode.tempo.core.ui.navigation.floatingNavigationSnackbarBottomP
 import com.mandrecode.tempo.core.ui.navigation.floatingRailContentClearance
 import com.mandrecode.tempo.features.focus.presentation.components.PlanTasksSheet
 import com.mandrecode.tempo.features.focus.presentation.components.ReplaceSessionDialog
+import com.mandrecode.tempo.features.focus.presentation.components.SessionEditorSheet
 import com.mandrecode.tempo.features.tasks.presentation.TasksViewModel
 import com.mandrecode.tempo.features.tasks.presentation.showTasksEffect
 import kotlinx.coroutines.flow.Flow
@@ -58,7 +59,7 @@ fun FocusScreen(
      * being counted on holiday terms.
      */
     topBar: @Composable (isVacationModeActive: Boolean) -> Unit = {},
-    /** Hands the floating bar its add action, which opens the task form over Focus (#434). */
+    /** Hands the floating bar its add action, which opens the new-session sheet over Focus (#517). */
     onFloatingBarStateChange: (FocusFloatingBarState) -> Unit = {},
     /**
      * Whether the session's route is open. On a large window Focus docks it beside the agenda (#502), and
@@ -77,8 +78,8 @@ fun FocusScreen(
         viewModel.onTabShown()
         onPauseOrDispose { }
     }
-    val onAddTask = remember(viewModel) { { viewModel.onEvent(FocusContract.UiEvent.AddTask) } }
-    SideEffect { onFloatingBarStateChange(FocusFloatingBarState(onAddTask = onAddTask)) }
+    val onAddSession = remember(viewModel) { { viewModel.onEvent(FocusContract.UiEvent.AddSession) } }
+    SideEffect { onFloatingBarStateChange(FocusFloatingBarState(onAddSession = onAddSession)) }
     val railContentClearance = floatingRailContentClearance()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -184,7 +185,10 @@ private fun FocusPaneContent(
 
 private const val DOCKED_SESSION_VIEW_MODEL_KEY = "tempo.focus.dockedSession"
 
-/** What opens over the screen: the replace-session prompt, the Plan tasks sheet and a sheet editor. */
+/**
+ * What opens over the screen: the replace-session prompt, the Plan tasks sheet, a sheet editor and
+ * the session sheet.
+ */
 @Composable
 private fun FocusOverlays(
     uiState: FocusContract.UiState,
@@ -203,6 +207,17 @@ private fun FocusOverlays(
 
     if (!pane.canDock) {
         uiState.taskEditor?.let { pane.content(it, SheetPlacement.BottomSheet) }
+    }
+
+    // A sheet at every width. It is a handful of numbers, not a form worth a pane of its own.
+    uiState.sessionEditor?.let { target ->
+        SessionEditorSheet(
+            target = target,
+            linkableTasks = uiState.linkableTasks,
+            defaultFocusMinutes = uiState.defaultSessionLengthMinutes,
+            defaultBreakMinutes = uiState.breakLengthMinutes,
+            onEvent = onEvent,
+        )
     }
 }
 
