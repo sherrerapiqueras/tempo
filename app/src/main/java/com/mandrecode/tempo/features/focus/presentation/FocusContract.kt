@@ -125,6 +125,40 @@ object FocusContract {
         }
 
         /**
+         * What "another session" would run for: the saved session's own length when that is what
+         * would start again, otherwise the length in Settings.
+         */
+        val nextSessionMinutes: Int
+            get() =
+                savedSessions
+                    .firstOrNull { it.session.id == lastSession?.savedSessionId }
+                    ?.session
+                    ?.focusMinutes
+                    ?: defaultSessionLengthMinutes
+
+        /** Whether the running session's card has a task to mark done. See [canComplete]. */
+        val canCompleteRunningTask: Boolean get() = canComplete(session, runningEntry)
+
+        /** The same question for the session screen, which may be showing a previewed task. */
+        val canCompleteScreenTask: Boolean
+            get() = screenSession == null || canComplete(screenSession, sessionEntry)
+
+        /**
+         * A timer on a task always offers finishing it. A saved session offers it only while its
+         * linked task is there and open: linked to none, or to one since ticked off or deleted,
+         * there is nothing for the button to do.
+         */
+        private fun canComplete(
+            session: FocusSession?,
+            entry: FocusAgendaItem.TaskEntry?,
+        ): Boolean =
+            when {
+                session?.taskId == null -> false
+                session.cycle == null -> true
+                else -> entry?.task?.isCompleted == false
+            }
+
+        /**
          * The Up next shortlist without the task the timer is on, which has the running card. Only
          * a timer on the task itself stands in for its card; a saved session linked to it does not.
          */
@@ -509,3 +543,7 @@ object FocusContract {
         }
     }
 }
+
+/** Pause while running, resume while paused: the one toggle every session surface offers. */
+internal fun FocusSession.pauseResumeEvent(): FocusContract.UiEvent =
+    if (isPaused) FocusContract.UiEvent.ResumeSession else FocusContract.UiEvent.PauseSession

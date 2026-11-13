@@ -53,7 +53,8 @@ internal fun RunningSessionCard(
     onExpand: () -> Unit,
     onPauseResume: () -> Unit,
     onStop: () -> Unit,
-    onComplete: () -> Unit,
+    /** `null` when there is no open task to mark done (#517). */
+    onComplete: (() -> Unit)?,
     onBackToWork: () -> Unit,
     modifier: Modifier = Modifier,
     subtasks: List<Task> = emptyList(),
@@ -111,8 +112,7 @@ internal fun RunningSessionCard(
                 session = session,
                 onPauseResume = onPauseResume,
                 onStop = onStop,
-                // A saved session linked to no task has nothing to mark done (#517).
-                onComplete = onComplete.takeIf { session.taskId != null },
+                onComplete = onComplete,
                 onBackToWork = onBackToWork,
                 modifier = Modifier.padding(top = 12.dp),
             )

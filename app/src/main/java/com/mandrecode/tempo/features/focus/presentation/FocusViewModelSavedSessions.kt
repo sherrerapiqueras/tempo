@@ -33,23 +33,7 @@ internal fun FocusViewModel.onSessionEditorEvent(event: FocusContract.UiEvent) {
 
         FocusContract.UiEvent.DismissSessionEditor -> closeSessionEditor()
 
-        is FocusContract.UiEvent.SaveSession ->
-            viewModelScope.launch {
-                val saved = saveSavedSession(event.draft.toSavedSession())
-                closeSessionEditor()
-                if (saved != null && event.startNow) {
-                    // The row follows the database a beat later, and starting reads the session
-                    // from the row — so what was just saved is put there now rather than waited for.
-                    mutableUiState.update { state ->
-                        val others = state.savedSessions.filterNot { it.session.id == saved.id }
-                        val entry =
-                            state.savedSessions.firstOrNull { it.session.id == saved.id }?.copy(session = saved)
-                                ?: SavedSessionEntry(session = saved)
-                        state.copy(savedSessions = (others + entry).sortedBy { it.session.id }.toPersistentList())
-                    }
-                    startSavedSession(saved.id)
-                }
-            }
+        is FocusContract.UiEvent.SaveSession -> saveSession(event.draft, event.startNow)
 
         is FocusContract.UiEvent.DeleteSession ->
             viewModelScope.launch {
@@ -63,6 +47,35 @@ internal fun FocusViewModel.onSessionEditorEvent(event: FocusContract.UiEvent) {
         is FocusContract.UiEvent.StartSavedSession -> startSavedSession(event.sessionId)
 
         else -> onSessionEvent(event)
+    }
+}
+
+/**
+ * Saves the sheet's draft and, with [startNow], runs it.
+ *
+ * The sheet is closed before the write, and only an open sheet can save: a second tap landing while
+ * the first is still on its way to the database would otherwise save the session twice.
+ */
+private fun FocusViewModel.saveSession(
+    draft: FocusContract.SessionDraft,
+    startNow: Boolean,
+) {
+    if (mutableUiState.value.sessionEditor == null) return
+    closeSessionEditor()
+    viewModelScope.launch {
+        val saved = saveSavedSession(draft.toSavedSession())
+        if (saved != null && startNow) {
+            // The row follows the database a beat later, and starting reads the session from the
+            // row — so what was just saved is put there now rather than waited for.
+            mutableUiState.update { state ->
+                val others = state.savedSessions.filterNot { it.session.id == saved.id }
+                val entry =
+                    state.savedSessions.firstOrNull { it.session.id == saved.id }?.copy(session = saved)
+                        ?: SavedSessionEntry(session = saved)
+                state.copy(savedSessions = (others + entry).sortedBy { it.session.id }.toPersistentList())
+            }
+            startSavedSession(saved.id)
+        }
     }
 }
 

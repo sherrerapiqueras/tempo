@@ -188,14 +188,9 @@ class BackupRepositoryImpl
                 val seededInboxCount = ensureDefaultCategory(data.categories)
                 data.sections.forEach { database.taskSectionDao().insertSection(it.toEntity()) }
                 data.tasks.forEach { database.taskDao().insertTask(it.toEntity()) }
-                // A session whose task the file does not carry comes back standing alone, rather than
-                // pointing at an id some later task could never have but nothing should rely on.
-                val taskIds = data.tasks.mapTo(HashSet()) { it.id }
-                data.focusSessions.forEach { session ->
-                    database.savedSessionDao().insert(
-                        session.copy(taskId = session.taskId?.takeIf { it in taskIds }).toEntity(),
-                    )
-                }
+                // Already sanitized by the validator: unique ids, named, and linked only to tasks
+                // this file carries.
+                data.focusSessions.forEach { database.savedSessionDao().insert(it.toEntity()) }
                 data.habits.forEach { database.habitDao().insertHabit(it.toEntity()) }
                 data.habitChains.forEach { database.habitChainDao().insertHabitChain(it.toEntity()) }
                 memberDao.insertMembers(

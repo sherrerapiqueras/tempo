@@ -89,7 +89,7 @@ internal fun SessionEditorSheet(
         onDismissRequest = {
             onEvent(
                 if (form.savesOnClose) {
-                    FocusContract.UiEvent.SaveSession(form.draft)
+                    FocusContract.UiEvent.SaveSession(form.closingDraft)
                 } else {
                     FocusContract.UiEvent.DismissSessionEditor
                 },
@@ -198,9 +198,16 @@ internal class SessionEditorForm(
                 taskId = linkedTaskId,
             )
 
-    /** Whether closing the sheet should save: an existing session, changed, and still named. */
+    /**
+     * What closing the sheet saves. A name rubbed out and left empty goes back to what it was
+     * rather than taking the other changes down with it.
+     */
+    val closingDraft: FocusContract.SessionDraft
+        get() = draft.copy(title = title.ifBlank { original?.title.orEmpty() })
+
+    /** Whether closing the sheet should save: an existing session that has been changed. */
     val savesOnClose: Boolean
-        get() = original != null && canSave && draft.toSavedSession().normalized() != original
+        get() = original != null && closingDraft.toSavedSession().normalized() != original
 
     /**
      * The chosen task, from the list when it is there. The list loads a beat after the sheet

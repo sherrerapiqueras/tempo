@@ -187,4 +187,7 @@ data class SessionCycle(
     val breakLength: Duration,
 ) {
     val hasRounds: Boolean get() = totalRounds > 1
+
+    /** The same cycle with every round behind it, so nothing follows whatever carries it. */
+    fun finished(): SessionCycle = copy(round = totalRounds)
 }

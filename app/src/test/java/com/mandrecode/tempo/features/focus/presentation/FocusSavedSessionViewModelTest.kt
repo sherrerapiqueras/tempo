@@ -143,6 +143,8 @@ class FocusSavedSessionViewModelTest : FocusViewModelHarness() {
             val viewModel = createViewModel()
             advanceUntilIdle()
 
+            viewModel.onEvent(FocusContract.UiEvent.AddSession)
+
             viewModel.uiEffect.test {
                 viewModel.onEvent(FocusContract.UiEvent.SaveSession(draftOf(), startNow = true))
                 advanceUntilIdle()
@@ -163,6 +165,8 @@ class FocusSavedSessionViewModelTest : FocusViewModelHarness() {
             val viewModel = createViewModel()
             advanceUntilIdle()
 
+            viewModel.onEvent(FocusContract.UiEvent.EditSession(4))
+
             viewModel.onEvent(FocusContract.UiEvent.SaveSession(draftOf(id = 4), startNow = true))
             advanceUntilIdle()
 
@@ -176,6 +180,8 @@ class FocusSavedSessionViewModelTest : FocusViewModelHarness() {
             coEvery { saveSavedSession(any()) } returns null
             val viewModel = createViewModel()
             advanceUntilIdle()
+
+            viewModel.onEvent(FocusContract.UiEvent.AddSession)
 
             viewModel.onEvent(FocusContract.UiEvent.SaveSession(draftOf(title = " "), startNow = true))
             advanceUntilIdle()
@@ -462,5 +468,57 @@ class FocusSavedSessionViewModelTest : FocusViewModelHarness() {
 
             coVerify { toggleTaskCompletion(elsewhere) }
             coVerify { focusSessionUseCases.end() }
+        }
+
+    @Test
+    fun `a second tap on save while the first is being written saves nothing more`() =
+        runTest {
+            stubDay()
+            coEvery { saveSavedSession(any()) } returns study
+            val viewModel = createViewModel()
+            advanceUntilIdle()
+            viewModel.onEvent(FocusContract.UiEvent.AddSession)
+
+            viewModel.onEvent(FocusContract.UiEvent.SaveSession(draftOf()))
+            viewModel.onEvent(FocusContract.UiEvent.SaveSession(draftOf()))
+            advanceUntilIdle()
+
+            coVerify(exactly = 1) { saveSavedSession(any()) }
+        }
+
+    @Test
+    fun `the sheet closes as soon as save is pressed, before the write returns`() =
+        runTest {
+            stubDay()
+            val viewModel = createViewModel()
+            advanceUntilIdle()
+            viewModel.onEvent(FocusContract.UiEvent.AddSession)
+
+            viewModel.onEvent(FocusContract.UiEvent.SaveSession(draftOf()))
+
+            assertThat(viewModel.uiState.value.sessionEditor).isNull()
+        }
+
+    @Test
+    fun `a break after a session that ended part-way does not pick its rounds back up`() =
+        runTest {
+            stubDay()
+            val viewModel = createViewModel()
+            advanceUntilIdle()
+            val midWay = FocusSession.start(savedSession(4, rounds = 4), nowInstant).cycle
+            runSessionOut(taskId = null, title = "Study", cycle = midWay)
+
+            viewModel.onEvent(FocusContract.UiEvent.TakeBreak)
+            advanceUntilIdle()
+
+            coVerify {
+                focusSessionUseCases.start(
+                    taskId = null,
+                    title = "Study",
+                    isBreak = true,
+                    lengthMinutes = 5,
+                    cycle = midWay?.copy(round = 4),
+                )
+            }
         }
 }

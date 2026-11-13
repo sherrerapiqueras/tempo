@@ -186,4 +186,14 @@ class FocusSessionTest {
         assertThat(FocusSession.start(saved(rounds = 1), start).cycle?.hasRounds).isFalse()
         assertThat(FocusSession.start(saved(rounds = 2), start).cycle?.hasRounds).isTrue()
     }
+
+    @Test
+    fun `a finished cycle has nothing left to follow it`() {
+        val midWay = FocusSession.start(saved(rounds = 4), start)
+        val rest = midWay.copy(isBreak = true, cycle = midWay.cycle?.finished())
+
+        assertThat(rest.cycle?.round).isEqualTo(4)
+        assertThat(rest.nextPhase(start)).isNull()
+        assertThat(rest.savedSessionId).isEqualTo(4)
+    }
 }

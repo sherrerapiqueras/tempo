@@ -110,4 +110,17 @@ class SavedSessionUseCasesTest {
                 awaitComplete()
             }
         }
+
+    @Test
+    fun `tasks are not read while no session points at one`() =
+        runTest {
+            every { savedSessionRepository.getAll() } returns flowOf(listOf(study), emptyList())
+
+            GetSavedSessionsUseCase(savedSessionRepository, taskRepository)().test {
+                assertThat(awaitItem().single().session).isEqualTo(study)
+                assertThat(awaitItem()).isEmpty()
+                awaitComplete()
+            }
+            io.mockk.verify(exactly = 0) { taskRepository.getAllTasks() }
+        }
 }

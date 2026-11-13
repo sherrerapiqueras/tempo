@@ -6,8 +6,10 @@ import com.mandrecode.tempo.features.focus.domain.repository.SavedSessionReposit
 import com.mandrecode.tempo.features.tasks.domain.model.Task
 import com.mandrecode.tempo.features.tasks.domain.repository.TaskRepository
 import jakarta.inject.Inject
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
 /**
@@ -23,13 +25,24 @@ class GetSavedSessionsUseCase
         private val savedSessionRepository: SavedSessionRepository,
         private val taskRepository: TaskRepository,
     ) {
+        @OptIn(ExperimentalCoroutinesApi::class)
         operator fun invoke(): Flow<List<SavedSessionEntry>> =
-            combine(savedSessionRepository.getAll(), taskRepository.getAllTasks()) { sessions, tasks ->
-                val tasksById = tasks.associateBy(Task::id)
-                sessions.map { session ->
-                    SavedSessionEntry(session = session, linkedTask = session.taskId?.let(tasksById::get))
+            savedSessionRepository.getAll().flatMapLatest { sessions ->
+                // Tasks are only read while some session points at one. This is collected from app
+                // start, and most days there is no link to resolve — or no session at all.
+                if (sessions.none { it.taskId != null }) {
+                    flowOf(sessions.map { SavedSessionEntry(session = it) })
+                } else {
+                    taskRepository.getAllTasks().map { tasks -> sessions.linkedTo(tasks) }
                 }
             }
+
+        private fun List<SavedSession>.linkedTo(tasks: List<Task>): List<SavedSessionEntry> {
+            val tasksById = tasks.associateBy(Task::id)
+            return map { session ->
+                SavedSessionEntry(session = session, linkedTask = session.taskId?.let(tasksById::get))
+            }
+        }
     }
 
 /**

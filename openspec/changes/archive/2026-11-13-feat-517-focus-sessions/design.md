@@ -35,7 +35,8 @@ No foreign key, like every other reference in this database. The link is resolve
 
 - **Idempotency:** `timeUp()` acts only on a session that `hasExpired(now)`. A duplicate or late alarm finds either the next phase (not expired → no-op) or nothing.
 - **Never through null:** Focus shows the finished sheet when the active session disappears after expiring. Swapping phases in one write keeps that sheet for the real end only.
-- **Transaction boundary:** banking minutes is the Room write (`daily_focus_activity`); the alarm, the notification and the preferences write are side effects outside it, in the order settle → store next phase → schedule → notify. A crash between settle and store leaves no session, which reads as stopped — minutes are never banked twice.
+- **Transaction boundary:** banking minutes is the Room write (`daily_focus_activity`); the alarm, the notification and the preferences write are side effects outside it, in the order store next phase → schedule → notify → settle. The next phase is stored before the expired round is banked, so a crash between the two loses that round's minutes rather than banking them twice — the same side `end()` errs on.
+- **Early alarm:** an alarm that arrives before the stored end (clock set back) is armed again rather than dropped, since it is the only thing that ends a session while the app is closed.
 - **Notification:** the ongoing notification is cleared before the next phase's is posted, so the phase change alerts instead of being swallowed by `setOnlyAlertOnce`.
 - `reconcile()` (app start, reboot) keeps ending an expired session outright: starting a rest for a round that ran out while the phone was off would be a timer nobody asked for.
 - `skipBreak()` starts the next phase immediately, for "Back to it" during a rest between rounds.

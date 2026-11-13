@@ -266,4 +266,62 @@ class FocusUiStateTest {
         assertThat(FocusContract.SessionEditorTarget().isNew).isTrue()
         assertThat(FocusContract.SessionEditorTarget(session = saved(1)).isNew).isFalse()
     }
+
+    @Test
+    fun `another session after a saved one is offered at that session's own length`() {
+        val study = saved(1).copy(focusMinutes = 50)
+        val state =
+            FocusContract.UiState(
+                defaultSessionLengthMinutes = 25,
+                savedSessions = persistentListOf(SavedSessionEntry(study)),
+                lastSession = FocusSession.start(study, now),
+            )
+
+        assertThat(state.nextSessionMinutes).isEqualTo(50)
+        // Deleted since, or a plain task timer: what starts again is a session at the set length.
+        assertThat(state.copy(savedSessions = persistentListOf()).nextSessionMinutes).isEqualTo(25)
+        assertThat(FocusContract.UiState(defaultSessionLengthMinutes = 30).nextSessionMinutes).isEqualTo(30)
+    }
+
+    @Test
+    fun `a timer on a task always offers finishing it`() {
+        val state = FocusContract.UiState(session = FocusSession.start(taskId = 1, title = "Report", now = now))
+
+        assertThat(state.canCompleteRunningTask).isTrue()
+        assertThat(state.canCompleteScreenTask).isTrue()
+    }
+
+    @Test
+    fun `a saved session offers finishing only while its linked task is there and open`() {
+        val open = task(8)
+        val running = FocusSession.start(saved(4, taskId = 8), now)
+
+        fun stateWith(linked: Task?) =
+            FocusContract.UiState(
+                savedSessions = persistentListOf(SavedSessionEntry(saved(4, taskId = 8), linkedTask = linked)),
+                session = running,
+            )
+
+        assertThat(stateWith(open).canCompleteRunningTask).isTrue()
+        assertThat(stateWith(open.copy(isCompleted = true)).canCompleteRunningTask).isFalse()
+        assertThat(stateWith(null).canCompleteRunningTask).isFalse()
+        assertThat(stateWith(null).canCompleteScreenTask).isFalse()
+        assertThat(FocusContract.UiState(session = FocusSession.start(saved(4), now)).canCompleteRunningTask).isFalse()
+    }
+
+    @Test
+    fun `a task being looked at before it starts can be finished from the screen`() {
+        val state = FocusContract.UiState(session = FocusSession.start(saved(4), now), previewTaskId = 2)
+
+        assertThat(state.canCompleteScreenTask).isTrue()
+        assertThat(FocusContract.UiState().canCompleteRunningTask).isFalse()
+    }
+
+    @Test
+    fun `the pause toggle asks for whichever the session is not doing`() {
+        val running = FocusSession.start(taskId = 1, title = "Report", now = now)
+
+        assertThat(running.pauseResumeEvent()).isEqualTo(FocusContract.UiEvent.PauseSession)
+        assertThat(running.pause(now).pauseResumeEvent()).isEqualTo(FocusContract.UiEvent.ResumeSession)
+    }
 }

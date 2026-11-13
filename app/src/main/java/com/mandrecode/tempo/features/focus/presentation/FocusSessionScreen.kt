@@ -171,20 +171,11 @@ fun FocusSessionSheet(
             task = task,
             categoryName = uiState.sessionEntry?.categoryName,
             onStart = { minutes -> onEvent(FocusContract.UiEvent.StartSession(minutes)) },
-            onPauseResume = {
-                onEvent(
-                    if (session?.isPaused != false) {
-                        FocusContract.UiEvent.ResumeSession
-                    } else {
-                        FocusContract.UiEvent.PauseSession
-                    },
-                )
-            },
+            onPauseResume = { session?.let { onEvent(it.pauseResumeEvent()) } },
             onStop = { onEvent(FocusContract.UiEvent.StopSession) },
-            // A session before it starts is always a task's; one running has a task or it does not.
             onComplete =
                 { onEvent(FocusContract.UiEvent.CompleteSessionTask) }
-                    .takeIf { session == null || session.taskId != null },
+                    .takeIf { uiState.canCompleteScreenTask },
             onBackToWork = { onEvent(FocusContract.UiEvent.BackToWork) },
             onToggleSubtask = { onEvent(FocusContract.UiEvent.ToggleTaskCompletion(it)) },
             onEditSubtask = { onEvent(FocusContract.UiEvent.EditTask(it)) },

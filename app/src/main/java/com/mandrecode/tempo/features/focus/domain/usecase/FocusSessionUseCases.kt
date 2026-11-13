@@ -75,24 +75,35 @@ class FocusSessionUseCases
          * and ends anything else.
          *
          * Acts only on a session that has really run out, so a late or repeated alarm finds the
-         * phase it already started and leaves it alone. The next phase replaces the expired one in
-         * a single write — the session never reads as gone in between, which is what Focus takes as
-         * "finished" and answers with its sheet.
+         * phase it already started and leaves it alone. One that arrives early — the clock was set
+         * back, or the alarm beat the stored end by a hair — is armed again rather than dropped:
+         * this alarm is the only thing that ends a session while the app is closed.
+         *
+         * The next phase replaces the expired one in a single write, so the session never reads as
+         * gone in between, which is what Focus takes as "finished" and answers with its sheet. It
+         * is stored before the expired round is banked: a process killed between the two loses that
+         * round's minutes rather than finding the round still there and banking it twice, the same
+         * side [end] errs on.
          */
         suspend fun timeUp(): TimeUp? {
             val now = clock.now()
-            val session = sessionRepository.activeSession.value?.takeIf { it.hasExpired(now) } ?: return null
-            val next = session.nextPhase(now)
-            if (next == null) {
-                end()
+            val running = sessionRepository.activeSession.value
+            val session = running?.takeIf { it.hasExpired(now) }
+            if (session == null) {
+                running?.takeIf { !it.isPaused }?.let { scheduler.scheduleSessionEnd(it) }
             } else {
-                settle(session, now)
-                // Cleared first, so the new phase arrives as news: left in place, the notification
-                // would only update, and it alerts once.
-                scheduler.clearOngoingNotification()
-                apply(next)
+                val next = session.nextPhase(now)
+                if (next == null) {
+                    end()
+                } else {
+                    // Cleared first, so the new phase arrives as news: left in place, the
+                    // notification would only update, and it alerts once.
+                    scheduler.clearOngoingNotification()
+                    apply(next)
+                    settle(session, now)
+                }
             }
-            return TimeUp(finished = session, next = next)
+            return session?.let { TimeUp(finished = it, next = sessionRepository.activeSession.value) }
         }
 
         /** Cuts a rest between rounds short and starts the next round now. */

@@ -236,7 +236,9 @@ class FocusViewModel
                                         ?.breakLength
                                         ?.inWholeMinutes
                                         ?.toInt(),
-                                cycle = last.cycle,
+                                // Pinned to its last round: this rest follows a session that is
+                                // over, however it ended, and must not pick its rounds back up.
+                                cycle = last.cycle?.finished(),
                             )
                         }
                     }

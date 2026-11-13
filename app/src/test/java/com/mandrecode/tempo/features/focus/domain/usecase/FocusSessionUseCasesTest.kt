@@ -422,4 +422,31 @@ class FocusSessionUseCasesTest {
             assertThat(ended?.title).isEqualTo("Study")
             assertThat(sessionFlow.value).isNull()
         }
+
+    @Test
+    fun `an alarm that arrives before the session has run out is armed again, not dropped`() =
+        runTest {
+            useCases.startSaved(saved())
+            now = start + 24.minutes
+
+            assertThat(useCases.timeUp()).isNull()
+
+            assertThat(sessionFlow.value?.cycle?.round).isEqualTo(1)
+            verify(exactly = 2) { scheduler.scheduleSessionEnd(any()) }
+            coVerify(exactly = 0) { activityRepository.addFocusMinutes(any<LocalDate>(), any()) }
+        }
+
+    @Test
+    fun `the next phase is stored before the finished round is banked`() =
+        runTest {
+            useCases.startSaved(saved())
+            now = start + 25.minutes
+
+            useCases.timeUp()
+
+            io.mockk.coVerifyOrder {
+                sessionRepository.setActiveSession(match { it?.isBreak == true })
+                activityRepository.addFocusMinutes(any<LocalDate>(), 25)
+            }
+        }
 }

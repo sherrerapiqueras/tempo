@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -19,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
 import com.mandrecode.tempo.core.ui.theme.groupLabel
@@ -51,49 +51,61 @@ internal fun LazyListScope.savedSessionsSection(
         )
     }
     item(key = "saved_sessions_row") {
-        val listState = rememberLazyListState()
-        BoxWithConstraints(modifier = Modifier.fillMaxWidth().animateItem()) {
-            val cardWidth = if (sessions.size > 1) maxWidth * SINGLE_PEEK_FRACTION else maxWidth
-            LazyRow(
-                state = listState,
-                flingBehavior = rememberSnapFlingBehavior(listState),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.Top,
-            ) {
-                items(sessions, key = { "saved_session_${it.session.id}" }) { entry ->
-                    UpNextCard(
-                        title = entry.session.title,
-                        metadata = entry.savedSessionMetadata(),
-                        onClick = { onEvent(FocusContract.UiEvent.EditSession(entry.session.id)) },
-                        modifier = Modifier.width(cardWidth),
-                        trailingContent = {
-                            StartSessionButton(
-                                minutes = entry.session.focusMinutes,
-                                onClick = {
-                                    onEvent(FocusContract.UiEvent.StartSavedSession(entry.session.id))
-                                },
-                            )
-                        },
-                    )
-                }
+        PeekingCardRow(cardCount = sessions.size, modifier = Modifier.animateItem()) { cardWidth ->
+            items(sessions, key = { "saved_session_${it.session.id}" }) { entry ->
+                UpNextCard(
+                    title = entry.session.title,
+                    metadata = entry.savedSessionMetadata(),
+                    onClick = { onEvent(FocusContract.UiEvent.EditSession(entry.session.id)) },
+                    modifier = Modifier.width(cardWidth),
+                    trailingContent = {
+                        StartSessionButton(
+                            minutes = entry.session.focusMinutes,
+                            onClick = { onEvent(FocusContract.UiEvent.StartSavedSession(entry.session.id)) },
+                        )
+                    },
+                )
             }
         }
     }
 }
 
 /**
- * Brings the Up next row back to its start whenever something new starts running.
+ * A row of cards you swipe through, the one shape Up next and the saved sessions share.
  *
- * The running card is put first, but a lazy row holds on to the card it was showing: a session
- * started from anywhere but the first card — a saved session always is — arrived off-screen to the
- * left, under a header already saying it was under way.
+ * Cards stop short of the full width when there is more than one, so the next shows at the edge —
+ * the only honest way to say there is more. They start on the same line and end wherever their
+ * content does: a running session is a deeper card than a queued one, and one height for all of
+ * them meant padding the short ones out to match the tallest thing on screen.
+ *
+ * [startKey] names what must be seen at the start of the row. When it changes to something, the row
+ * goes back there: a lazy row holds on to the card it was showing, and a session started from
+ * anywhere but the first card arrived off-screen to the left, under a header already saying it was
+ * under way.
  */
 @Composable
-internal fun KeepRunningCardInView(
-    subjectKey: String?,
-    listState: LazyListState,
+internal fun PeekingCardRow(
+    cardCount: Int,
+    modifier: Modifier = Modifier,
+    startKey: String? = null,
+    content: LazyListScope.(cardWidth: Dp) -> Unit,
 ) {
-    LaunchedEffect(subjectKey) {
-        if (subjectKey != null) listState.scrollToItem(0)
+    val listState = rememberLazyListState()
+    LaunchedEffect(startKey) {
+        if (startKey != null) listState.scrollToItem(0)
+    }
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val cardWidth = if (cardCount > 1) maxWidth * SINGLE_PEEK_FRACTION else maxWidth
+        LazyRow(
+            state = listState,
+            flingBehavior = rememberSnapFlingBehavior(listState),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            content(cardWidth)
+        }
     }
 }
+
+/** Leaves the next card showing at the edge, so the row reads as a row. */
+private const val SINGLE_PEEK_FRACTION = 0.88f
