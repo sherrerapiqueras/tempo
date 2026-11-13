@@ -2,7 +2,7 @@
 activityCompose = "1.13.0"
 agp = "9.5.1"
 composeBom = "2026.09.00"
-composeMaterial3 = "1.5.0-beta02"
+composeMaterial3 = "1.5.0-rc01"
 coreKtx = "1.19.1"
 detekt = "2.0.0-alpha.6"
 coreSplashScreen = "1.2.0"
@@ -32,7 +32,7 @@ nav3Core = "1.1.4"
 room = "2.8.5"
 androidxSqlite = "2.7.0"
 sqlcipher = "4.20.0"
-uiAutomator = "2.4.0"
+uiAutomator = "2.4.1"
 work = "2.12.0"
 
 [libraries]
