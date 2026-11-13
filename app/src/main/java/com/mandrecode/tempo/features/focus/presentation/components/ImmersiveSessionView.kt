@@ -32,7 +32,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
 import com.mandrecode.tempo.core.ui.editor.EditorBottomSheetFooter
@@ -54,8 +53,8 @@ private val HeroTextStartInset = 8.dp
 /** The gap between the body's rows, as the task and habit editors space theirs. */
 private val RowGap = 20.dp
 
-/** Where an editor row's control starts, so what hangs under a row lines up with it. */
-private val MetadataStartInset = 52.dp
+/** The gap the setup rows keep between themselves, kept between them and the task's row too. */
+private val SetupRowsGap = 12.dp
 
 /**
  * What the session screen's body can do, as one value: starting and saving before it runs, the
@@ -168,7 +167,8 @@ internal fun SessionBody(
             enter = expandVertically() + fadeIn(),
             exit = shrinkVertically() + fadeOut(),
         ) {
-            SessionSetupRows(form = form, modifier = Modifier.padding(top = RowGap))
+            // The rows' own gap, so the task's row and the three under it read as one list.
+            SessionSetupRows(form = form, modifier = Modifier.padding(top = SetupRowsGap))
         }
 
         SessionControls(
@@ -395,19 +395,9 @@ private fun SessionLinkedTask(
         onOpen = link.onOpenTask,
         onPick = link.onPick,
         onClear = link.onUnlink,
+        supporting = task?.let { sessionTaskSummary(it, categoryName) },
         modifier = Modifier.padding(top = RowGap),
     )
-    val summary = task?.let { sessionTaskSummary(it, categoryName) }
-    AnimatedVisibility(visible = summary != null) {
-        Text(
-            text = summary.orEmpty(),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth().padding(start = MetadataStartInset, top = 4.dp),
-        )
-    }
 }
 
 /**

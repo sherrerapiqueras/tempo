@@ -1,12 +1,16 @@
 package com.mandrecode.tempo.features.focus.presentation.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -48,6 +52,7 @@ import com.mandrecode.tempo.core.ui.adaptive.adaptiveHorizontalMargin
 import com.mandrecode.tempo.core.ui.components.TempoConfirmDialog
 import com.mandrecode.tempo.core.ui.components.TempoModalBottomSheet
 import com.mandrecode.tempo.core.ui.components.ValueStepper
+import com.mandrecode.tempo.core.ui.editor.EDITOR_CONTROL_HEIGHT
 import com.mandrecode.tempo.core.ui.editor.EditorAddButton
 import com.mandrecode.tempo.core.ui.editor.EditorPropertyRow
 import com.mandrecode.tempo.core.ui.editor.EditorValueChip
@@ -341,7 +346,7 @@ private fun StepperRow(
         Text(
             text = name,
             style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).padding(start = RowContentInset),
         )
         stepper()
     }
@@ -365,26 +370,48 @@ internal fun LinkedTaskRow(
     /** Takes the link off. `null` once the session is running, when it is the timer's task. */
     onClear: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    /** One quiet line under the chip: what the linked task carries. */
+    supporting: String? = null,
 ) {
     if (linkedTask == null && onPick == null) return
     EditorPropertyRow(
         iconPainter = painterResource(R.drawable.ic_checklist),
         iconContentDescription = stringResource(R.string.session_editor_linked_task),
         modifier = modifier,
+        // Top-aligned, with the icon given the control's own height to centre in: the row grows
+        // downward when the task has something to say, and the icon stays beside the chip.
+        verticalAlignment = Alignment.Top,
+        iconBoxModifier = Modifier.width(RowIconWidth).height(EDITOR_CONTROL_HEIGHT),
     ) {
-        if (linkedTask == null) {
-            EditorAddButton(
-                label = stringResource(R.string.session_editor_link_task),
-                onClick = { onPick?.invoke() },
-            )
-        } else {
-            EditorValueChip(
-                label = linkedTask.title,
-                onClick = { onOpen(linkedTask) },
-                onClear = onClear,
-                clearContentDescription = stringResource(R.string.session_editor_unlink_task),
-                modifier = Modifier.weight(1f, fill = false),
-            )
+        // One column for the control and the line under it, so they start at the same place by
+        // construction — the place every other row's content starts.
+        Column(modifier = Modifier.weight(1f).padding(start = RowContentInset)) {
+            if (linkedTask == null) {
+                EditorAddButton(
+                    label = stringResource(R.string.session_editor_link_task),
+                    onClick = { onPick?.invoke() },
+                )
+            } else {
+                EditorValueChip(
+                    label = linkedTask.title,
+                    onClick = { onOpen(linkedTask) },
+                    onClear = onClear,
+                    clearContentDescription = stringResource(R.string.session_editor_unlink_task),
+                    // The chip brings an inset of its own, for the editors it was made for; here
+                    // the column has already placed it.
+                    modifier = Modifier.offset(x = -ChipOwnInset),
+                )
+            }
+            AnimatedVisibility(visible = linkedTask != null && supporting != null) {
+                Text(
+                    text = supporting.orEmpty(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                )
+            }
         }
     }
 }
@@ -465,4 +492,16 @@ internal fun LinkTaskSheet(
 
 /** The gap between rows, as the task and habit editors space theirs. */
 private val RowSpacing = 12.dp
+
+/** The width the editors give a row's icon. */
+private val RowIconWidth = 48.dp
+
+/**
+ * Where every row's content starts, past its icon: the stepper rows' names, the linked task's
+ * control and the line under it. One value, so the rows share a start line.
+ */
+private val RowContentInset = 4.dp
+
+/** The start inset `EditorValueChip` applies to itself. */
+private val ChipOwnInset = 4.dp
 private const val PLACEHOLDER_ALPHA = 0.6f
