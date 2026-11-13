@@ -409,7 +409,9 @@ internal fun LinkedTaskRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                    // Under the chip's own text, not its edge: the line is the chip's caption, and
+                    // a caption starting left of the words it belongs to reads as a row of its own.
+                    modifier = Modifier.fillMaxWidth().padding(start = ChipLabelInset, top = 4.dp),
                 )
             }
         }
@@ -504,4 +506,7 @@ private val RowContentInset = 4.dp
 
 /** The start inset `EditorValueChip` applies to itself. */
 private val ChipOwnInset = 4.dp
+
+/** How far inside its own edge an input chip starts its label. */
+private val ChipLabelInset = 12.dp
 private const val PLACEHOLDER_ALPHA = 0.6f

@@ -88,15 +88,18 @@ internal fun SessionDial(
         modifier =
             modifier.drawWithCache {
                 val stroke = strokeWidth.toPx()
-                // Inset by the stroke, so the trace sits on the shape's edge without being clipped.
-                val inner = Size(size.width - stroke * 2, size.height - stroke * 2)
+                // Inset by half the stroke and no more: the trace is centred on the shape's edge, so
+                // its outer side then lands exactly on the dial's bounds, and the dial lines up with
+                // whatever else ends at that edge.
+                val inset = stroke / 2
+                val inner = Size(size.width - stroke, size.height - stroke)
                 val outline = shape.createOutline(inner, layoutDirection, this)
                 val path = (outline as? Outline.Generic)?.path ?: Path()
                 val measure = PathMeasure().apply { setPath(path, forceClosed = true) }
                 val traced = Path()
                 onDrawBehind {
                     scale(scale) {
-                        translate(stroke, stroke) {
+                        translate(inset, inset) {
                             drawPath(path, colors.fill)
                             drawPath(path, colors.track, style = Stroke(stroke))
                             traced.rewind()
