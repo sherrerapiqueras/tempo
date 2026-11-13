@@ -196,4 +196,23 @@ class FocusSessionTest {
         assertThat(rest.nextPhase(start)).isNull()
         assertThat(rest.savedSessionId).isEqualTo(4)
     }
+
+    @Test
+    fun `a task can be given rounds of its own without a saved session behind them`() {
+        val rounds = FocusSession.adHocCycle(focusMinutes = 25, breakMinutes = 5, rounds = 2)
+        val running = FocusSession.start(taskId = 1, title = "Report", now = start, cycle = rounds)
+
+        assertThat(rounds?.savedSessionId).isNull()
+        assertThat(running.savedSessionId).isNull()
+        assertThat(running.subjectKey).isEqualTo("task:1")
+        assertThat(running.nextPhase(start)?.isBreak).isTrue()
+    }
+
+    @Test
+    fun `one round is no cycle at all, and too many are capped`() {
+        assertThat(FocusSession.adHocCycle(focusMinutes = 25, breakMinutes = 5, rounds = 1)).isNull()
+        assertThat(FocusSession.adHocCycle(focusMinutes = 25, breakMinutes = 5, rounds = 0)).isNull()
+        assertThat(FocusSession.adHocCycle(focusMinutes = 25, breakMinutes = 5, rounds = 99)?.totalRounds)
+            .isEqualTo(FocusSession.ROUNDS_RANGE.last)
+    }
 }

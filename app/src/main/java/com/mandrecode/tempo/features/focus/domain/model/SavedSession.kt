@@ -29,6 +29,11 @@ data class SavedSession(
             rounds = rounds.coerceIn(FocusSession.ROUNDS_RANGE),
         )
 
+    companion object {
+        /** The id of a session that has not been saved yet. */
+        const val NEW_ID: Long = 0
+    }
+
     /** Same name and same numbers: what a merge import calls "already here". */
     fun hasSameSetupAs(other: SavedSession): Boolean =
         title == other.title &&

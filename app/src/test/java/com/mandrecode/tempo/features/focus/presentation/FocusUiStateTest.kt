@@ -324,4 +324,91 @@ class FocusUiStateTest {
         assertThat(running.pauseResumeEvent()).isEqualTo(FocusContract.UiEvent.PauseSession)
         assertThat(running.pause(now).pauseResumeEvent()).isEqualTo(FocusContract.UiEvent.ResumeSession)
     }
+
+    @Test
+    fun `a saved session being set up has the key its timer will have, so the screen stays on it`() {
+        val study = saved(4, taskId = 8)
+        val setUp =
+            FocusContract.UiState(
+                savedSessions = persistentListOf(SavedSessionEntry(study, linkedTask = task(8))),
+                setupSessionId = 4,
+            )
+        val running = setUp.copy(setupSessionId = null, session = FocusSession.start(study, now))
+
+        assertThat(setUp.sessionSetup?.session).isEqualTo(study)
+        assertThat(setUp.sessionSetup?.linkedTask).isEqualTo(task(8))
+        assertThat(setUp.sessionSubjectKey).isEqualTo(running.sessionSubjectKey)
+        assertThat(setUp.screenSession).isNull()
+    }
+
+    @Test
+    fun `a new session is set up under a stand-in key and shows nothing of what else is running`() {
+        val elsewhere = FocusSession.start(taskId = 1, title = "Report", now = now)
+        val state =
+            FocusContract.UiState(
+                todayItems = persistentListOf(FocusAgendaItem.TaskEntry(task(1))),
+                session = elsewhere,
+                setupSessionId = SavedSession.NEW_ID,
+            )
+
+        assertThat(state.sessionSetup?.isNew).isTrue()
+        assertThat(state.sessionSubjectKey).isEqualTo("session:0")
+        assertThat(state.screenSession).isNull()
+        // Not the running task's details under a session that has nothing to do with it.
+        assertThat(state.sessionEntry).isNull()
+    }
+
+    @Test
+    fun `a session deleted while it was being set up leaves the screen nothing to show`() {
+        val state = FocusContract.UiState(setupSessionId = 4, session = FocusSession.start(taskId = 1, "Report", now))
+
+        assertThat(state.sessionSetup).isNull()
+        assertThat(state.sessionSubjectKey).isNull()
+    }
+
+    @Test
+    fun `a task run with rounds of its own is still the task's timer`() {
+        val entry = FocusAgendaItem.TaskEntry(task(1))
+        val rounds = FocusSession.adHocCycle(focusMinutes = 25, breakMinutes = 5, rounds = 3)
+        val state =
+            FocusContract.UiState(
+                todayItems = persistentListOf(entry),
+                upNext = persistentListOf(entry),
+                session = FocusSession.start(taskId = 1, title = "Task 1", now = now, cycle = rounds),
+            )
+
+        assertThat(state.sessionSubjectKey).isEqualTo("task:1")
+        assertThat(state.visibleToday).isEmpty()
+        assertThat(state.queuedUpNext).isEmpty()
+        assertThat(state.canCompleteRunningTask).isTrue()
+    }
+
+    @Test
+    fun `a start that asked first is asked for again as it was`() {
+        val request = FocusContract.UiEvent.StartSession(lengthMinutes = 50, taskId = 1, breakMinutes = 10, rounds = 3)
+
+        val pending = request.toPendingStart(task(1), replacing = "Emails")
+
+        assertThat(pending.replacingTaskTitle).isEqualTo("Emails")
+        assertThat(pending.toStartSession()).isEqualTo(request)
+        assertThat(request.cycle(defaultFocusMinutes = 25, defaultBreakMinutes = 5)?.totalRounds).isEqualTo(3)
+        assertThat(FocusContract.UiEvent.StartSession().cycle(25, 5)).isNull()
+    }
+
+    @Test
+    fun `a task just linked is found wherever it is, so what it carries can be shown`() {
+        val onToday = FocusAgendaItem.TaskEntry(task(1), categoryName = "Work")
+        val elsewhere = task(8)
+        val state =
+            FocusContract.UiState(
+                todayItems = persistentListOf(onToday),
+                linkableTasks = persistentListOf(task(1), elsewhere),
+            )
+
+        // The day's own entry when it has one: that is the one carrying its category and its time.
+        assertThat(state.taskEntry(1)).isEqualTo(onToday)
+        assertThat(state.taskEntry(8)?.task).isEqualTo(elsewhere)
+        assertThat(state.taskEntry(99)).isNull()
+        assertThat(state.taskEntry(null)).isNull()
+    }
 }

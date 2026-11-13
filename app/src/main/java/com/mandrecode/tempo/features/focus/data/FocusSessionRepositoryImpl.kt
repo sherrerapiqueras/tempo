@@ -4,6 +4,10 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import com.mandrecode.tempo.features.focus.domain.model.FocusSession
+import com.mandrecode.tempo.features.focus.domain.model.FocusSession.Companion.BREAK_LENGTH_RANGE
+import com.mandrecode.tempo.features.focus.domain.model.FocusSession.Companion.DEFAULT_BREAK_LENGTH
+import com.mandrecode.tempo.features.focus.domain.model.FocusSession.Companion.DEFAULT_LENGTH
+import com.mandrecode.tempo.features.focus.domain.model.FocusSession.Companion.SESSION_LENGTH_RANGE
 import com.mandrecode.tempo.features.focus.domain.model.SessionCycle
 import com.mandrecode.tempo.features.focus.domain.model.TaskFocusToday
 import com.mandrecode.tempo.features.focus.domain.repository.FocusSessionRepository
@@ -17,6 +21,7 @@ import kotlinx.datetime.todayIn
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Clock
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
@@ -31,9 +36,12 @@ class FocusSessionRepositoryImpl
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
         private val sessionFlow = MutableStateFlow(readSession())
-        private val defaultLengthFlow = MutableStateFlow(readDefaultLength())
-        private val breakLengthFlow = MutableStateFlow(readBreakLength())
+        private val defaultLengthFlow =
+            MutableStateFlow(readLength(KEY_DEFAULT_LENGTH, DEFAULT_LENGTH, SESSION_LENGTH_RANGE))
+        private val breakLengthFlow =
+            MutableStateFlow(readLength(KEY_BREAK_LENGTH, DEFAULT_BREAK_LENGTH, BREAK_LENGTH_RANGE))
         private val previewTaskIdFlow = MutableStateFlow<Long?>(null)
+        private val setupSessionIdFlow = MutableStateFlow<Long?>(null)
         private val focusTodayFlow =
             MutableStateFlow(prefs.readFocusOn(clock.todayIn(TimeZone.currentSystemDefault())))
 
@@ -44,6 +52,8 @@ class FocusSessionRepositoryImpl
         override val breakLengthMinutes: StateFlow<Int> = breakLengthFlow.asStateFlow()
 
         override val previewTaskId: StateFlow<Long?> = previewTaskIdFlow.asStateFlow()
+
+        override val setupSessionId: StateFlow<Long?> = setupSessionIdFlow.asStateFlow()
 
         override val focusToday: StateFlow<Map<Long, TaskFocusToday>> = focusTodayFlow.asStateFlow()
 
@@ -119,7 +129,13 @@ class FocusSessionRepositoryImpl
         }
 
         override fun setPreviewTaskId(taskId: Long?) {
+            setupSessionIdFlow.value = null
             previewTaskIdFlow.value = taskId
+        }
+
+        override fun setSetupSessionId(sessionId: Long?) {
+            if (sessionId != null) previewTaskIdFlow.value = null
+            setupSessionIdFlow.value = sessionId
         }
 
         override fun setDefaultLengthMinutes(minutes: Int) {
@@ -154,15 +170,12 @@ class FocusSessionRepositoryImpl
             )
         }
 
-        private fun readDefaultLength(): Int {
-            val fallback = FocusSession.DEFAULT_LENGTH.inWholeMinutes.toInt()
-            return prefs.getInt(KEY_DEFAULT_LENGTH, fallback).coerceIn(FocusSession.SESSION_LENGTH_RANGE)
-        }
-
-        private fun readBreakLength(): Int {
-            val fallback = FocusSession.DEFAULT_BREAK_LENGTH.inWholeMinutes.toInt()
-            return prefs.getInt(KEY_BREAK_LENGTH, fallback).coerceIn(FocusSession.BREAK_LENGTH_RANGE)
-        }
+        /** A stored length in minutes, inside what a timer can run, or [fallback] when none is. */
+        private fun readLength(
+            key: String,
+            fallback: Duration,
+            range: IntRange,
+        ): Int = prefs.getInt(key, fallback.inWholeMinutes.toInt()).coerceIn(range)
 
         private companion object {
             const val PREFS_NAME = "focus_session_prefs"
@@ -186,23 +199,27 @@ private const val KEY_CYCLE_ROUND = "session_cycle_round"
 private const val KEY_CYCLE_TOTAL_ROUNDS = "session_cycle_total_rounds"
 private const val KEY_CYCLE_FOCUS_MILLIS = "session_cycle_focus_millis"
 private const val KEY_CYCLE_BREAK_MILLIS = "session_cycle_break_millis"
-private const val NO_CYCLE = -1L
+private const val NO_SAVED_SESSION = -1L
+private const val NO_ROUNDS = 0
 
-/** A session stored before saved sessions existed has no cycle keys, and reads as none. */
+/**
+ * A session stored before saved sessions existed has no cycle keys, and reads as none. The rounds
+ * are what say a cycle is there: one set on a task for a single run has no saved session to name.
+ */
 private fun SharedPreferences.readCycle(): SessionCycle? {
-    val savedSessionId = getLong(KEY_CYCLE_SESSION_ID, NO_CYCLE)
-    if (savedSessionId == NO_CYCLE) return null
+    val totalRounds = getInt(KEY_CYCLE_TOTAL_ROUNDS, NO_ROUNDS)
+    if (totalRounds == NO_ROUNDS) return null
     return SessionCycle(
-        savedSessionId = savedSessionId,
+        savedSessionId = getLong(KEY_CYCLE_SESSION_ID, NO_SAVED_SESSION).takeIf { it != NO_SAVED_SESSION },
         round = getInt(KEY_CYCLE_ROUND, 1),
-        totalRounds = getInt(KEY_CYCLE_TOTAL_ROUNDS, 1),
+        totalRounds = totalRounds,
         focusLength = getLong(KEY_CYCLE_FOCUS_MILLIS, 0L).milliseconds,
         breakLength = getLong(KEY_CYCLE_BREAK_MILLIS, 0L).milliseconds,
     )
 }
 
 private fun SharedPreferences.Editor.putCycle(cycle: SessionCycle) {
-    putLong(KEY_CYCLE_SESSION_ID, cycle.savedSessionId)
+    putLong(KEY_CYCLE_SESSION_ID, cycle.savedSessionId ?: NO_SAVED_SESSION)
     putInt(KEY_CYCLE_ROUND, cycle.round)
     putInt(KEY_CYCLE_TOTAL_ROUNDS, cycle.totalRounds)
     putLong(KEY_CYCLE_FOCUS_MILLIS, cycle.focusLength.inWholeMilliseconds)

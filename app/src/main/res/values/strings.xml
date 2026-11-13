@@ -719,7 +719,6 @@
     <string name="focus_session_finished_title">%1$d minutes done</string>
     <string name="focus_break_finished_title">Break\'s over — back to it</string>
     <string name="focus_session_start">Start %1$s</string>
-    <string name="focus_session_start_custom">Start with</string>
     <string name="focus_session_length_decrease">Shorter session</string>
     <string name="focus_session_length_increase">Longer session</string>
     <string name="focus_session_pause">Pause</string>
@@ -747,9 +746,7 @@
     <string name="focus_replace_session_message">%1$s is still running. Starting %2$s ends it and keeps only the minutes it earned.</string>
     <string name="focus_replace_session_confirm">Start anyway</string>
     <string name="focus_session_not_started">Not started</string>
-    <string name="focus_session_open_in_tasks">Open in Tasks</string>
     <string name="add_session">Add session</string>
-    <string name="focus_sessions_label">Sessions</string>
     <string name="focus_session_round">Round %1$d of %2$d</string>
     <string name="focus_session_rest_length">%1$s rest</string>
     <plurals name="focus_session_rounds">

@@ -2,14 +2,15 @@ package com.mandrecode.tempo.features.focus.presentation.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -25,15 +26,21 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
@@ -41,12 +48,10 @@ import com.mandrecode.tempo.core.ui.adaptive.adaptiveHorizontalMargin
 import com.mandrecode.tempo.core.ui.components.TempoConfirmDialog
 import com.mandrecode.tempo.core.ui.components.TempoModalBottomSheet
 import com.mandrecode.tempo.core.ui.components.ValueStepper
-import com.mandrecode.tempo.core.ui.editor.EDITOR_TEXT_FIELD_BOTTOM_INSET
 import com.mandrecode.tempo.core.ui.editor.EditorAddButton
-import com.mandrecode.tempo.core.ui.editor.EditorBottomSheetFooter
 import com.mandrecode.tempo.core.ui.editor.EditorPropertyRow
-import com.mandrecode.tempo.core.ui.editor.EditorTitleField
 import com.mandrecode.tempo.core.ui.editor.EditorValueChip
+import com.mandrecode.tempo.core.ui.theme.inputTitle
 import com.mandrecode.tempo.core.ui.theme.subtaskTitle
 import com.mandrecode.tempo.features.focus.domain.model.FocusSession
 import com.mandrecode.tempo.features.focus.domain.model.SavedSession
@@ -60,108 +65,7 @@ import kotlinx.collections.immutable.ImmutableList
 internal const val SESSION_EDITOR_TITLE_FIELD_TEST_TAG = "session_editor_title_field"
 
 /**
- * The session sheet: a new saved session, or one being changed (#517).
- *
- * Built from the task and habit editors' own parts — their title field, their icon-led rows, their
- * footer — so a session is made the way everything else in the app is made. What it asks for is
- * shorter than either: a name, how long to focus, how long to rest, how many times, and optionally
- * the task it is for.
- *
- * A new session is saved by its button. One that exists saves as the sheet closes, the way an
- * existing task does, and its footer offers deleting it instead.
- */
-@Composable
-internal fun SessionEditorSheet(
-    target: FocusContract.SessionEditorTarget,
-    linkableTasks: ImmutableList<Task>,
-    defaultFocusMinutes: Int,
-    defaultBreakMinutes: Int,
-    onEvent: (FocusContract.UiEvent) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val form = rememberSessionEditorForm(target, defaultFocusMinutes, defaultBreakMinutes)
-    var isPickingTask by rememberSaveable(form.sessionId) { mutableStateOf(false) }
-    var isConfirmingDelete by rememberSaveable(form.sessionId) { mutableStateOf(false) }
-
-    TempoModalBottomSheet(
-        // An existing session keeps what was changed, as an existing task does. A new one that was
-        // never confirmed is not created by closing the sheet on it.
-        onDismissRequest = {
-            onEvent(
-                if (form.savesOnClose) {
-                    FocusContract.UiEvent.SaveSession(form.closingDraft)
-                } else {
-                    FocusContract.UiEvent.DismissSessionEditor
-                },
-            )
-        },
-        modifier = modifier,
-        hasUnsavedChanges = form.isNew && form.canSave,
-    ) { onRequestDismiss ->
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = adaptiveHorizontalMargin())
-                    .padding(top = 8.dp, bottom = 32.dp),
-        ) {
-            SessionEditorFields(
-                form = form,
-                linkedTask = form.linkedTask(linkableTasks, target.linkedTask),
-                onPickTask = { isPickingTask = true },
-            )
-            SessionEditorActions(
-                form = form,
-                onEvent = onEvent,
-                onDelete = { isConfirmingDelete = true },
-                onRequestDismiss = onRequestDismiss,
-            )
-        }
-    }
-
-    if (isPickingTask) {
-        LinkTaskSheet(
-            tasks = linkableTasks,
-            selectedTaskId = form.linkedTaskId,
-            onPick = { task ->
-                form.linkedTaskId = task.id
-                isPickingTask = false
-            },
-            onDismiss = { isPickingTask = false },
-        )
-    }
-
-    target.session?.takeIf { isConfirmingDelete }?.let { session ->
-        DeleteSessionDialog(
-            session = session,
-            onConfirm = {
-                isConfirmingDelete = false
-                onEvent(FocusContract.UiEvent.DeleteSession(session.id))
-            },
-            onCancel = { isConfirmingDelete = false },
-        )
-    }
-}
-
-/** Asked on [TempoConfirmDialog] in its destructive dress, as deleting a task is. */
-@Composable
-private fun DeleteSessionDialog(
-    session: SavedSession,
-    onConfirm: () -> Unit,
-    onCancel: () -> Unit,
-) {
-    TempoConfirmDialog(
-        title = stringResource(R.string.delete_session_title),
-        confirmLabel = stringResource(R.string.delete),
-        onConfirm = onConfirm,
-        onCancel = onCancel,
-        text = { Text(stringResource(R.string.delete_session_message, session.title)) },
-    )
-}
-
-/**
- * What is being typed into the session sheet.
+ * What is being set on the session screen before it starts.
  *
  * Held here rather than in the view model, the way the task and habit editors hold their drafts: a
  * text field fed from a state flow loses its cursor to every round trip.
@@ -209,6 +113,14 @@ internal class SessionEditorForm(
     val savesOnClose: Boolean
         get() = original != null && closingDraft.toSavedSession().normalized() != original
 
+    /** These lengths and rounds as a run on the task the screen is showing, for this run alone. */
+    fun startOnTask(): FocusContract.UiEvent.StartSession =
+        FocusContract.UiEvent.StartSession(
+            lengthMinutes = focusMinutes,
+            breakMinutes = breakMinutes,
+            rounds = rounds,
+        )
+
     /**
      * The chosen task, from the list when it is there. The list loads a beat after the sheet
      * opens, and until then the task the session came with stands in for itself.
@@ -222,51 +134,114 @@ internal class SessionEditorForm(
     }
 }
 
+/**
+ * The setup for whatever the session screen is about, keyed by [subjectKey] so each subject keeps
+ * its own. A saved session starts from its own values; a new one and a task start from the
+ * configured lengths and a single round.
+ */
 @Composable
-private fun rememberSessionEditorForm(
-    target: FocusContract.SessionEditorTarget,
+internal fun rememberSessionEditorForm(
+    subjectKey: String?,
+    target: FocusContract.SessionEditorTarget?,
     defaultFocusMinutes: Int,
     defaultBreakMinutes: Int,
 ): SessionEditorForm {
-    val original = target.session
-    val key = original?.id ?: 0L
-    val title = rememberSaveable(key) { mutableStateOf(original?.title.orEmpty()) }
-    val focusMinutes = rememberSaveable(key) { mutableIntStateOf(original?.focusMinutes ?: defaultFocusMinutes) }
-    val breakMinutes = rememberSaveable(key) { mutableIntStateOf(original?.breakMinutes ?: defaultBreakMinutes) }
-    val rounds = rememberSaveable(key) { mutableIntStateOf(original?.rounds ?: 1) }
-    val linkedTaskId = rememberSaveable(key) { mutableStateOf(target.linkedTask?.id) }
-    val showsTitleError = rememberSaveable(key) { mutableStateOf(false) }
-    return remember(key) {
+    val original = target?.session
+    val title = rememberSaveable(subjectKey) { mutableStateOf(original?.title.orEmpty()) }
+    val focusMinutes =
+        rememberSaveable(subjectKey) { mutableIntStateOf(original?.focusMinutes ?: defaultFocusMinutes) }
+    val breakMinutes =
+        rememberSaveable(subjectKey) { mutableIntStateOf(original?.breakMinutes ?: defaultBreakMinutes) }
+    val rounds = rememberSaveable(subjectKey) { mutableIntStateOf(original?.rounds ?: 1) }
+    val linkedTaskId = rememberSaveable(subjectKey) { mutableStateOf(target?.linkedTask?.id) }
+    val showsTitleError = rememberSaveable(subjectKey) { mutableStateOf(false) }
+    return remember(subjectKey, original?.id) {
         SessionEditorForm(original, title, focusMinutes, breakMinutes, rounds, linkedTaskId, showsTitleError)
     }
 }
 
-/** The name, the three numbers and the linked task. */
+/**
+ * A session's name, typed where a running session's title stands and in the same style, so the
+ * screen has one heading whether it is being set up or counting down.
+ *
+ * A new session opens here with the keyboard up, as a new task does. One being changed opens at
+ * rest: it is as likely the numbers that are wanted.
+ */
 @Composable
-private fun ColumnScope.SessionEditorFields(
+internal fun SessionNameField(
     form: SessionEditorForm,
-    linkedTask: Task?,
-    onPickTask: () -> Unit,
+    textAlign: TextAlign,
+    modifier: Modifier = Modifier,
 ) {
-    // A new session starts at its name, with the keyboard up, as a new task does. One being
-    // changed opens at rest: it is as likely the numbers that are wanted.
+    val focusManager = LocalFocusManager.current
     val titleFocus = remember { FocusRequester() }
     LaunchedEffect(form.isNew) {
-        if (form.isNew) titleFocus.requestFocus()
+        if (form.isNew && form.title.isEmpty()) titleFocus.requestFocus()
     }
-    EditorTitleField(
-        value = form.title,
-        onValueChange = {
-            form.title = it
-            if (it.isNotBlank()) form.showsTitleError = false
-        },
-        placeholder = stringResource(R.string.session_editor_title_placeholder),
-        error = stringResource(R.string.task_title_required).takeIf { form.showsTitleError },
-        besideCheckbox = false,
-        fieldModifier = Modifier.testTag(SESSION_EDITOR_TITLE_FIELD_TEST_TAG).focusRequester(titleFocus),
-    )
-    Spacer(modifier = Modifier.height(RowSpacing - EDITOR_TEXT_FIELD_BOTTOM_INSET + TitleGap))
+    // Asked for a name by pressing Start without one: the field takes the cursor, so the request
+    // is seen where it has to be answered rather than left at the top of a sheet scrolled past it.
+    LaunchedEffect(form.showsTitleError) {
+        if (form.showsTitleError) titleFocus.requestFocus()
+    }
+    val style = MaterialTheme.typography.inputTitle.copy(textAlign = textAlign)
+    Column(modifier = modifier.fillMaxWidth()) {
+        BasicTextField(
+            value = form.title,
+            onValueChange = {
+                form.title = it
+                if (it.isNotBlank()) form.showsTitleError = false
+            },
+            textStyle = style.copy(color = MaterialTheme.colorScheme.onSurface),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            maxLines = 2,
+            keyboardOptions =
+                KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .testTag(SESSION_EDITOR_TITLE_FIELD_TEST_TAG)
+                    .focusRequester(titleFocus),
+            decorationBox = { innerTextField ->
+                // The field is as wide as its text, so it is the box that places it: centred under
+                // the handle as a running session's title is, or at the start when docked.
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = if (textAlign == TextAlign.Center) Alignment.TopCenter else Alignment.TopStart,
+                ) {
+                    if (form.title.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.session_editor_title_placeholder),
+                            style = style,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = PLACEHOLDER_ALPHA),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    innerTextField()
+                }
+            },
+        )
+        if (form.showsTitleError) {
+            Text(
+                text = stringResource(R.string.task_title_required),
+                style = MaterialTheme.typography.labelMedium.copy(textAlign = textAlign),
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+            )
+        }
+    }
+}
 
+/**
+ * What a session is set to before it starts: how long to focus, how long to rest, how many times.
+ *
+ * The same rows whether the screen is about a session or a task, in the editors' own shape.
+ */
+@Composable
+internal fun SessionSetupRows(
+    form: SessionEditorForm,
+    modifier: Modifier = Modifier,
+) {
     SessionLengthRows(
         focusMinutes = form.focusMinutes,
         breakMinutes = form.breakMinutes,
@@ -274,57 +249,23 @@ private fun ColumnScope.SessionEditorFields(
         onFocusMinutesChange = { form.focusMinutes = it },
         onBreakMinutesChange = { form.breakMinutes = it },
         onRoundsChange = { form.rounds = it },
-    )
-
-    Spacer(modifier = Modifier.height(RowSpacing))
-    LinkedTaskRow(
-        linkedTask = linkedTask,
-        onPick = onPickTask,
-        onClear = { form.linkedTaskId = null },
+        modifier = modifier,
     )
 }
 
-/**
- * Starting, and the editors' own footer beneath it.
- *
- * Start is the session screen's filled button, saying the length it will run for: saving a session
- * and running it is one thought as often as it is two. Pressed with no name it asks for one rather
- * than doing nothing.
- */
+/** Asked on [TempoConfirmDialog] in its destructive dress, as deleting a task is. */
 @Composable
-private fun ColumnScope.SessionEditorActions(
-    form: SessionEditorForm,
-    onEvent: (FocusContract.UiEvent) -> Unit,
-    onDelete: () -> Unit,
-    onRequestDismiss: () -> Unit,
+internal fun DeleteSessionDialog(
+    session: SavedSession,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit,
 ) {
-    SessionActionButton(
-        action =
-            SessionAction(
-                label = stringResource(R.string.focus_session_start, sessionLengthLabel(form.focusMinutes)),
-                icon = painterResource(R.drawable.ic_play_arrow),
-                emphasis = ButtonEmphasis.FILLED,
-                onClick = {
-                    if (form.canSave) {
-                        onEvent(FocusContract.UiEvent.SaveSession(form.draft, startNow = true))
-                    } else {
-                        form.showsTitleError = true
-                    }
-                },
-            ),
-        colors = sessionScreenActionColors(),
-        modifier = Modifier.padding(top = 28.dp),
-    )
-
-    EditorBottomSheetFooter(
-        hasDeleteAction = !form.isNew,
-        deleteLabel = stringResource(R.string.delete_session),
-        onDelete = onDelete,
-        autoSaveEnabled = false,
-        confirmEnabled = form.canSave,
-        confirmLabel = stringResource(R.string.add_session),
-        onRequestDismiss = onRequestDismiss,
-        onConfirmClick = { onEvent(FocusContract.UiEvent.SaveSession(form.draft)) },
+    TempoConfirmDialog(
+        title = stringResource(R.string.delete_session_title),
+        confirmLabel = stringResource(R.string.delete),
+        onConfirm = onConfirm,
+        onCancel = onCancel,
+        text = { Text(stringResource(R.string.delete_session_message, session.title)) },
     )
 }
 
@@ -337,8 +278,9 @@ private fun SessionLengthRows(
     onFocusMinutesChange: (Int) -> Unit,
     onBreakMinutesChange: (Int) -> Unit,
     onRoundsChange: (Int) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(RowSpacing)) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(RowSpacing)) {
         StepperRow(
             iconRes = R.drawable.ic_timer,
             name = stringResource(R.string.session_editor_focus_time),
@@ -406,28 +348,39 @@ private fun StepperRow(
 }
 
 /**
- * The task the session is for: the editor's Add button until one is chosen, then a chip that can be
- * tapped to change it or cleared — the way a reminder is set on a task.
+ * The task a session is for, in one place whatever the session is: the editors' Add button while
+ * there is none, then a chip naming it.
+ *
+ * The chip opens the task itself, in its own sheet over this one — the task is right there to be
+ * read or changed without leaving the session. Its cross takes the link off, and that is always
+ * on offer before a session starts: a session standing alone is the ordinary case, and a task is
+ * something it may be given. To link a different task, take this one off and pick again.
  */
 @Composable
-private fun LinkedTaskRow(
+internal fun LinkedTaskRow(
     linkedTask: Task?,
-    onPick: () -> Unit,
-    onClear: () -> Unit,
+    onOpen: (Task) -> Unit,
+    /** Opens the picker. `null` when a task cannot be chosen here: the session is running. */
+    onPick: (() -> Unit)?,
+    /** Takes the link off. `null` once the session is running, when it is the timer's task. */
+    onClear: (() -> Unit)?,
+    modifier: Modifier = Modifier,
 ) {
+    if (linkedTask == null && onPick == null) return
     EditorPropertyRow(
         iconPainter = painterResource(R.drawable.ic_checklist),
         iconContentDescription = stringResource(R.string.session_editor_linked_task),
+        modifier = modifier,
     ) {
         if (linkedTask == null) {
             EditorAddButton(
                 label = stringResource(R.string.session_editor_link_task),
-                onClick = onPick,
+                onClick = { onPick?.invoke() },
             )
         } else {
             EditorValueChip(
                 label = linkedTask.title,
-                onClick = onPick,
+                onClick = { onOpen(linkedTask) },
                 onClear = onClear,
                 clearContentDescription = stringResource(R.string.session_editor_unlink_task),
                 modifier = Modifier.weight(1f, fill = false),
@@ -442,7 +395,7 @@ private fun LinkedTaskRow(
  * The sort sheet's header and rows: choosing one of a list is the same act here as there.
  */
 @Composable
-private fun LinkTaskSheet(
+internal fun LinkTaskSheet(
     tasks: ImmutableList<Task>,
     selectedTaskId: Long?,
     onPick: (Task) -> Unit,
@@ -512,6 +465,4 @@ private fun LinkTaskSheet(
 
 /** The gap between rows, as the task and habit editors space theirs. */
 private val RowSpacing = 12.dp
-
-/** What the title's own bottom inset leaves short of a row's gap. */
-private val TitleGap = 16.dp
+private const val PLACEHOLDER_ALPHA = 0.6f

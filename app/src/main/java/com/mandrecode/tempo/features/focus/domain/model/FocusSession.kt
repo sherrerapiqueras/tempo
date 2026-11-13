@@ -12,7 +12,8 @@ import kotlin.time.Instant
  * collection.
  *
  * It runs on a task, on a saved session, or on a saved session linked to a task. [taskId] is the
- * task the work belongs to, if any; [cycle] is set when a [SavedSession] started it (#517).
+ * task the work belongs to, if any; [cycle] is set when the run has rounds — a [SavedSession]'s, or
+ * ones given to a task for this run alone (#517).
  *
  * Time is kept as two pieces: [completedBeforeNow], the time banked by earlier run segments, and
  * [runningSince], when the current segment began. Nothing has to tick — remaining time is always
@@ -31,7 +32,7 @@ data class FocusSession(
     val completedBeforeNow: Duration = Duration.ZERO,
     /** Start of the current run segment, or `null` while paused. */
     val runningSince: Instant? = null,
-    /** Where a saved session's run stands, or `null` for a timer started straight on a task. */
+    /** Where a run with rounds stands, or `null` for a single session started on a task. */
     val cycle: SessionCycle? = null,
 ) {
     val isPaused: Boolean get() = runningSince == null
@@ -157,6 +158,25 @@ data class FocusSession(
                     ),
             )
 
+        /**
+         * The cycle for a task run given [rounds] of its own, or `null` when it is a single session
+         * and has no rounds to keep track of.
+         */
+        fun adHocCycle(
+            focusMinutes: Int,
+            breakMinutes: Int,
+            rounds: Int,
+        ): SessionCycle? =
+            rounds.coerceIn(ROUNDS_RANGE).takeIf { it > 1 }?.let { total ->
+                SessionCycle(
+                    savedSessionId = null,
+                    round = 1,
+                    totalRounds = total,
+                    focusLength = lengthOf(focusMinutes),
+                    breakLength = lengthOf(breakMinutes),
+                )
+            }
+
         /** See [FocusSession.subjectKey]; also names a task that is only being previewed. */
         fun subjectKeyOf(
             taskId: Long?,
@@ -172,14 +192,15 @@ data class FocusSession(
 }
 
 /**
- * Where a saved session's run stands.
+ * Where a run with rounds stands.
  *
  * The lengths are copied here when the run starts rather than read back from the saved session at
  * each round: editing or deleting the session must not change a run already under way, and the
  * receiver that advances the rounds has no business opening the database to ask.
  */
 data class SessionCycle(
-    val savedSessionId: Long,
+    /** The saved session this run came from, or `null` for rounds set on a task for one run. */
+    val savedSessionId: Long?,
     /** The focus round under way, or the one the current rest follows. Starts at 1. */
     val round: Int,
     val totalRounds: Int,

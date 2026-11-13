@@ -399,4 +399,49 @@ class FocusSessionRepositoryImplTest {
 
         assertThat(createRepository(stored).activeSession.value?.cycle).isNull()
     }
+
+    @Test
+    fun `rounds given to a task for one run round-trip with no saved session`() {
+        val stored = mutableMapOf<String, Any>()
+        val session =
+            FocusSession.start(
+                taskId = 7,
+                title = "Report",
+                now = start,
+                cycle = FocusSession.adHocCycle(focusMinutes = 25, breakMinutes = 5, rounds = 3),
+            )
+
+        createRepository(stored).setActiveSession(session)
+        val restored = createRepository(stored).activeSession.value
+
+        assertThat(restored).isEqualTo(session)
+        assertThat(restored?.savedSessionId).isNull()
+    }
+
+    @Test
+    fun `the screen is about one thing, a task being looked at or a session being set up`() {
+        val repository = createRepository()
+
+        repository.setPreviewTaskId(9)
+        repository.setSetupSessionId(4)
+        assertThat(repository.previewTaskId.value).isNull()
+        assertThat(repository.setupSessionId.value).isEqualTo(4)
+
+        repository.setPreviewTaskId(9)
+        assertThat(repository.setupSessionId.value).isNull()
+        assertThat(repository.previewTaskId.value).isEqualTo(9)
+    }
+
+    @Test
+    fun `clearing the preview clears a session being set up, and clearing a setup leaves a preview`() {
+        val repository = createRepository()
+
+        repository.setSetupSessionId(4)
+        repository.setPreviewTaskId(null)
+        assertThat(repository.setupSessionId.value).isNull()
+
+        repository.setPreviewTaskId(9)
+        repository.setSetupSessionId(null)
+        assertThat(repository.previewTaskId.value).isEqualTo(9)
+    }
 }

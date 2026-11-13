@@ -75,8 +75,14 @@ class FocusViewModel
         /** Cancelled when the sheet closes, so a closed sheet is not still collecting for nobody. */
         internal var planSheetJob: Job? = null
 
-        /** Cancelled when the session sheet closes, for the same reason. */
+        /** Cancelled when no session is being set up any more, for the same reason. */
         internal var linkableTasksJob: Job? = null
+
+        /**
+         * Held for as long as a session is on its way to the database, so a second tap on save or
+         * start cannot write it twice.
+         */
+        internal var isSavingSession = false
 
         /** Replaced when an interaction finds that the open screen has crossed into a new day. */
         private var observeDayJob: Job? = null
@@ -158,7 +164,7 @@ class FocusViewModel
                     if (savedSessionId != null) {
                         startSavedSession(savedSessionId, force = true)
                     } else {
-                        startSessionOn(pending.taskId, pending.lengthMinutes, force = true)
+                        startSessionOn(pending.toStartSession(), force = true)
                     }
                 }
 
@@ -172,8 +178,7 @@ class FocusViewModel
          */
         internal fun onSessionEvent(event: FocusContract.UiEvent) {
             when (event) {
-                is FocusContract.UiEvent.StartSession ->
-                    startSessionOn(event.taskId, event.lengthMinutes)
+                is FocusContract.UiEvent.StartSession -> startSessionOn(event)
 
                 FocusContract.UiEvent.BackToWork -> backToWork()
 
@@ -266,15 +271,17 @@ class FocusViewModel
          * Starts on the card that was tapped, or on whatever the screen is already showing when
          * nothing names one. Also the way out of a break: starting replaces whatever is running,
          * and a break banks no minutes, so cutting one short costs nothing.
+         *
+         * With more than one round asked for, the run carries a cycle of its own and moves between
+         * focus and rest by itself, the way a saved session does — without becoming one.
          */
         internal fun startSessionOn(
-            taskId: Long?,
-            lengthMinutes: Int?,
+            request: FocusContract.UiEvent.StartSession,
             force: Boolean = false,
         ) {
             val state = mutableUiState.value
             val task =
-                taskId
+                request.taskId
                     ?.let { id -> state.upNext.firstOrNull { it.task.id == id } }
                     ?.task
                     ?: (state.sessionEntry ?: state.upNext.firstOrNull())?.task
@@ -290,15 +297,7 @@ class FocusViewModel
             val replaced = state.session?.takeIf { !it.isBreak && it.subjectKey != taskKey }
             if (!force && replaced != null) {
                 mutableUiState.update {
-                    it.copy(
-                        pendingStart =
-                            FocusContract.PendingStart(
-                                taskId = task.id,
-                                title = task.title,
-                                lengthMinutes = lengthMinutes,
-                                replacingTaskTitle = replaced.title,
-                            ),
-                    )
+                    it.copy(pendingStart = request.toPendingStart(task, replacing = replaced.title))
                 }
                 return
             }
@@ -307,7 +306,8 @@ class FocusViewModel
                 focusSessionUseCases.start(
                     taskId = task.id,
                     title = task.title,
-                    lengthMinutes = lengthMinutes,
+                    lengthMinutes = request.lengthMinutes,
+                    cycle = request.cycle(state.defaultSessionLengthMinutes, state.breakLengthMinutes),
                 )
                 focusSessionRepository.setPreviewTaskId(null)
                 // Starting is a commitment to the work, so the app follows the user into it rather
@@ -379,6 +379,9 @@ class FocusViewModel
                 focusSessionRepository.previewTaskId.collect { taskId ->
                     mutableUiState.update { it.copy(previewTaskId = taskId) }
                 }
+            }
+            viewModelScope.launch {
+                focusSessionRepository.setupSessionId.collect { onSetupSessionChanged(it) }
             }
             viewModelScope.launch {
                 focusSessionRepository.breakLengthMinutes.collect { minutes ->

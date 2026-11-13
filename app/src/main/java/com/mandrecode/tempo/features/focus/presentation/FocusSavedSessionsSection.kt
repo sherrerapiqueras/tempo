@@ -4,69 +4,49 @@ import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
-import com.mandrecode.tempo.core.ui.theme.groupLabel
+import com.mandrecode.tempo.features.focus.domain.model.SavedSessionEntry
 import com.mandrecode.tempo.features.focus.presentation.components.StartSessionButton
 import com.mandrecode.tempo.features.focus.presentation.components.UpNextCard
 import com.mandrecode.tempo.features.focus.presentation.components.savedSessionMetadata
 
 /**
- * The sessions the user has saved, as a second row of the same cards (#517).
+ * The sessions the user has saved, as cards in the Up next row (#517).
  *
  * The Up next card and not a new one: a saved session is offered for exactly the same thing — one
- * tap to start — and a second kind of card for it would have said it was a different kind of act.
- * Its own row, though, under its own label, because it is not part of the day: these are here
- * every day, whatever is due.
+ * tap to start, or a tap on the card to look first — and it opens the same session screen a task
+ * does. A timer leads its line where a task's flag would, which is what tells the two apart.
  */
-internal fun LazyListScope.savedSessionsSection(
-    uiState: FocusContract.UiState,
+internal fun LazyListScope.savedSessionCards(
+    sessions: List<SavedSessionEntry>,
+    cardWidth: Dp,
     onEvent: (FocusContract.UiEvent) -> Unit,
 ) {
-    val sessions = uiState.startableSessions
-    if (sessions.isEmpty()) return
-
-    item(key = "saved_sessions_label") {
-        Text(
-            text = stringResource(R.string.focus_sessions_label).uppercase(),
-            style = MaterialTheme.typography.groupLabel,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 8.dp).animateItem(),
-        )
-    }
-    item(key = "saved_sessions_row") {
-        PeekingCardRow(cardCount = sessions.size, modifier = Modifier.animateItem()) { cardWidth ->
-            items(sessions, key = { "saved_session_${it.session.id}" }) { entry ->
-                UpNextCard(
-                    title = entry.session.title,
-                    metadata = entry.savedSessionMetadata(),
-                    onClick = { onEvent(FocusContract.UiEvent.EditSession(entry.session.id)) },
-                    modifier = Modifier.width(cardWidth),
-                    trailingContent = {
-                        StartSessionButton(
-                            minutes = entry.session.focusMinutes,
-                            onClick = { onEvent(FocusContract.UiEvent.StartSavedSession(entry.session.id)) },
-                        )
-                    },
+    items(sessions, key = { "saved_session_${it.session.id}" }) { entry ->
+        UpNextCard(
+            title = entry.session.title,
+            metadata = entry.savedSessionMetadata(),
+            metadataIconRes = R.drawable.ic_timer,
+            onClick = { onEvent(FocusContract.UiEvent.EditSession(entry.session.id)) },
+            modifier = Modifier.width(cardWidth),
+            trailingContent = {
+                StartSessionButton(
+                    minutes = entry.session.focusMinutes,
+                    onClick = { onEvent(FocusContract.UiEvent.StartSavedSession(entry.session.id)) },
                 )
-            }
-        }
+            },
+        )
     }
 }
 

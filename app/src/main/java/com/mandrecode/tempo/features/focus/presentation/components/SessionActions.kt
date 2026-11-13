@@ -71,6 +71,14 @@ internal data class SessionActionColors(
     val quietBorder: Color,
 )
 
+/** What a [SessionDial] is painted in, so it can sit on the sheet and on the card alike. */
+internal data class SessionDialColors(
+    val fill: Color,
+    val content: Color,
+    val progress: Color,
+    val track: Color,
+)
+
 @Composable
 internal fun sessionScreenActionColors(): SessionActionColors =
     SessionActionColors(

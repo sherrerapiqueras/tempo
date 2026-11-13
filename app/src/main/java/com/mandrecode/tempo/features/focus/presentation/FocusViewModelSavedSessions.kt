@@ -8,9 +8,11 @@ import com.mandrecode.tempo.features.focus.domain.model.SavedSessionEntry
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Saved sessions: making one, changing one, deleting one and starting one (#517).
@@ -20,18 +22,15 @@ import kotlinx.coroutines.launch
  */
 internal fun FocusViewModel.onSessionEditorEvent(event: FocusContract.UiEvent) {
     when (event) {
-        FocusContract.UiEvent.AddSession -> openSessionEditor(FocusContract.SessionEditorTarget())
+        FocusContract.UiEvent.AddSession -> openSessionSetup(SavedSession.NEW_ID)
 
-        is FocusContract.UiEvent.EditSession -> {
-            val entry =
-                mutableUiState.value.savedSessions
-                    .firstOrNull { it.session.id == event.sessionId } ?: return
-            openSessionEditor(
-                FocusContract.SessionEditorTarget(session = entry.session, linkedTask = entry.linkedTask),
-            )
-        }
+        is FocusContract.UiEvent.EditSession ->
+            if (savedSession(event.sessionId) != null) openSessionSetup(event.sessionId)
 
-        FocusContract.UiEvent.DismissSessionEditor -> closeSessionEditor()
+        FocusContract.UiEvent.DismissSessionEditor -> focusSessionRepository.setSetupSessionId(null)
+
+        // The screen stays where it is; what it is about becomes a session of its own.
+        FocusContract.UiEvent.UnlinkPreviewTask -> focusSessionRepository.setSetupSessionId(SavedSession.NEW_ID)
 
         is FocusContract.UiEvent.SaveSession -> saveSession(event.draft, event.startNow)
 
@@ -41,7 +40,7 @@ internal fun FocusViewModel.onSessionEditorEvent(event: FocusContract.UiEvent) {
                 // no longer exists would have nothing to go back to.
                 if (mutableUiState.value.session?.savedSessionId == event.sessionId) finishSession()
                 deleteSavedSession(event.sessionId)
-                closeSessionEditor()
+                focusSessionRepository.setSetupSessionId(null)
             }
 
         is FocusContract.UiEvent.StartSavedSession -> startSavedSession(event.sessionId)
@@ -51,54 +50,82 @@ internal fun FocusViewModel.onSessionEditorEvent(event: FocusContract.UiEvent) {
 }
 
 /**
- * Saves the sheet's draft and, with [startNow], runs it.
+ * Opens the session screen on a saved session that is not running: a new one, or one to change or
+ * start. The same screen a task opens, and the one its timer will run in.
+ */
+private fun FocusViewModel.openSessionSetup(sessionId: Long) {
+    focusSessionRepository.setSetupSessionId(sessionId)
+    sendEffect(FocusContract.UiEffect.OpenSessionScreen)
+}
+
+/**
+ * Saves the screen's draft and, with [startNow], runs it.
  *
- * The sheet is closed before the write, and only an open sheet can save: a second tap landing while
- * the first is still on its way to the database would otherwise save the session twice.
+ * One write at a time: a second tap landing while the first is still on its way to the database
+ * would otherwise save the session twice. The write itself is not cancellable — closing the screen
+ * is one of the things that saves, and it clears this view model in the same breath.
  */
 private fun FocusViewModel.saveSession(
     draft: FocusContract.SessionDraft,
     startNow: Boolean,
 ) {
-    if (mutableUiState.value.sessionEditor == null) return
-    closeSessionEditor()
+    if (isSavingSession) return
+    isSavingSession = true
     viewModelScope.launch {
-        val saved = saveSavedSession(draft.toSavedSession())
-        if (saved != null && startNow) {
-            // The row follows the database a beat later, and starting reads the session from the
-            // row — so what was just saved is put there now rather than waited for.
-            mutableUiState.update { state ->
-                val others = state.savedSessions.filterNot { it.session.id == saved.id }
-                val entry =
-                    state.savedSessions.firstOrNull { it.session.id == saved.id }?.copy(session = saved)
-                        ?: SavedSessionEntry(session = saved)
-                state.copy(savedSessions = (others + entry).sortedBy { it.session.id }.toPersistentList())
+        try {
+            val saved = withContext(NonCancellable) { saveSavedSession(draft.toSavedSession()) }
+            if (saved != null && startNow) {
+                showSaved(saved)
+                // Under its real id from here on: a new session was being set up under a stand-in,
+                // and the screen follows it across to the one its timer will carry.
+                focusSessionRepository.setSetupSessionId(saved.id)
+                startSavedSession(saved.id)
+            } else {
+                focusSessionRepository.setSetupSessionId(null)
             }
-            startSavedSession(saved.id)
+        } finally {
+            isSavingSession = false
         }
     }
 }
 
-private fun FocusViewModel.openSessionEditor(target: FocusContract.SessionEditorTarget) {
-    mutableUiState.update { it.copy(sessionEditor = target) }
-    linkableTasksJob?.cancel()
-    linkableTasksJob =
-        viewModelScope.launch {
-            getLinkableTasks()
-                .catch { exception ->
-                    if (exception is CancellationException) throw exception
-                    // The sheet still works without the picker's list; the link is optional.
-                    Log.w(SAVED_SESSIONS_TAG, "Unable to load tasks to link", exception)
-                }.collect { tasks ->
-                    mutableUiState.update { it.copy(linkableTasks = tasks.toPersistentList()) }
-                }
-        }
+/**
+ * Puts a session just saved in the row now. The row follows the database a beat later, and
+ * starting reads the session from the row.
+ */
+private fun FocusViewModel.showSaved(saved: SavedSession) {
+    mutableUiState.update { state ->
+        val others = state.savedSessions.filterNot { it.session.id == saved.id }
+        val entry =
+            state.savedSessions.firstOrNull { it.session.id == saved.id }?.copy(session = saved)
+                ?: SavedSessionEntry(session = saved)
+        state.copy(savedSessions = (others + entry).sortedBy { it.session.id }.toPersistentList())
+    }
 }
 
-private fun FocusViewModel.closeSessionEditor() {
-    linkableTasksJob?.cancel()
-    linkableTasksJob = null
-    mutableUiState.update { it.copy(sessionEditor = null, linkableTasks = persistentListOf()) }
+/**
+ * The session being set up has changed. While there is one, the tasks it could be linked to are
+ * kept loaded; with none, they are let go.
+ */
+internal fun FocusViewModel.onSetupSessionChanged(sessionId: Long?) {
+    mutableUiState.update { it.copy(setupSessionId = sessionId) }
+    if (sessionId == null) {
+        linkableTasksJob?.cancel()
+        linkableTasksJob = null
+        mutableUiState.update { it.copy(linkableTasks = persistentListOf()) }
+    } else if (linkableTasksJob == null) {
+        linkableTasksJob =
+            viewModelScope.launch {
+                getLinkableTasks()
+                    .catch { exception ->
+                        if (exception is CancellationException) throw exception
+                        // The screen still works without the picker's list; the link is optional.
+                        Log.w(SAVED_SESSIONS_TAG, "Unable to load tasks to link", exception)
+                    }.collect { tasks ->
+                        mutableUiState.update { it.copy(linkableTasks = tasks.toPersistentList()) }
+                    }
+            }
+    }
 }
 
 /**
@@ -141,7 +168,8 @@ internal fun FocusViewModel.backToWork() {
     val saved = savedSession(session.savedSessionId)
     when {
         saved != null -> startSavedSession(saved.id, force = true)
-        session.taskId != null -> startSessionOn(taskId = session.taskId, lengthMinutes = null)
+        session.taskId != null ->
+            startSessionOn(FocusContract.UiEvent.StartSession(taskId = session.taskId))
         else ->
             viewModelScope.launch {
                 focusSessionUseCases.start(taskId = null, title = session.title)

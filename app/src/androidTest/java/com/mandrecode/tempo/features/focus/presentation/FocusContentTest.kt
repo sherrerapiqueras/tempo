@@ -13,6 +13,7 @@ import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -23,6 +24,7 @@ import com.mandrecode.tempo.features.focus.domain.model.FocusAgendaItem
 import com.mandrecode.tempo.features.focus.domain.model.FocusSession
 import com.mandrecode.tempo.features.focus.domain.model.SavedSession
 import com.mandrecode.tempo.features.focus.domain.model.SavedSessionEntry
+import com.mandrecode.tempo.features.focus.presentation.components.SESSION_ROUNDS_TEST_TAG
 import com.mandrecode.tempo.features.tasks.domain.model.Task
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
@@ -250,14 +252,12 @@ class FocusContentTest {
     private val study = SavedSession(id = 4, title = "Study", focusMinutes = 50, breakMinutes = 10, rounds = 4)
 
     @Test
-    fun savedSessions_areListedWithTheirSetupAndStartInOneTap() {
+    fun savedSessions_shareTheUpNextRowAndStartInOneTap() {
         val events = mutableListOf<FocusContract.UiEvent>()
-        val state =
-            stateWith(items = listOf(taskEntry(1, "Write report")))
-                .copy(savedSessions = persistentListOf(SavedSessionEntry(study)))
-        setContent(state) { events += it }
+        setContent(stateWith().copy(savedSessions = persistentListOf(SavedSessionEntry(study)))) { events += it }
 
-        composeTestRule.onNodeWithText("SESSIONS").assertIsDisplayed()
+        composeTestRule.onNodeWithText("UP NEXT").assertIsDisplayed()
+        composeTestRule.onNodeWithText("SESSIONS").assertDoesNotExist()
         composeTestRule.onNodeWithText("4 ROUNDS · 10 MIN REST").assertIsDisplayed()
         composeTestRule.onNodeWithText("Start 50 min").performClick()
         composeTestRule.onNodeWithText("Study").performClick()
@@ -282,6 +282,8 @@ class FocusContentTest {
         setContent(stateWith().copy(savedSessions = persistentListOf(SavedSessionEntry(study)), session = running)) { }
 
         composeTestRule.onNodeWithText("Focusing · Round 1 of 4").assertIsDisplayed()
+        // One marker per round, on the card as on the sheet.
+        composeTestRule.onNodeWithTag(SESSION_ROUNDS_TEST_TAG, useUnmergedTree = true).assertIsDisplayed()
         composeTestRule.onNodeWithText("Pause").assertIsDisplayed()
         composeTestRule.onNodeWithText("Mark done").assertDoesNotExist()
         // The running session has the card above, so it is not offered for starting again.

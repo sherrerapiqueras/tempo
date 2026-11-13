@@ -151,4 +151,28 @@ class FocusPaneHostTest {
         assertThat(taskYieldsToSession(canDock = true, isEditorOpen = true, isSessionOpen = false)).isFalse()
         assertThat(taskYieldsToSession(canDock = false, isEditorOpen = true, isSessionOpen = true)).isFalse()
     }
+
+    @Test
+    fun givenANewSessionJustSaved_whenItIsStillBeingSetUp_thenTheLatchIsLetGoForItsRealKey() {
+        assertThat(latchedSessionSubject("session:0", setupSessionId = 12)).isNull()
+    }
+
+    @Test
+    fun givenANewSession_whenNothingIsBeingSetUpAnyMore_thenTheLatchIsKeptSoTheSurfaceCloses() {
+        assertThat(latchedSessionSubject("session:0", setupSessionId = null)).isEqualTo("session:0")
+        assertThat(latchedSessionSubject("session:0", setupSessionId = 0)).isEqualTo("session:0")
+    }
+
+    @Test
+    fun givenAnythingElseLatched_whenASessionIsBeingSetUp_thenTheLatchIsUntouched() {
+        assertThat(latchedSessionSubject("session:4", setupSessionId = 12)).isEqualTo("session:4")
+        assertThat(latchedSessionSubject("task:1", setupSessionId = 12)).isEqualTo("task:1")
+        assertThat(latchedSessionSubject(null, setupSessionId = 12)).isNull()
+    }
+
+    @Test
+    fun givenASurfaceOpenedOnATask_whenItsLinkIsTakenOff_thenItBecomesTheNewSessionInPlace() {
+        assertThat(latchedSessionSubject("task:1", setupSessionId = 0)).isNull()
+        assertThat(latchedSessionSubject("session:4", setupSessionId = 0)).isNull()
+    }
 }

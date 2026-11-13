@@ -98,7 +98,7 @@ class FocusSavedSessionViewModelTest : FocusViewModelHarness() {
                 viewModel.onEvent(FocusContract.UiEvent.AddSession)
                 advanceUntilIdle()
 
-                assertThat(viewModel.uiState.value.sessionEditor).isNotNull()
+                assertThat(viewModel.uiState.value.sessionSetup).isNotNull()
             }
         }
 
@@ -111,11 +111,18 @@ class FocusSavedSessionViewModelTest : FocusViewModelHarness() {
             val viewModel = createViewModel()
             advanceUntilIdle()
 
-            viewModel.onEvent(FocusContract.UiEvent.EditSession(4))
-            viewModel.onEvent(FocusContract.UiEvent.EditSession(99))
+            viewModel.uiEffect.test {
+                viewModel.onEvent(FocusContract.UiEvent.EditSession(99))
+                viewModel.onEvent(FocusContract.UiEvent.EditSession(4))
+                advanceUntilIdle()
 
-            assertThat(viewModel.uiState.value.sessionEditor)
+                // The session screen itself, not a form of its own: one effect, for the one that exists.
+                assertThat(awaitItem()).isEqualTo(FocusContract.UiEffect.OpenSessionScreen)
+                expectNoEvents()
+            }
+            assertThat(viewModel.uiState.value.sessionSetup)
                 .isEqualTo(FocusContract.SessionEditorTarget(session = linked.session, linkedTask = linked.linkedTask))
+            assertThat(viewModel.uiState.value.sessionSubjectKey).isEqualTo("session:4")
         }
 
     @Test
@@ -131,7 +138,7 @@ class FocusSavedSessionViewModelTest : FocusViewModelHarness() {
             advanceUntilIdle()
 
             coVerify { saveSavedSession(draftOf().toSavedSession()) }
-            assertThat(viewModel.uiState.value.sessionEditor).isNull()
+            assertThat(viewModel.uiState.value.sessionSetup).isNull()
             coVerify(exactly = 0) { focusSessionUseCases.startSaved(any()) }
         }
 
@@ -281,7 +288,7 @@ class FocusSavedSessionViewModelTest : FocusViewModelHarness() {
 
             coVerify { deleteSavedSession(4) }
             coVerify(exactly = 0) { focusSessionUseCases.end() }
-            assertThat(viewModel.uiState.value.sessionEditor).isNull()
+            assertThat(viewModel.uiState.value.sessionSetup).isNull()
         }
 
     @Test
@@ -478,6 +485,7 @@ class FocusSavedSessionViewModelTest : FocusViewModelHarness() {
             val viewModel = createViewModel()
             advanceUntilIdle()
             viewModel.onEvent(FocusContract.UiEvent.AddSession)
+            advanceUntilIdle()
 
             viewModel.onEvent(FocusContract.UiEvent.SaveSession(draftOf()))
             viewModel.onEvent(FocusContract.UiEvent.SaveSession(draftOf()))
@@ -487,16 +495,118 @@ class FocusSavedSessionViewModelTest : FocusViewModelHarness() {
         }
 
     @Test
-    fun `the sheet closes as soon as save is pressed, before the write returns`() =
+    fun `saving a new session and starting it moves the screen onto its real id, then runs it`() =
+        runTest {
+            stubDay()
+            coEvery { saveSavedSession(any()) } returns study
+            val viewModel = createViewModel()
+            advanceUntilIdle()
+            viewModel.onEvent(FocusContract.UiEvent.AddSession)
+            advanceUntilIdle()
+            assertThat(viewModel.uiState.value.sessionSubjectKey).isEqualTo("session:0")
+            val seen = mutableListOf<Long?>()
+            every { focusSessionRepository.setSetupSessionId(any()) } answers {
+                seen += firstArg<Long?>()
+                setupFlow.value = firstArg()
+            }
+
+            viewModel.onEvent(FocusContract.UiEvent.SaveSession(draftOf(), startNow = true))
+            advanceUntilIdle()
+
+            assertThat(seen).containsExactly(4L)
+            coVerify { focusSessionUseCases.startSaved(study) }
+            // Starting clears what was being set up; the timer is the subject from here.
+            assertThat(viewModel.uiState.value.setupSessionId).isNull()
+        }
+
+    @Test
+    fun `a task can be started with a rest and rounds for this run alone`() =
+        runTest {
+            val entry = FocusAgendaItem.TaskEntry(task(9, "Report"))
+            stubDay(agendaOf(upNext = entry, todayItems = listOf(entry)))
+            val viewModel = createViewModel()
+            advanceUntilIdle()
+
+            viewModel.onEvent(
+                FocusContract.UiEvent.StartSession(lengthMinutes = 50, taskId = 9, breakMinutes = 10, rounds = 3),
+            )
+            advanceUntilIdle()
+
+            coVerify {
+                focusSessionUseCases.start(
+                    taskId = 9,
+                    title = "Report",
+                    lengthMinutes = 50,
+                    cycle = FocusSession.adHocCycle(focusMinutes = 50, breakMinutes = 10, rounds = 3),
+                )
+            }
+            coVerify(exactly = 0) { saveSavedSession(any()) }
+        }
+
+    @Test
+    fun `a task start that had to ask first keeps its rest and rounds when confirmed`() =
+        runTest {
+            val entry = FocusAgendaItem.TaskEntry(task(9, "Report"))
+            stubDay(agendaOf(upNext = entry, todayItems = listOf(entry)))
+            sessionFlow.value = FocusSession.start(taskId = 1, title = "Emails", now = nowInstant)
+            val viewModel = createViewModel()
+            advanceUntilIdle()
+
+            viewModel.onEvent(FocusContract.UiEvent.StartSession(lengthMinutes = 25, taskId = 9, rounds = 2))
+            advanceUntilIdle()
+            assertThat(
+                viewModel.uiState.value.pendingStart
+                    ?.rounds,
+            ).isEqualTo(2)
+
+            viewModel.onEvent(FocusContract.UiEvent.ConfirmPendingStart)
+            advanceUntilIdle()
+
+            coVerify {
+                focusSessionUseCases.start(
+                    taskId = 9,
+                    title = "Report",
+                    lengthMinutes = 25,
+                    cycle = FocusSession.adHocCycle(focusMinutes = 25, breakMinutes = 5, rounds = 2),
+                )
+            }
+        }
+
+    @Test
+    fun `adding a session opens the session screen on a new one`() =
         runTest {
             stubDay()
             val viewModel = createViewModel()
             advanceUntilIdle()
+
+            viewModel.uiEffect.test {
+                viewModel.onEvent(FocusContract.UiEvent.AddSession)
+                advanceUntilIdle()
+
+                assertThat(awaitItem()).isEqualTo(FocusContract.UiEffect.OpenSessionScreen)
+                cancelAndIgnoreRemainingEvents()
+            }
+            assertThat(
+                viewModel.uiState.value.sessionSetup
+                    ?.isNew,
+            ).isTrue()
+        }
+
+    @Test
+    fun `looking at a task instead forgets the session that was being set up`() =
+        runTest {
+            val entry = FocusAgendaItem.TaskEntry(task(9, "Report"))
+            stubDay(agendaOf(upNext = entry, todayItems = listOf(entry)))
+            val viewModel = createViewModel()
+            advanceUntilIdle()
             viewModel.onEvent(FocusContract.UiEvent.AddSession)
+            advanceUntilIdle()
 
-            viewModel.onEvent(FocusContract.UiEvent.SaveSession(draftOf()))
+            viewModel.onEvent(FocusContract.UiEvent.PreviewUpNext(9))
+            advanceUntilIdle()
 
-            assertThat(viewModel.uiState.value.sessionEditor).isNull()
+            assertThat(viewModel.uiState.value.sessionSetup).isNull()
+            assertThat(viewModel.uiState.value.sessionSubjectKey).isEqualTo("task:9")
         }
 
     @Test
@@ -520,5 +630,26 @@ class FocusSavedSessionViewModelTest : FocusViewModelHarness() {
                     cycle = midWay?.copy(round = 4),
                 )
             }
+        }
+
+    @Test
+    fun `taking the link off a screen opened on a task leaves a new session being set up`() =
+        runTest {
+            val entry = FocusAgendaItem.TaskEntry(task(9, "Report"))
+            stubDay(agendaOf(upNext = entry, todayItems = listOf(entry)))
+            val viewModel = createViewModel()
+            advanceUntilIdle()
+            viewModel.onEvent(FocusContract.UiEvent.PreviewUpNext(9))
+            advanceUntilIdle()
+
+            viewModel.onEvent(FocusContract.UiEvent.UnlinkPreviewTask)
+            advanceUntilIdle()
+
+            assertThat(viewModel.uiState.value.previewTaskId).isNull()
+            assertThat(
+                viewModel.uiState.value.sessionSetup
+                    ?.isNew,
+            ).isTrue()
+            assertThat(viewModel.uiState.value.sessionSubjectKey).isEqualTo("session:0")
         }
 }

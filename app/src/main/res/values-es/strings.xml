@@ -723,7 +723,6 @@
     <string name="focus_session_finished_title">%1$d minutos completados</string>
     <string name="focus_break_finished_title">Fin del descanso, ¡a seguir!</string>
     <string name="focus_session_start">Empezar %1$s</string>
-    <string name="focus_session_start_custom">Empezar con</string>
     <string name="focus_session_length_decrease">Sesión más corta</string>
     <string name="focus_session_length_increase">Sesión más larga</string>
     <string name="focus_session_pause">Pausar</string>
@@ -751,9 +750,7 @@
     <string name="focus_replace_session_message">%1$s sigue en marcha. Empezar %2$s la termina y solo guarda los minutos que lleva.</string>
     <string name="focus_replace_session_confirm">Empezar igualmente</string>
     <string name="focus_session_not_started">Sin empezar</string>
-    <string name="focus_session_open_in_tasks">Abrir en Tareas</string>
     <string name="add_session">Añadir sesión</string>
-    <string name="focus_sessions_label">Sesiones</string>
     <string name="focus_session_round">Ronda %1$d de %2$d</string>
     <string name="focus_session_rest_length">%1$s de descanso</string>
     <plurals name="focus_session_rounds">

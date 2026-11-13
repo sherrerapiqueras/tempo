@@ -155,8 +155,6 @@ private fun FocusAgendaList(
     ) {
         upNextSection(uiState = uiState, onEvent = onEvent)
 
-        savedSessionsSection(uiState = uiState, onEvent = onEvent)
-
         // Today above Overdue. Both are the day, but only one of them is the day you are in, and
         // opening Focus onto last week's leftovers put the work you came for below the fold.
         agendaSection(
@@ -229,8 +227,9 @@ private fun LazyListScope.upNextSection(
     onEvent: (FocusContract.UiEvent) -> Unit,
 ) {
     val session = uiState.session
-    val upNext = uiState.upNext
-    if (session == null && upNext.isEmpty()) return
+    // The day's tasks worth starting and the saved sessions are one row (#517): both are a card
+    // with a start on it, and two rows of those under two labels was the same offer made twice.
+    if (session == null && uiState.upNext.isEmpty() && uiState.startableSessions.isEmpty()) return
 
     item(key = "up_next_label") {
         Text(
@@ -271,10 +270,11 @@ private fun LazyListScope.upNextRow(
 ) {
     val session = uiState.session
     val queued = uiState.queuedUpNext
+    val sessions = uiState.startableSessions
 
     item(key = "up_next_row") {
         PeekingCardRow(
-            cardCount = queued.size + if (session != null) 1 else 0,
+            cardCount = queued.size + sessions.size + if (session != null) 1 else 0,
             modifier = Modifier.animateItem(),
             // The running card is put first and has to be seen there.
             startKey = session?.subjectKey,
@@ -316,6 +316,9 @@ private fun LazyListScope.upNextRow(
                     },
                 )
             }
+            // After the day's work, not before it: they are here every day, and what is due today
+            // is what Focus is opened for.
+            savedSessionCards(sessions = sessions, cardWidth = cardWidth, onEvent = onEvent)
         }
     }
 }

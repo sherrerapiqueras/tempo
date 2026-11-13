@@ -42,7 +42,6 @@ import com.mandrecode.tempo.core.ui.navigation.floatingNavigationSnackbarBottomP
 import com.mandrecode.tempo.core.ui.navigation.floatingRailContentClearance
 import com.mandrecode.tempo.features.focus.presentation.components.PlanTasksSheet
 import com.mandrecode.tempo.features.focus.presentation.components.ReplaceSessionDialog
-import com.mandrecode.tempo.features.focus.presentation.components.SessionEditorSheet
 import com.mandrecode.tempo.features.tasks.presentation.TasksViewModel
 import com.mandrecode.tempo.features.tasks.presentation.showTasksEffect
 import kotlinx.coroutines.flow.Flow
@@ -67,7 +66,6 @@ fun FocusScreen(
      */
     isSessionRouteOpen: Boolean = false,
     onCloseSession: () -> Unit = {},
-    onOpenTaskInTasks: (Long) -> Unit = {},
     viewModel: FocusViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -132,7 +130,7 @@ fun FocusScreen(
             // Only while docking is possible: past the breakpoint the editor moves to the sheet in
             // the same frame the pane starts its exit, and must not be in both places.
             if (pane.canDock) {
-                FocusPaneContent(pane, onCloseSession, onOpenTaskInTasks, viewModel::onEvent)
+                FocusPaneContent(pane, onCloseSession, viewModel::onEvent)
             }
         }
     }
@@ -163,7 +161,6 @@ private fun FocusSnackbarHost(snackbarHostState: SnackbarHostState) {
 private fun FocusPaneContent(
     pane: FocusPaneHost,
     onCloseSession: () -> Unit,
-    onOpenTaskInTasks: (Long) -> Unit,
     onEvent: (FocusContract.UiEvent) -> Unit,
 ) {
     when (pane.shownPane) {
@@ -174,7 +171,6 @@ private fun FocusPaneContent(
         FocusPane.SESSION ->
             FocusSessionRoute(
                 onBack = onCloseSession,
-                onOpenTaskInTasks = onOpenTaskInTasks,
                 placement = SheetPlacement.DockedPane,
                 onEditTask = { onEvent(FocusContract.UiEvent.EditTask(it)) },
                 viewModel = viewModel(key = DOCKED_SESSION_VIEW_MODEL_KEY),
@@ -185,10 +181,7 @@ private fun FocusPaneContent(
 
 private const val DOCKED_SESSION_VIEW_MODEL_KEY = "tempo.focus.dockedSession"
 
-/**
- * What opens over the screen: the replace-session prompt, the Plan tasks sheet, a sheet editor and
- * the session sheet.
- */
+/** What opens over the screen: the replace-session prompt, the Plan tasks sheet and a sheet editor. */
 @Composable
 private fun FocusOverlays(
     uiState: FocusContract.UiState,
@@ -207,17 +200,6 @@ private fun FocusOverlays(
 
     if (!pane.canDock) {
         uiState.taskEditor?.let { pane.content(it, SheetPlacement.BottomSheet) }
-    }
-
-    // A sheet at every width. It is a handful of numbers, not a form worth a pane of its own.
-    uiState.sessionEditor?.let { target ->
-        SessionEditorSheet(
-            target = target,
-            linkableTasks = uiState.linkableTasks,
-            defaultFocusMinutes = uiState.defaultSessionLengthMinutes,
-            defaultBreakMinutes = uiState.breakLengthMinutes,
-            onEvent = onEvent,
-        )
     }
 }
 

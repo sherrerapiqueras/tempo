@@ -169,7 +169,7 @@ class FocusViewModelTest : FocusViewModelHarness() {
         }
 
     @Test
-    fun `adding from the bar opens a blank session sheet over Focus, not a task form`() =
+    fun `adding from the bar sets up a new session on the session screen, not a task form`() =
         runTest {
             stubDay()
             val viewModel = createViewModel()
@@ -178,11 +178,12 @@ class FocusViewModelTest : FocusViewModelHarness() {
             viewModel.onEvent(FocusContract.UiEvent.AddSession)
             advanceUntilIdle()
 
-            assertThat(viewModel.uiState.value.sessionEditor).isEqualTo(FocusContract.SessionEditorTarget())
+            assertThat(viewModel.uiState.value.sessionSetup).isEqualTo(FocusContract.SessionEditorTarget())
             assertThat(viewModel.uiState.value.taskEditor).isNull()
 
             viewModel.onEvent(FocusContract.UiEvent.DismissSessionEditor)
-            assertThat(viewModel.uiState.value.sessionEditor).isNull()
+            advanceUntilIdle()
+            assertThat(viewModel.uiState.value.sessionSetup).isNull()
         }
 
     @Test

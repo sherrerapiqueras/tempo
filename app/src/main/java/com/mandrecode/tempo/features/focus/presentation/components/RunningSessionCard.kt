@@ -3,7 +3,6 @@ package com.mandrecode.tempo.features.focus.presentation.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -167,25 +165,23 @@ private fun SessionCardActions(
  */
 private val ThreeAcrossMinWidth = 340.dp
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun SessionRing(
     progress: Float,
     session: FocusSession,
     label: String,
 ) {
-    Box(contentAlignment = Alignment.Center) {
-        CircularWavyProgressIndicator(
-            // A break unwinds: the ring empties as it runs, where a session fills. Opposite
-            // directions for opposite things, so which one is under way reads without a label.
-            progress = { if (session.isBreak) 1f - progress else progress },
-            modifier = Modifier.size(RingSize),
-            color = MaterialTheme.colorScheme.onTertiaryContainer,
-            trackColor = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = TRACK_ALPHA),
-            // The wave is the session's heartbeat: it travels while time is running down and
-            // stands still the moment the user pauses.
-            waveSpeed = if (session.isPaused) STILL else WaveSpeed,
-        )
+    // The sheet's own dial, small: the same shape for the same session, wherever it is seen. A
+    // break unwinds — the trace empties as it runs, where a session's fills — so which one is
+    // under way reads without a label.
+    SessionDial(
+        progress = if (session.isBreak) 1f - progress else progress,
+        isRunning = !session.isPaused,
+        isBreak = session.isBreak,
+        colors = sessionCardDialColors(),
+        modifier = Modifier.size(RingSize),
+        strokeWidth = 3.dp,
+    ) {
         if (session.isBreak) {
             // The cup says it at a glance, and the numerals are too small here to be missed. The
             // sheet keeps its countdown — that surface exists to show the time.
@@ -265,14 +261,19 @@ private fun SessionTitleBlock(
             color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = LABEL_ALPHA),
             modifier = Modifier.padding(top = 2.dp),
         )
+        // How many rounds are left, where the card is already being read.
+        SessionRounds.of(cycle, isBreak)?.let { rounds ->
+            SessionRoundPips(
+                rounds = rounds,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
     }
 }
 
 private const val FULLY_ROUNDED = 50
 private const val COUNT_CONTAINER_ALPHA = 0.12f
-private val STILL = 0.dp
-private val WaveSpeed = 10.dp
-private const val TRACK_ALPHA = 0.24f
 private const val LABEL_ALPHA = 0.75f
 private val PillRadius = 20.dp
 private val PillPressedRadius = 10.dp

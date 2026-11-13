@@ -72,13 +72,25 @@ abstract class FocusViewModelHarness {
     protected val sessionFlow = MutableStateFlow<FocusSession?>(null)
     protected val lengthFlow = MutableStateFlow(25)
     protected val previewFlow = MutableStateFlow<Long?>(null)
+    protected val setupFlow = MutableStateFlow<Long?>(null)
     protected val focusSessionRepository =
         mockk<FocusSessionRepository> {
             every { activeSession } returns sessionFlow
             every { defaultLengthMinutes } returns lengthFlow
             every { previewTaskId } returns previewFlow
             every { breakLengthMinutes } returns MutableStateFlow(5)
-            every { setPreviewTaskId(any()) } answers { previewFlow.value = firstArg() }
+            every { setupSessionId } returns setupFlow
+            // The real repository's rule: the screen is about one thing, so naming a task forgets
+            // the session being set up, and clearing the preview clears both.
+            every { setPreviewTaskId(any()) } answers {
+                setupFlow.value = null
+                previewFlow.value = firstArg()
+            }
+            every { setSetupSessionId(any()) } answers {
+                val id: Long? = firstArg()
+                if (id != null) previewFlow.value = null
+                setupFlow.value = id
+            }
         }
 
     /** What the plan sheet opens onto. Empty unless a test says otherwise. */

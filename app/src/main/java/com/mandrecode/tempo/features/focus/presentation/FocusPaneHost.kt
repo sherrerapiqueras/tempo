@@ -12,6 +12,8 @@ import androidx.compose.runtime.setValue
 import com.mandrecode.tempo.core.ui.adaptive.SheetPlacement
 import com.mandrecode.tempo.core.ui.adaptive.rememberSheetPlacement
 import com.mandrecode.tempo.core.ui.util.rememberFrozenWhileHidden
+import com.mandrecode.tempo.features.focus.domain.model.FocusSession
+import com.mandrecode.tempo.features.focus.domain.model.SavedSession
 
 /**
  * Where Focus shows its task editor and its running session (#502): on a large window both dock in
@@ -59,6 +61,31 @@ internal fun <T : Any> nextSessionSubject(
     subject: T?,
     current: T?,
 ): T? = if (isDocked) current ?: subject else subject ?: current
+
+/** The key a session not saved yet is latched under. */
+private val NewSessionKey = FocusSession.subjectKeyOf(taskId = null, savedSessionId = SavedSession.NEW_ID)
+
+/**
+ * What the session surface is still latched on, given the session now being set up.
+ *
+ * Two cases let the latch go, both of them the same surface carrying on rather than a different
+ * subject arriving:
+ *
+ * - A new session has no id until it is saved, so the key it was latched under is a stand-in. Once
+ *   it has been saved and is still what is being set up, the surface takes up its real key.
+ * - A surface opened on a task whose link was taken off is now about a new session.
+ *
+ * With nothing being set up any more the latch is kept, which is what closes the surface instead
+ * of handing it to whatever else is running.
+ */
+internal fun latchedSessionSubject(
+    latched: String?,
+    setupSessionId: Long?,
+): String? {
+    val hasBecomeReal = latched == NewSessionKey && setupSessionId != null && setupSessionId != SavedSession.NEW_ID
+    val hasBecomeNew = latched != NewSessionKey && setupSessionId == SavedSession.NEW_ID
+    return latched.takeUnless { hasBecomeReal || hasBecomeNew }
+}
 
 /** What the pane shows: a task when one is open, else the session when it is, else nothing. */
 internal fun focusPane(
