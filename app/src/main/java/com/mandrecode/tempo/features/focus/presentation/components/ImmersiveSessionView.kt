@@ -27,7 +27,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -41,7 +40,7 @@ import com.mandrecode.tempo.features.focus.domain.model.FocusSession
 import com.mandrecode.tempo.features.focus.domain.model.TaskFocusToday
 import com.mandrecode.tempo.features.tasks.domain.model.Task
 import com.mandrecode.tempo.features.tasks.presentation.components.cards.SubtaskItem
-import com.mandrecode.tempo.util.DateTimeFormatter
+import com.mandrecode.tempo.features.tasks.presentation.components.cards.getSimpleFormattedDate
 import kotlin.time.Clock
 
 /** Small enough to share a line with the title, large enough to read the time across a desk. */
@@ -409,10 +408,12 @@ private fun SessionLinkedTask(
 }
 
 /**
- * `Inbox · High · 2:00 PM`, or `null` when the task carries none of them. [spentToday] adds what
- * the task has already had out of today, when the status line is not the one saying it.
+ * `Inbox · High · Today, 2:00 PM`, or `null` when the task carries none of them.
  *
- * The reminder shows its time alone: the date is already implied by the session being set up now.
+ * The day as well as the time, written the way the task's own card writes it. The time alone was
+ * shown once, on the thought that a session implies today — but a session can be linked to a task
+ * due last week or next, and "2:00 PM" said the same for all three. [spentToday] adds what
+ * the task has already had out of today, when the status line is not the one saying it.
  */
 @Composable
 private fun sessionTaskSummary(
@@ -420,12 +421,11 @@ private fun sessionTaskSummary(
     categoryName: String?,
     spentToday: TaskFocusToday?,
 ): String? {
-    val context = LocalContext.current
     val parts =
         listOfNotNull(
             categoryName?.takeIf { it.isNotBlank() },
             task.priority?.let { stringResource(it.titleResId) },
-            task.reminderDate?.let { DateTimeFormatter.formatTimeOfDay(it.time, context) },
+            task.reminderDate?.let { getSimpleFormattedDate(it) },
             spentToday?.soFarTodayLabel(),
         )
     return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")

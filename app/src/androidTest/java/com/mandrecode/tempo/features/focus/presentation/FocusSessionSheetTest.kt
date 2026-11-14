@@ -126,6 +126,10 @@ class FocusSessionSheetTest {
 
         nameIt("Deep work")
         composeTestRule.onNodeWithText("Link a task").performScrollTo().performClick()
+        // The picker is a sheet of its own and takes a moment to arrive.
+        composeTestRule.waitUntil(PICKER_TIMEOUT_MS) {
+            composeTestRule.onAllNodesWithText("Read chapter 3").fetchSemanticsNodes().isNotEmpty()
+        }
         composeTestRule.onNodeWithText("Read chapter 3").performClick()
         composeTestRule.onNodeWithText("Start 25 min").performScrollTo().performClick()
 
@@ -216,6 +220,10 @@ class FocusSessionSheetTest {
         composeTestRule.onNodeWithText("Reading").assertDoesNotExist()
 
         composeTestRule.onNodeWithText("Link a task").performScrollTo().performClick()
+        // The picker is a sheet of its own and takes a moment to arrive.
+        composeTestRule.waitUntil(PICKER_TIMEOUT_MS) {
+            composeTestRule.onAllNodesWithText("Read chapter 3").fetchSemanticsNodes().isNotEmpty()
+        }
         composeTestRule.onNodeWithText("Read chapter 3").performClick()
         composeTestRule.waitForIdle()
 
@@ -248,3 +256,5 @@ class FocusSessionSheetTest {
         composeTestRule.onNodeWithContentDescription("More rounds").assertDoesNotExist()
     }
 }
+
+private const val PICKER_TIMEOUT_MS = 5_000L
