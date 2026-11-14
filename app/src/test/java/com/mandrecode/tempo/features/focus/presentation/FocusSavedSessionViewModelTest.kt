@@ -515,6 +515,8 @@ class FocusSavedSessionViewModelTest : FocusViewModelHarness() {
 
             assertThat(seen).containsExactly(4L)
             coVerify { focusSessionUseCases.startSaved(study) }
+            // What lets the screen follow the timer it started rather than close on it.
+            assertThat(viewModel.uiState.value.startedNewSessionId).isEqualTo(4)
             // Starting clears what was being set up; the timer is the subject from here.
             assertThat(viewModel.uiState.value.setupSessionId).isNull()
         }
@@ -680,5 +682,22 @@ class FocusSavedSessionViewModelTest : FocusViewModelHarness() {
             advanceUntilIdle()
 
             coVerify(exactly = 0) { saveSavedSession(any()) }
+        }
+
+    @Test
+    fun `starting a session that already existed marks no new session as started`() =
+        runTest {
+            stubDay()
+            savedSessions.value = listOf(SavedSessionEntry(study))
+            coEvery { saveSavedSession(any()) } returns study
+            val viewModel = createViewModel()
+            advanceUntilIdle()
+            viewModel.onEvent(FocusContract.UiEvent.EditSession(4))
+            advanceUntilIdle()
+
+            viewModel.onEvent(FocusContract.UiEvent.SaveSession(draftOf(id = 4), startNow = true))
+            advanceUntilIdle()
+
+            assertThat(viewModel.uiState.value.startedNewSessionId).isNull()
         }
 }

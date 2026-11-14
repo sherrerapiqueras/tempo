@@ -81,7 +81,13 @@ fun FocusSessionRoute(
     // once it is saved and still the subject, the screen moves on to its real one. That is the one
     // case where the subject is the same thing under a new name rather than a different thing.
     val subject = rememberSaveable { mutableStateOf<String?>(null) }
-    val latched = latchedSessionSubject(subject.value, uiState.setupSessionId)
+    val latched =
+        latchedSessionSubject(
+            latched = subject.value,
+            current = uiState.sessionSubjectKey,
+            setupSessionId = uiState.setupSessionId,
+            startedSessionId = uiState.startedNewSessionId,
+        )
     subject.value = nextSessionSubject(placement == SheetPlacement.DockedPane, latched, uiState.sessionSubjectKey)
     val subjectKey = subject.value
     val hasSomethingToShow = subjectKey != null && uiState.sessionSubjectKey == subjectKey

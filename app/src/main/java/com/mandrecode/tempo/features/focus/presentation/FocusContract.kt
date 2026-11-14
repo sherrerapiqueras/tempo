@@ -53,6 +53,16 @@ object FocusContract {
          * [SavedSession.NEW_ID] for one not saved yet, or `null` for none.
          */
         val setupSessionId: Long? = null,
+        /**
+         * The id a new session was given when it was saved and started from the session screen.
+         *
+         * The screen was opened on a session with no id, and the timer it now has to follow carries
+         * this one. Said outright rather than left to be inferred from the setup passing through
+         * that id on its way to nothing: with nothing else running that passage is over before
+         * anything can observe it, and the screen took the session it had just started for a
+         * stranger and closed.
+         */
+        val startedNewSessionId: Long? = null,
         /** The open tasks a session can be linked to, loaded while one is being set up. */
         val linkableTasks: ImmutableList<Task> = persistentListOf(),
         /**

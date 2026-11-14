@@ -66,23 +66,29 @@ internal fun <T : Any> nextSessionSubject(
 private val NewSessionKey = FocusSession.subjectKeyOf(taskId = null, savedSessionId = SavedSession.NEW_ID)
 
 /**
- * What the session surface is still latched on, given the session now being set up.
+ * What the session surface is still latched on, given what it is now being asked to show.
  *
  * Two cases let the latch go, both of them the same surface carrying on rather than a different
  * subject arriving:
  *
  * - A new session has no id until it is saved, so the key it was latched under is a stand-in. Once
- *   it has been saved and is still what is being set up, the surface takes up its real key.
+ *   it has an id of its own the surface takes up its real key: while it is still being set up
+ *   under that id, or once it is the session the surface itself just started ([startedSessionId]).
  * - A surface opened on a task whose link was taken off is now about a new session.
  *
- * With nothing being set up any more the latch is kept, which is what closes the surface instead
- * of handing it to whatever else is running.
+ * Otherwise the latch is kept — a new session saved without starting, with something else running
+ * — which is what closes the surface instead of handing it to whatever else there is.
  */
 internal fun latchedSessionSubject(
     latched: String?,
+    current: String?,
     setupSessionId: Long?,
+    startedSessionId: Long? = null,
 ): String? {
-    val hasBecomeReal = latched == NewSessionKey && setupSessionId != null && setupSessionId != SavedSession.NEW_ID
+    val isSetUpUnderRealId = setupSessionId != null && setupSessionId != SavedSession.NEW_ID
+    val startedKey = startedSessionId?.let { FocusSession.subjectKeyOf(taskId = null, savedSessionId = it) }
+    val isWhatItStarted = startedKey != null && current == startedKey
+    val hasBecomeReal = latched == NewSessionKey && (isSetUpUnderRealId || isWhatItStarted)
     val hasBecomeNew = latched != NewSessionKey && setupSessionId == SavedSession.NEW_ID
     return latched.takeUnless { hasBecomeReal || hasBecomeNew }
 }

@@ -81,6 +81,9 @@ private fun FocusViewModel.saveSession(
             val saved = withContext(NonCancellable) { saveSavedSession(session) }
             if (saved != null && startNow) {
                 showSaved(saved)
+                if (settingUp == SavedSession.NEW_ID) {
+                    mutableUiState.update { it.copy(startedNewSessionId = saved.id) }
+                }
                 // Under its real id from here on: a new session was being set up under a stand-in,
                 // and the screen follows it across to the one its timer will carry.
                 focusSessionRepository.setSetupSessionId(saved.id)
