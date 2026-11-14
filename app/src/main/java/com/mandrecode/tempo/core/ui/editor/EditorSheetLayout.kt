@@ -1,7 +1,9 @@
 package com.mandrecode.tempo.core.ui.editor
 
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -37,30 +39,43 @@ internal fun ColumnScope.EditorSheetLayout(
     // bottom edge. A bottom sheet wraps its content: the form only takes what it needs, up to the
     // sheet's maximum height, and the footer follows it.
     val fillsHeight = (placement ?: rememberSheetPlacement()) == SheetPlacement.DockedPane
-    Column(
-        modifier =
-            Modifier
-                .weight(1f, fill = fillsHeight)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = margin)
-                .padding(top = 8.dp, bottom = if (pinFooter) PINNED_FORM_BOTTOM_PADDING else 32.dp),
-    ) {
-        body()
-        if (!pinFooter) footer()
-    }
-    if (pinFooter) {
+    BoxWithConstraints(modifier = Modifier.weight(1f, fill = fillsHeight).fillMaxWidth()) {
+        // The sheet's height already excludes the keyboard. In a short window (landscape phone
+        // with the keyboard up) a pinned footer would take what is left and hide the form,
+        // including the title being typed, so the footer scrolls with the form instead.
+        val pinned = pinFooter && maxHeight >= MIN_HEIGHT_TO_PIN_FOOTER
         Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = margin)
-                    .padding(bottom = PINNED_FOOTER_BOTTOM_PADDING),
+            modifier = Modifier.fillMaxWidth().then(if (fillsHeight) Modifier.fillMaxHeight() else Modifier),
         ) {
-            footer()
+            Column(
+                modifier =
+                    Modifier
+                        .weight(1f, fill = fillsHeight)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = margin)
+                        .padding(top = 8.dp, bottom = if (pinned) PINNED_FORM_BOTTOM_PADDING else 32.dp),
+            ) {
+                body()
+                if (!pinned) footer()
+            }
+            if (pinned) {
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = margin)
+                            .padding(bottom = PINNED_FOOTER_BOTTOM_PADDING),
+                ) {
+                    footer()
+                }
+            }
         }
     }
 }
+
+/** Below this sheet height a pinned footer would leave too little room for the form. */
+private val MIN_HEIGHT_TO_PIN_FOOTER = 280.dp
 
 // Space between the end of the form and the pinned footer; it scrolls away instead of taking
 // permanent height, which matters on short windows with the keyboard open.
