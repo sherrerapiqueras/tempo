@@ -312,6 +312,7 @@ internal fun LinkedTaskRow(
     supporting: String? = null,
 ) {
     if (linkedTask == null && onPick == null) return
+    val notesIcon = painterResource(R.drawable.ic_short_text)
     EditorPropertyRow(
         iconPainter = painterResource(R.drawable.ic_checklist),
         iconContentDescription = stringResource(R.string.session_editor_linked_task),
@@ -333,6 +334,10 @@ internal fun LinkedTaskRow(
                 onClear = onClear,
                 clearContentDescription = stringResource(R.string.session_editor_unlink_task),
                 supporting = supporting,
+                // The task's notes are read in the task's own sheet, which this chip opens; here it
+                // is enough to say that there are some.
+                supportingIcon = notesIcon.takeIf { linkedTask.description.isNotBlank() },
+                supportingIconDescription = stringResource(R.string.session_linked_task_has_description),
                 modifier = Modifier.weight(1f, fill = false),
             )
         }

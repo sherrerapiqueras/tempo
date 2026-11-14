@@ -764,6 +764,7 @@
     <string name="session_editor_linked_task">Linked task</string>
     <string name="session_editor_link_task">Link a task</string>
     <string name="session_editor_unlink_task">Remove the linked task</string>
+    <string name="session_linked_task_has_description">Has a description</string>
     <string name="session_editor_no_tasks">No open tasks to link</string>
     <string name="delete_session">Delete session</string>
     <string name="delete_session_title">Delete this session?</string>

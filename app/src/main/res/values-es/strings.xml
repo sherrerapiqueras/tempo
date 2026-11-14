@@ -768,6 +768,7 @@
     <string name="session_editor_linked_task">Tarea vinculada</string>
     <string name="session_editor_link_task">Vincular una tarea</string>
     <string name="session_editor_unlink_task">Quitar la tarea vinculada</string>
+    <string name="session_linked_task_has_description">Tiene descripción</string>
     <string name="session_editor_no_tasks">No hay tareas abiertas que vincular</string>
     <string name="delete_session">Eliminar sesión</string>
     <string name="delete_session_title">¿Eliminar esta sesión?</string>

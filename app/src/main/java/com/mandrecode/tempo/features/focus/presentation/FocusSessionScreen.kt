@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -186,7 +185,6 @@ fun FocusSessionSheet(
             heading = {
                 SessionSheetHeading(
                     title = session?.title ?: linked?.task?.title.orEmpty(),
-                    description = linked?.task?.description.takeIf { target == null },
                     form = form.takeIf { target != null },
                 )
             },
@@ -335,17 +333,19 @@ private fun sessionLinkActions(
 
 /**
  * The sheet's heading: the name field while a saved session is being set up, otherwise the title of
- * what is running or being looked at, with the task's description under it. The two cross over in
- * place when a session starts.
+ * what is running or being looked at. The two cross over in place when a session starts.
  *
- * Start-aligned and in the style the task and habit editors give their titles, with the description
- * directly beneath as theirs is, so a session reads as another sheet about one item. It stands
- * beside the dial, in the body's hero, which is what places it.
+ * Start-aligned and in the style the task and habit editors give their titles, so a session reads
+ * as another sheet about one item. It stands beside the dial, in the body's hero, which is what
+ * places it.
+ *
+ * The title and nothing under it. The linked task's description stood here once, and read as the
+ * session's own; it is the task's, and the task's sheet — one tap on its chip away — is where it
+ * is read. The chip says when there is one.
  */
 @Composable
-private fun ColumnScope.SessionSheetHeading(
+private fun SessionSheetHeading(
     title: String,
-    description: String?,
     form: SessionEditorForm?,
 ) {
     AnimatedContent(
@@ -367,16 +367,6 @@ private fun ColumnScope.SessionSheetHeading(
                 modifier = Modifier.fillMaxWidth().padding(vertical = EDITOR_TEXT_FIELD_TOP_INSET),
             )
         }
-    }
-    description?.takeIf { it.isNotBlank() }?.let {
-        Text(
-            text = it,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
-        )
     }
 }
 

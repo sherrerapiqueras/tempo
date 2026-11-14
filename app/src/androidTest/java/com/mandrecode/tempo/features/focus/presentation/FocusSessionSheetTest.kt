@@ -232,6 +232,33 @@ class FocusSessionSheetTest {
     }
 
     @Test
+    fun linkedTasksDescription_isSignalledOnTheChipAndNeverWrittenOut() {
+        val noted = chapter.copy(description = "Pages 41 to 68")
+        val state =
+            base.copy(
+                savedSessions = persistentListOf(SavedSessionEntry(study, linkedTask = noted)),
+                linkableTasks = persistentListOf(noted),
+            )
+        setSheet(state.copy(setupSessionId = study.id))
+
+        composeTestRule.onNodeWithContentDescription("Has a description", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("Pages 41 to 68").assertDoesNotExist()
+
+        // The same before and after starting: nothing arrives with the timer.
+        uiState = state.copy(session = FocusSession.start(study, Clock.System.now()))
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithContentDescription("Has a description", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("Pages 41 to 68").assertDoesNotExist()
+    }
+
+    @Test
+    fun taskWithNoDescription_showsNoSuchSign() {
+        setSheet(base.copy(setupSessionId = study.id))
+
+        composeTestRule.onNodeWithContentDescription("Has a description", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
     fun runningSession_keepsItsTaskAndOffersNoWayToTakeItOff() {
         setSheet(base.copy(session = FocusSession.start(study, Clock.System.now())))
 
