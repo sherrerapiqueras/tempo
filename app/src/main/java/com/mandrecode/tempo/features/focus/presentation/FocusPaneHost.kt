@@ -12,6 +12,8 @@ import androidx.compose.runtime.setValue
 import com.mandrecode.tempo.core.ui.adaptive.SheetPlacement
 import com.mandrecode.tempo.core.ui.adaptive.rememberSheetPlacement
 import com.mandrecode.tempo.core.ui.util.rememberFrozenWhileHidden
+import com.mandrecode.tempo.features.focus.domain.model.FocusSession
+import com.mandrecode.tempo.features.focus.domain.model.SavedSession
 
 /**
  * Where Focus shows its task editor and its running session (#502): on a large window both dock in
@@ -49,15 +51,56 @@ internal fun canDockFocusPane(
 ): Boolean = placement == SheetPlacement.DockedPane && !isEditorOverPlanSheet
 
 /**
- * The task the session surface is about. A sheet latches the first one it hears of, since nothing
- * behind it can be tapped. Docked, the agenda stays live, so the pane follows a newly chosen task,
- * and keeps the last one once there is none, which is how it knows to close.
+ * What the session surface is about: a task, or a saved session. A sheet latches the first one it
+ * hears of, since nothing behind it can be tapped. Docked, the agenda stays live, so the pane
+ * follows a newly chosen task, and keeps the last one once there is none, which is how it knows to
+ * close.
  */
-internal fun nextSessionSubject(
+internal fun <T : Any> nextSessionSubject(
     isDocked: Boolean,
-    subject: Long?,
-    sessionTaskId: Long?,
-): Long? = if (isDocked) sessionTaskId ?: subject else subject ?: sessionTaskId
+    subject: T?,
+    current: T?,
+): T? = if (isDocked) current ?: subject else subject ?: current
+
+/** The key a session not saved yet is latched under. */
+private val NewSessionKey = FocusSession.subjectKeyOf(taskId = null, savedSessionId = SavedSession.NEW_ID)
+
+/**
+ * What the session surface is still latched on, given what it is now being asked to show.
+ *
+ * Two cases let the latch go, both of them the same surface carrying on rather than a different
+ * subject arriving:
+ *
+ * - A new session has no id until it is saved, so the key it was latched under is a stand-in. Once
+ *   it has an id of its own the surface takes up its real key: while it is still being set up
+ *   under that id, or once it is the session the surface itself just started ([startedSessionId]).
+ * - A surface opened on a task whose link was taken off is now about a new session.
+ *
+ * Otherwise the latch is kept — a new session saved without starting, with something else running
+ * — which is what closes the surface instead of handing it to whatever else there is.
+ */
+internal fun latchedSessionSubject(
+    latched: String?,
+    current: String?,
+    setupSessionId: Long?,
+    startedSessionId: Long? = null,
+): String? {
+    val isSetUpUnderRealId = setupSessionId != null && setupSessionId != SavedSession.NEW_ID
+    val startedKey = startedSessionId?.let { FocusSession.subjectKeyOf(taskId = null, savedSessionId = it) }
+    val isWhatItStarted = startedKey != null && current == startedKey
+    val hasBecomeReal = latched == NewSessionKey && (isSetUpUnderRealId || isWhatItStarted)
+    val hasBecomeNew = latched != NewSessionKey && setupSessionId == SavedSession.NEW_ID
+    return latched.takeUnless { hasBecomeReal || hasBecomeNew }
+}
+
+/**
+ * Whether a task opened from the docked session goes to the pane, taking the session's place.
+ *
+ * Not while a session is being set up. Giving up the pane closes the session surface, and with it
+ * whatever had been typed into a session not yet saved — so there the task opens as a sheet over
+ * the pane instead, and the draft is still underneath when it closes.
+ */
+internal fun handsTaskToPane(setupSessionId: Long?): Boolean = setupSessionId == null
 
 /** What the pane shows: a task when one is open, else the session when it is, else nothing. */
 internal fun focusPane(
@@ -114,7 +157,7 @@ internal fun focusPaneHost(
     val isEditorOpen = uiState.taskEditor != null
     // The route alone isn't enough: restored after the session ended, it has nothing to show, and
     // an empty pane would have no way to close.
-    val isSessionOpen = isSessionRouteOpen && uiState.sessionTaskId != null
+    val isSessionOpen = isSessionRouteOpen && uiState.sessionSubjectKey != null
     val pane = focusPane(canDock, isEditorOpen, isSessionOpen)
     val isEditorDocked = pane == FocusPane.EDITOR
     val editingTaskId = uiState.editingTaskId()

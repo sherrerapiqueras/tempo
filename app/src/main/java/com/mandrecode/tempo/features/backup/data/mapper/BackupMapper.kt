@@ -9,12 +9,14 @@ import com.mandrecode.tempo.features.backup.data.model.BackupFileDto
 import com.mandrecode.tempo.features.backup.data.model.CategoryBackupDto
 import com.mandrecode.tempo.features.backup.data.model.ChainMemberBackupDto
 import com.mandrecode.tempo.features.backup.data.model.DailyFocusActivityBackupDto
+import com.mandrecode.tempo.features.backup.data.model.FocusSessionBackupDto
 import com.mandrecode.tempo.features.backup.data.model.HabitBackupDto
 import com.mandrecode.tempo.features.backup.data.model.HabitChainBackupDto
 import com.mandrecode.tempo.features.backup.data.model.TaskBackupDto
 import com.mandrecode.tempo.features.backup.data.model.TaskSectionBackupDto
 import com.mandrecode.tempo.features.backup.domain.model.BackupData
 import com.mandrecode.tempo.features.backup.domain.model.ChainMembership
+import com.mandrecode.tempo.features.focus.domain.model.SavedSession
 import com.mandrecode.tempo.features.routines.domain.model.Habit
 import com.mandrecode.tempo.features.routines.domain.model.HabitChain
 import com.mandrecode.tempo.features.routines.domain.model.HabitType
@@ -55,6 +57,17 @@ fun BackupData.toDto(
                     focusMinutes = activity.focusMinutes,
                 )
             },
+        focusSessions =
+            focusSessions.map { session ->
+                FocusSessionBackupDto(
+                    id = session.id,
+                    title = session.title,
+                    focusMinutes = session.focusMinutes,
+                    breakMinutes = session.breakMinutes,
+                    rounds = session.rounds,
+                    taskId = session.taskId,
+                )
+            },
     )
 
 fun BackupFileDto.toDomain(): BackupData =
@@ -77,6 +90,18 @@ fun BackupFileDto.toDomain(): BackupData =
                     completedCount = dto.completedCount,
                     focusMinutes = dto.focusMinutes,
                 )
+            },
+        focusSessions =
+            focusSessions.map { dto ->
+                // Brought inside what a timer can run on the way in: the file may have been edited.
+                SavedSession(
+                    id = dto.id,
+                    title = dto.title,
+                    focusMinutes = dto.focusMinutes,
+                    breakMinutes = dto.breakMinutes,
+                    rounds = dto.rounds,
+                    taskId = dto.taskId,
+                ).normalized()
             },
     )
 

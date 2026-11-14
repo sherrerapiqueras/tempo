@@ -6,12 +6,19 @@ import com.mandrecode.tempo.core.domain.repository.VacationModeRepository
 import com.mandrecode.tempo.features.focus.domain.model.FocusAgenda
 import com.mandrecode.tempo.features.focus.domain.model.FocusAgendaItem
 import com.mandrecode.tempo.features.focus.domain.model.FocusSession
+import com.mandrecode.tempo.features.focus.domain.model.SavedSession
+import com.mandrecode.tempo.features.focus.domain.model.SavedSessionEntry
+import com.mandrecode.tempo.features.focus.domain.model.SessionCycle
 import com.mandrecode.tempo.features.focus.domain.repository.FocusSessionRepository
+import com.mandrecode.tempo.features.focus.domain.usecase.DeleteSavedSessionUseCase
 import com.mandrecode.tempo.features.focus.domain.usecase.FocusSessionUseCases
 import com.mandrecode.tempo.features.focus.domain.usecase.GetFocusAgendaUseCase
 import com.mandrecode.tempo.features.focus.domain.usecase.GetFocusHistoryUseCase
 import com.mandrecode.tempo.features.focus.domain.usecase.GetFocusStreakUseCase
+import com.mandrecode.tempo.features.focus.domain.usecase.GetLinkableTasksUseCase
+import com.mandrecode.tempo.features.focus.domain.usecase.GetSavedSessionsUseCase
 import com.mandrecode.tempo.features.focus.domain.usecase.RecordDailyActivityUseCase
+import com.mandrecode.tempo.features.focus.domain.usecase.SaveSavedSessionUseCase
 import com.mandrecode.tempo.features.tasks.domain.model.Category
 import com.mandrecode.tempo.features.tasks.domain.model.Task
 import com.mandrecode.tempo.features.tasks.domain.model.UndatedTask
@@ -65,13 +72,25 @@ abstract class FocusViewModelHarness {
     protected val sessionFlow = MutableStateFlow<FocusSession?>(null)
     protected val lengthFlow = MutableStateFlow(25)
     protected val previewFlow = MutableStateFlow<Long?>(null)
+    protected val setupFlow = MutableStateFlow<Long?>(null)
     protected val focusSessionRepository =
         mockk<FocusSessionRepository> {
             every { activeSession } returns sessionFlow
             every { defaultLengthMinutes } returns lengthFlow
             every { previewTaskId } returns previewFlow
             every { breakLengthMinutes } returns MutableStateFlow(5)
-            every { setPreviewTaskId(any()) } answers { previewFlow.value = firstArg() }
+            every { setupSessionId } returns setupFlow
+            // The real repository's rule: the screen is about one thing, so naming a task forgets
+            // the session being set up, and clearing the preview clears both.
+            every { setPreviewTaskId(any()) } answers {
+                setupFlow.value = null
+                previewFlow.value = firstArg()
+            }
+            every { setSetupSessionId(any()) } answers {
+                val id: Long? = firstArg()
+                if (id != null) previewFlow.value = null
+                setupFlow.value = id
+            }
         }
 
     /** What the plan sheet opens onto. Empty unless a test says otherwise. */
@@ -88,6 +107,23 @@ abstract class FocusViewModelHarness {
         }
     protected val updateTask = mockk<UpdateTaskUseCase>(relaxed = true)
     protected val restoreTaskReminders = mockk<RestoreTaskRemindersUseCase>(relaxed = true)
+
+    /** The saved sessions on Focus. None unless a test says otherwise. */
+    protected val savedSessions = MutableStateFlow<List<SavedSessionEntry>>(emptyList())
+    protected val getSavedSessions =
+        mockk<GetSavedSessionsUseCase> { every { this@mockk.invoke() } returns savedSessions }
+    protected val linkableTasks = MutableStateFlow<List<Task>>(emptyList())
+    protected val getLinkableTasks =
+        mockk<GetLinkableTasksUseCase> { every { this@mockk.invoke() } returns linkableTasks }
+    protected val saveSavedSession = mockk<SaveSavedSessionUseCase>(relaxed = true)
+    protected val deleteSavedSession = mockk<DeleteSavedSessionUseCase>(relaxed = true)
+
+    protected fun savedSession(
+        id: Long,
+        title: String = "Study",
+        rounds: Int = 1,
+        taskId: Long? = null,
+    ) = SavedSession(id = id, title = title, focusMinutes = 25, breakMinutes = 5, rounds = rounds, taskId = taskId)
 
     protected val vacationPeriods = MutableStateFlow<List<VacationPeriod>>(emptyList())
     protected val vacationModeRepository =
@@ -154,6 +190,10 @@ abstract class FocusViewModelHarness {
             getUndatedTasks = getUndatedTasks,
             updateTask = updateTask,
             restoreTaskReminders = restoreTaskReminders,
+            getSavedSessions = getSavedSessions,
+            getLinkableTasks = getLinkableTasks,
+            saveSavedSession = saveSavedSession,
+            deleteSavedSession = deleteSavedSession,
             vacationModeRepository = vacationModeRepository,
             clock = clock,
         )
@@ -173,16 +213,18 @@ abstract class FocusViewModelHarness {
      * gone from the repository. Nothing else tells the app a session expired.
      */
     protected suspend fun TestScope.runSessionOut(
-        taskId: Long = 1,
+        taskId: Long? = 1,
         title: String = "Report",
         isBreak: Boolean = false,
+        cycle: SessionCycle? = null,
     ) {
         sessionFlow.value =
             FocusSession.start(
                 taskId = taskId,
-                taskTitle = title,
+                title = title,
                 now = nowInstant - 30.minutes,
                 isBreak = isBreak,
+                cycle = cycle,
             )
         advanceUntilIdle()
         sessionFlow.value = null

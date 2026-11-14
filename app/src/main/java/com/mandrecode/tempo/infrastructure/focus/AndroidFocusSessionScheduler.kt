@@ -71,20 +71,13 @@ class AndroidFocusSessionScheduler
                 NotificationCompat
                     .Builder(context, NotificationChannelManager.FOCUS_SESSION_CHANNEL_ID)
                     .setSmallIcon(R.drawable.ic_focus)
-                    .setContentTitle(session.taskTitle)
+                    .setContentTitle(session.title)
                     // A second line, and the app's own accent. Title-plus-chronometer alone left
                     // the row looking like a system message with three buttons bolted under it.
                     // Not colorized: the platform only honours that for foreground-service
                     // notifications, and this feature deliberately has no service.
-                    .setContentText(
-                        context.getString(
-                            when {
-                                session.isBreak -> R.string.focus_session_break
-                                session.isPaused -> R.string.focus_session_paused
-                                else -> R.string.focus_session_focusing
-                            },
-                        ),
-                    ).setColor(accentColor())
+                    .setContentText(statusText(session))
+                    .setColor(accentColor())
                     .setOngoing(true)
                     // Alerts when it arrives and then stays quiet: the pause and resume updates
                     // that follow are the same notification changing, not news.
@@ -111,6 +104,21 @@ class AndroidFocusSessionScheduler
             notificationManager.notify(RequestCodeGenerator.forFocusSession(), builder.build())
         }
 
+        /** `Focusing`, or `Focusing · Round 2 of 4` for a saved session that repeats. */
+        private fun statusText(session: FocusSession): String {
+            val status =
+                context.getString(
+                    when {
+                        session.isBreak -> R.string.focus_session_break
+                        session.isPaused -> R.string.focus_session_paused
+                        else -> R.string.focus_session_focusing
+                    },
+                )
+            val cycle = session.cycle?.takeIf { it.hasRounds } ?: return status
+            val round = context.getString(R.string.focus_session_round, cycle.round, cycle.totalRounds)
+            return "$status · $round"
+        }
+
         /**
          * Done, pause-or-resume, stop — the same three the card and the session screen offer, in the
          * same order, so the notification is the app's controls rather than a cut-down version of
@@ -120,7 +128,8 @@ class AndroidFocusSessionScheduler
             builder: NotificationCompat.Builder,
             session: FocusSession,
         ) {
-            if (!session.isBreak) {
+            // Done is about the task. A session linked to none has nothing to tick.
+            if (!session.isBreak && session.taskId != null) {
                 builder.addAction(
                     R.drawable.ic_check_circle,
                     context.getString(R.string.focus_session_mark_done),

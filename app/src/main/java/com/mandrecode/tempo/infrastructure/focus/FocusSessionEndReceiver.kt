@@ -18,8 +18,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * Fires when a session's time is up: banks the elapsed minutes and replaces the ongoing countdown
- * with a one-shot "time's up" notification, so the user is told even if the app is not foregrounded.
+ * Fires when a session's time is up: banks the elapsed minutes and either starts the next phase of
+ * a saved session's rounds, or replaces the ongoing countdown with a one-shot "time's up"
+ * notification, so the user is told even if the app is not foregrounded.
  *
  * In-app, the completion sheet is what the user actually sees; this notification is the fallback
  * for a session that ran out while they were elsewhere.
@@ -40,10 +41,17 @@ class FocusSessionEndReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(ioDispatcher).launch {
             try {
-                val finished = focusSessionUseCases.end() ?: return@launch
+                // Not `end()`: a saved session with rounds to go moves on to its rest or its next
+                // round here, and only the last one is over. A late or repeated alarm finds a phase
+                // that has not run out and does nothing.
+                val timeUp = focusSessionUseCases.timeUp() ?: return@launch
+                // A new phase announces itself through its own ongoing notification; "time's up"
+                // is for the run that has actually ended.
+                if (timeUp.next != null) return@launch
+                val finished = timeUp.finished
                 notifyTimeIsUp(
                     context = context,
-                    taskTitle = finished.taskTitle,
+                    title = finished.title,
                     minutes = finished.plannedLength.inWholeMinutes.toInt(),
                     wasBreak = finished.isBreak,
                 )
@@ -55,7 +63,7 @@ class FocusSessionEndReceiver : BroadcastReceiver() {
 
     private fun notifyTimeIsUp(
         context: Context,
-        taskTitle: String,
+        title: String,
         minutes: Int,
         wasBreak: Boolean,
     ) {
@@ -87,7 +95,7 @@ class FocusSessionEndReceiver : BroadcastReceiver() {
                     } else {
                         context.getString(R.string.focus_session_finished_title, minutes)
                     },
-                ).setContentText(taskTitle)
+                ).setContentText(title)
                 .setAutoCancel(true)
                 .setContentIntent(openFocus)
                 .build()

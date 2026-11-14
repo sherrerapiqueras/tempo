@@ -67,6 +67,7 @@ class PortraitFloatingBarMotionTest {
 
         const val SORT_DESCRIPTION = "Sort tasks by"
         const val ADD_DESCRIPTION = "Add Task"
+        const val ADD_SESSION_DESCRIPTION = "Add session"
     }
 
     private var isTasksRoute by mutableStateOf(true)
@@ -210,15 +211,16 @@ class PortraitFloatingBarMotionTest {
         assertThat(abs((positions.last() - unflanked).value)).isAtMost(Settled.value)
     }
 
-    /** Focus adds a task from the bar, with the same button Tasks uses (#434). */
+    /** Focus adds a session from the bar, in the place Tasks adds a task (#517). */
     @Test
-    fun focus_offersTheAddTaskButton_andNoSort() {
+    fun focus_offersTheAddSessionButton_andNoSort() {
         isTasksRoute = false
         otherRoute = FocusRoute
         setBar()
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithContentDescription(ADD_DESCRIPTION, substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(ADD_SESSION_DESCRIPTION, substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(ADD_DESCRIPTION, substring = true).assertDoesNotExist()
         composeTestRule.onNodeWithContentDescription(SORT_DESCRIPTION, substring = true).assertDoesNotExist()
     }
 

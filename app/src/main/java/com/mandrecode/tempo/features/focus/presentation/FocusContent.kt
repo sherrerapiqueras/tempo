@@ -1,9 +1,7 @@
 package com.mandrecode.tempo.features.focus.presentation
 
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -15,9 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -116,12 +112,12 @@ fun FocusContent(
                     uiState.finishedSession?.let { finished ->
                         SessionFinishedSheet(
                             finished = finished,
-                            nextSessionMinutes = uiState.defaultSessionLengthMinutes,
+                            nextSessionMinutes = uiState.nextSessionMinutes,
                             onEvent = onEvent,
                         )
                     }
 
-                    if (uiState.isDayEmpty) {
+                    if (uiState.showsEmptyState) {
                         FocusEmptyState(
                             undatedTaskCount = uiState.undatedTaskCount,
                             onUndatedClick = { onEvent(FocusContract.UiEvent.UndatedTasksClicked) },
@@ -231,8 +227,9 @@ private fun LazyListScope.upNextSection(
     onEvent: (FocusContract.UiEvent) -> Unit,
 ) {
     val session = uiState.session
-    val upNext = uiState.upNext
-    if (session == null && upNext.isEmpty()) return
+    // The day's tasks worth starting and the saved sessions are one row (#517): both are a card
+    // with a start on it, and two rows of those under two labels was the same offer made twice.
+    if (session == null && uiState.upNext.isEmpty() && uiState.startableSessions.isEmpty()) return
 
     item(key = "up_next_label") {
         Text(
@@ -272,67 +269,56 @@ private fun LazyListScope.upNextRow(
     onEvent: (FocusContract.UiEvent) -> Unit,
 ) {
     val session = uiState.session
-    val queued = uiState.upNext.filterNot { it.task.id == session?.taskId }
+    val queued = uiState.queuedUpNext
+    val sessions = uiState.startableSessions
 
     item(key = "up_next_row") {
-        val listState = rememberLazyListState()
-        BoxWithConstraints(modifier = Modifier.fillMaxWidth().animateItem()) {
-            val cardCount = queued.size + if (session != null) 1 else 0
-            val cardWidth = if (cardCount > 1) maxWidth * SINGLE_PEEK_FRACTION else maxWidth
-            LazyRow(
-                state = listState,
-                flingBehavior = rememberSnapFlingBehavior(listState),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                // Cards start on the same line and end wherever their content does. A running
-                // session is a deeper card than a queued one, and a task already worked on carries
-                // two buttons where an untouched one carries a single pill — one height for all of
-                // them meant padding the short ones out to match the tallest thing on screen.
-                verticalAlignment = Alignment.Top,
-            ) {
-                if (session != null) {
-                    item(key = "running_session") {
-                        RunningSessionCard(
-                            session = session,
-                            // The running task's own row, not the screen's subject: a sheet open on
-                            // some other card must not relabel the one still counting down.
-                            subtasks = uiState.runningEntry?.subtasks.orEmpty(),
-                            focusToday = uiState.runningEntry?.focusToday ?: TaskFocusToday(),
-                            onExpand = { onEvent(FocusContract.UiEvent.OpenSessionScreen) },
-                            onPauseResume = {
-                                onEvent(
-                                    if (session.isPaused) {
-                                        FocusContract.UiEvent.ResumeSession
-                                    } else {
-                                        FocusContract.UiEvent.PauseSession
-                                    },
-                                )
-                            },
-                            onStop = { onEvent(FocusContract.UiEvent.StopSession) },
-                            onComplete = { onEvent(FocusContract.UiEvent.CompleteSessionTask) },
-                            onBackToWork = { onEvent(FocusContract.UiEvent.BackToWork) },
-                            modifier = Modifier.width(cardWidth),
-                        )
-                    }
-                }
-                items(queued, key = { it.id }) { entry ->
-                    UpNextCard(
-                        title = entry.displayTitle(),
-                        metadata = entry.upNextMetadata(uiState.today),
-                        metadataIconRes = R.drawable.ic_flag.takeIf { entry.priority != null },
-                        onClick = {
-                            onEvent(FocusContract.UiEvent.PreviewUpNext(entry.task.id))
-                        },
+        PeekingCardRow(
+            cardCount = queued.size + sessions.size + if (session != null) 1 else 0,
+            modifier = Modifier.animateItem(),
+            // The running card is put first and has to be seen there.
+            startKey = session?.subjectKey,
+        ) { cardWidth ->
+            if (session != null) {
+                item(key = "running_session") {
+                    RunningSessionCard(
+                        session = session,
+                        // The running task's own row, not the screen's subject: a sheet open on
+                        // some other card must not relabel the one still counting down.
+                        subtasks = uiState.runningEntry?.subtasks.orEmpty(),
+                        focusToday = uiState.runningEntry?.focusToday ?: TaskFocusToday(),
+                        onExpand = { onEvent(FocusContract.UiEvent.OpenSessionScreen) },
+                        onPauseResume = { onEvent(session.pauseResumeEvent()) },
+                        onStop = { onEvent(FocusContract.UiEvent.StopSession) },
+                        onComplete =
+                            { onEvent(FocusContract.UiEvent.CompleteSessionTask) }
+                                .takeIf { uiState.canCompleteRunningTask },
+                        onBackToWork = { onEvent(FocusContract.UiEvent.BackToWork) },
                         modifier = Modifier.width(cardWidth),
-                        trailingContent = {
-                            UpNextAction(
-                                entry = entry,
-                                defaultSessionLengthMinutes = uiState.defaultSessionLengthMinutes,
-                                onEvent = onEvent,
-                            )
-                        },
                     )
                 }
             }
+            items(queued, key = { it.id }) { entry ->
+                UpNextCard(
+                    title = entry.displayTitle(),
+                    metadata = entry.upNextMetadata(uiState.today),
+                    metadataIconRes = R.drawable.ic_flag.takeIf { entry.priority != null },
+                    onClick = {
+                        onEvent(FocusContract.UiEvent.PreviewUpNext(entry.task.id))
+                    },
+                    modifier = Modifier.width(cardWidth),
+                    trailingContent = {
+                        UpNextAction(
+                            entry = entry,
+                            defaultSessionLengthMinutes = uiState.defaultSessionLengthMinutes,
+                            onEvent = onEvent,
+                        )
+                    },
+                )
+            }
+            // After the day's work, not before it: they are here every day, and what is due today
+            // is what Focus is opened for.
+            savedSessionCards(sessions = sessions, cardWidth = cardWidth, onEvent = onEvent)
         }
     }
 }
@@ -362,9 +348,6 @@ private fun UpNextAction(
         )
     }
 }
-
-/** Leaves the next card showing at the edge, so the row reads as a row. */
-private const val SINGLE_PEEK_FRACTION = 0.88f
 
 @Composable
 private fun AgendaRow(

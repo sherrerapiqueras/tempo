@@ -7,6 +7,7 @@ import com.mandrecode.tempo.core.data.entity.CategoryEntity
 import com.mandrecode.tempo.core.data.entity.HabitChainEntity
 import com.mandrecode.tempo.core.data.entity.HabitChainMemberEntity
 import com.mandrecode.tempo.core.data.entity.HabitEntity
+import com.mandrecode.tempo.core.data.entity.SavedSessionEntity
 import com.mandrecode.tempo.core.data.entity.TaskEntity
 import com.mandrecode.tempo.core.data.entity.TaskSectionEntity
 import com.mandrecode.tempo.core.data.local.TempoDatabase
@@ -14,6 +15,7 @@ import com.mandrecode.tempo.core.data.local.dao.CategoryDao
 import com.mandrecode.tempo.core.data.local.dao.HabitChainDao
 import com.mandrecode.tempo.core.data.local.dao.HabitChainMemberDao
 import com.mandrecode.tempo.core.data.local.dao.HabitDao
+import com.mandrecode.tempo.core.data.local.dao.SavedSessionDao
 import com.mandrecode.tempo.core.data.local.dao.TaskDao
 import com.mandrecode.tempo.core.data.local.dao.TaskSectionDao
 import com.mandrecode.tempo.core.domain.model.DayOfWeek
@@ -50,6 +52,7 @@ class BackupRepositoryImplTest {
     private lateinit var habitChainDao: HabitChainDao
     private lateinit var memberDao: HabitChainMemberDao
     private lateinit var sectionDao: TaskSectionDao
+    private lateinit var savedSessionDao: SavedSessionDao
     private lateinit var database: TempoDatabase
     private lateinit var context: Context
     private lateinit var settingsDataSource: BackupSettingsDataSource
@@ -65,6 +68,8 @@ class BackupRepositoryImplTest {
         memberDao = mockk(relaxed = true)
         sectionDao = mockk(relaxed = true)
         coEvery { sectionDao.getAllSectionsSync() } returns emptyList()
+        savedSessionDao = mockk(relaxed = true)
+        coEvery { savedSessionDao.getAllSync() } returns emptyList()
         context = mockk(relaxed = true)
         every { context.getString(any()) } returns "Inbox"
         settingsDataSource = mockk(relaxed = true)
@@ -76,6 +81,7 @@ class BackupRepositoryImplTest {
         every { database.habitChainDao() } returns habitChainDao
         every { database.habitChainMemberDao() } returns memberDao
         every { database.taskSectionDao() } returns sectionDao
+        every { database.savedSessionDao() } returns savedSessionDao
         mockkStatic("androidx.room.RoomDatabaseKt")
         @Suppress("UNCHECKED_CAST")
         coEvery { database.withTransaction(any<suspend () -> Any?>()) } coAnswers {
@@ -577,4 +583,68 @@ class BackupRepositoryImplTest {
         checkNotNull(javaClass.getResourceAsStream(path)) { "Missing fixture $path" }
             .bufferedReader()
             .use { it.readText() }
+
+    private val linkedSession =
+        SavedSessionEntity(id = 3, title = "Study", focusMinutes = 50, breakMinutes = 10, rounds = 4, taskId = 1)
+    private val looseSession = SavedSessionEntity(id = 5, title = "Read", focusMinutes = 25, breakMinutes = 5)
+
+    @Test
+    fun `export then replace-import restores saved sessions with their ids and links`() =
+        runTest {
+            stubLocalData()
+            coEvery { savedSessionDao.getAllSync() } returns listOf(linkedSession, looseSession)
+            val json = repository.exportEncrypted(testPassphrase)
+            val inserted = mutableListOf<SavedSessionEntity>()
+            coEvery { savedSessionDao.insert(capture(inserted)) } returns 0
+
+            val outcome = repository.importFromJson(json, ImportMode.REPLACE, testPassphrase)
+
+            assertThat(outcome).isInstanceOf(ImportOutcome.Success::class.java)
+            coVerify { savedSessionDao.deleteAll() }
+            assertThat(inserted).containsExactly(linkedSession, looseSession).inOrder()
+        }
+
+    @Test
+    fun `a restored session whose task the file does not carry comes back unlinked`() =
+        runTest {
+            stubLocalData()
+            coEvery { savedSessionDao.getAllSync() } returns listOf(linkedSession.copy(taskId = 404))
+            val json = repository.exportEncrypted(testPassphrase)
+            val inserted = mutableListOf<SavedSessionEntity>()
+            coEvery { savedSessionDao.insert(capture(inserted)) } returns 0
+
+            repository.importFromJson(json, ImportMode.REPLACE, testPassphrase)
+
+            assertThat(inserted.single().taskId).isNull()
+        }
+
+    @Test
+    fun `merging an export of the same data adds no saved session twice`() =
+        runTest {
+            stubLocalData()
+            coEvery { savedSessionDao.getAllSync() } returns listOf(linkedSession, looseSession)
+            val json = repository.exportEncrypted(testPassphrase)
+
+            repository.importFromJson(json, ImportMode.MERGE, testPassphrase)
+
+            coVerify(exactly = 0) { savedSessionDao.insert(any()) }
+        }
+
+    @Test
+    fun `merging adds the sessions this device lacks, once, linked to the matching local task`() =
+        runTest {
+            stubLocalData()
+            coEvery { savedSessionDao.getAllSync() } returns
+                listOf(linkedSession, linkedSession.copy(id = 9), looseSession)
+            val json = repository.exportEncrypted(testPassphrase)
+            coEvery { savedSessionDao.getAllSync() } returns listOf(looseSession)
+            val inserted = mutableListOf<SavedSessionEntity>()
+            coEvery { savedSessionDao.insert(capture(inserted)) } returns 0
+
+            repository.importFromJson(json, ImportMode.MERGE, testPassphrase)
+
+            // The incoming task matches the local one, so the link follows it there; the second
+            // copy in the file is the same session and is not added again.
+            assertThat(inserted).containsExactly(linkedSession.copy(id = 0, taskId = 1))
+        }
 }

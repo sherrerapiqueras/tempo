@@ -6,7 +6,9 @@ import com.mandrecode.tempo.core.domain.usecase.DailyActivityRecorder
 import com.mandrecode.tempo.features.backup.data.repository.BackupRepositoryImpl
 import com.mandrecode.tempo.features.backup.domain.repository.BackupRepository
 import com.mandrecode.tempo.features.focus.data.FocusSessionRepositoryImpl
+import com.mandrecode.tempo.features.focus.data.SavedSessionRepositoryImpl
 import com.mandrecode.tempo.features.focus.domain.repository.FocusSessionRepository
+import com.mandrecode.tempo.features.focus.domain.repository.SavedSessionRepository
 import com.mandrecode.tempo.features.focus.domain.scheduler.FocusSessionScheduler
 import com.mandrecode.tempo.features.focus.domain.usecase.RecordDailyActivityUseCase
 import com.mandrecode.tempo.features.routines.data.repository.HabitChainRepositoryImpl
@@ -51,6 +53,9 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindTaskSectionRepository(impl: TaskSectionRepositoryImpl): TaskSectionRepository
+
+    @Binds
+    abstract fun bindSavedSessionRepository(impl: SavedSessionRepositoryImpl): SavedSessionRepository
 
     @Binds
     abstract fun bindHabitChainRepository(impl: HabitChainRepositoryImpl): HabitChainRepository

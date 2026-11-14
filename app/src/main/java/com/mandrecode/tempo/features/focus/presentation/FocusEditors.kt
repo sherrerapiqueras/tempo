@@ -52,9 +52,6 @@ internal fun FocusTaskEditor(
         openedFor = key
         viewModel.onEvent(
             when (target) {
-                FocusContract.TaskEditorTarget.NewTask ->
-                    TasksContract.UiEvent.ShowTaskDialog()
-
                 is FocusContract.TaskEditorTarget.Existing ->
                     TasksContract.UiEvent.ShowTaskDialog(task = target.task)
 
@@ -99,7 +96,6 @@ internal fun FocusTaskEditor(
 /** Which editor a target opens, stable across recreation (a task's id, not its contents). */
 private fun FocusContract.TaskEditorTarget.editorKey(): String =
     when (this) {
-        FocusContract.TaskEditorTarget.NewTask -> "new"
         is FocusContract.TaskEditorTarget.Existing -> "task:${task.id}"
         is FocusContract.TaskEditorTarget.NewSubtask -> "subtask:$parentTaskId"
     }

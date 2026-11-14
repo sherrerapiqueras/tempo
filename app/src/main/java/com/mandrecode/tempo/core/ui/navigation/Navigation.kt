@@ -18,7 +18,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -93,26 +92,6 @@ sealed interface PendingNotificationAction {
 
 @OptIn(ExperimentalMaterial3Api::class)
 /**
- * The two ways a task's editor is opened from outside the Tasks tab: a notification extra the
- * activity received, and Focus asking in-app. Both travel the same channel rather than Focus
- * getting a second way in, and the in-app request wins while set — a stale notification extra must
- * not shadow the tap the user just made.
- */
-@Stable
-private class TaskEditorRequests {
-    var inApp by mutableStateOf<PendingNotificationAction?>(null)
-        private set
-
-    fun request(taskId: Long) {
-        inApp = PendingNotificationAction.OpenTask(taskId, null)
-    }
-
-    fun consume(onConsumeExternal: () -> Unit) {
-        if (inApp != null) inApp = null else onConsumeExternal()
-    }
-}
-
-/**
  * windowInsetsPadding, not a plain padding(startInset, endInset): it also marks this horizontal
  * inset as consumed for descendants, so NavDisplay/Scaffold don't apply the same safe-drawing inset
  * a second time internally (a plain padding() modifier doesn't consume anything, which doubled this
@@ -120,7 +99,9 @@ private class TaskEditorRequests {
  */
 @Composable
 private fun rememberHorizontalInsetPadding(): Modifier =
-    Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+    Modifier.windowInsetsPadding(
+        WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal),
+    )
 
 /** The session screen always sits on the Focus tab's stack, wherever the user opened it from. */
 private fun TempoNavigator.openSession() {
@@ -140,11 +121,6 @@ fun TempoNavHost(
     onRouteChange: (String) -> Unit = {},
 ) {
     val navigator = rememberTempoNavigator(startDestination)
-    val taskEditorRequests = remember { TaskEditorRequests() }
-    val openTaskInTasks: (Long) -> Unit = { taskId ->
-        taskEditorRequests.request(taskId)
-        navigator.navigateToTopLevel(TasksRoute)
-    }
     var focusFloatingBarState by remember { mutableStateOf(FocusFloatingBarState()) }
     var routinesFloatingBarState by remember { mutableStateOf(RoutinesFloatingBarState()) }
     var tasksFloatingBarState by remember { mutableStateOf(TasksFloatingBarState()) }
@@ -159,21 +135,17 @@ fun TempoNavHost(
     val activeEntries =
         rememberActiveEntries(
             navigator = navigator,
-            pendingNotificationAction = taskEditorRequests.inApp ?: pendingNotificationAction,
-            onConsumePendingNotificationAction = {
-                taskEditorRequests.consume(onConsumePendingNotificationAction)
-            },
+            pendingNotificationAction = pendingNotificationAction,
+            onConsumePendingNotificationAction = onConsumePendingNotificationAction,
             onFocusFloatingBarStateChange = { focusFloatingBarState = it },
             onRoutinesFloatingBarStateChange = { routinesFloatingBarState = it },
             onTasksFloatingBarStateChange = { tasksFloatingBarState = it },
-            onOpenTaskInTasks = openTaskInTasks,
         )
     val insetPaddingModifier = rememberHorizontalInsetPadding()
 
     GlassChromeLayers(
         entries = activeEntries,
         navigator = navigator,
-        onOpenTaskInTasks = openTaskInTasks,
         modifier = modifier,
     ) {
         PersistentFloatingBar(
@@ -201,7 +173,6 @@ fun TempoNavHost(
 private fun GlassChromeLayers(
     entries: List<NavEntry<NavKey>>,
     navigator: TempoNavigator,
-    onOpenTaskInTasks: (Long) -> Unit,
     modifier: Modifier = Modifier,
     chrome: @Composable () -> Unit,
 ) {
@@ -218,7 +189,7 @@ private fun GlassChromeLayers(
                     modifier = insetPaddingModifier,
                 )
 
-                SlideOverlays(navigator = navigator, onOpenTaskInTasks = onOpenTaskInTasks)
+                SlideOverlays(navigator = navigator)
             }
         }
         ProvideGlassBackdrop(glassBackdrop, chrome)
@@ -268,10 +239,7 @@ private fun BoxScope.HorizontalInsetMarginStrips() {
  * so it needs no overlay of its own — only the route to decide when it is showing.
  */
 @Composable
-private fun BoxScope.SlideOverlays(
-    navigator: TempoNavigator,
-    onOpenTaskInTasks: (Long) -> Unit,
-) {
+private fun BoxScope.SlideOverlays(navigator: TempoNavigator) {
     // Computed here rather than passed in: two sibling overlays sharing one caller-supplied
     // modifier trips the "modifiers are used once, by the root layout" rule.
     val insetPadding =
@@ -287,7 +255,7 @@ private fun BoxScope.SlideOverlays(
 
     // On a large window Focus docks the session beside its agenda instead (#502).
     if (navigator.currentRoute == FocusSessionRoute && rememberSheetPlacement() != SheetPlacement.DockedPane) {
-        FocusSessionDestination(navigator = navigator, onOpenTaskInTasks = onOpenTaskInTasks)
+        FocusSessionDestination(navigator = navigator)
     }
 }
 
@@ -316,7 +284,6 @@ private fun rememberActiveEntries(
     onFocusFloatingBarStateChange: (FocusFloatingBarState) -> Unit,
     onRoutinesFloatingBarStateChange: (RoutinesFloatingBarState) -> Unit,
     onTasksFloatingBarStateChange: (TasksFloatingBarState) -> Unit,
-    onOpenTaskInTasks: (Long) -> Unit,
 ): List<NavEntry<NavKey>> {
     val decorators =
         listOf<NavEntryDecorator<NavKey>>(
@@ -331,7 +298,6 @@ private fun rememberActiveEntries(
             onFocusFloatingBarStateChange,
             onRoutinesFloatingBarStateChange,
             onTasksFloatingBarStateChange,
-            onOpenTaskInTasks,
         )
 
     val focusEntries = rememberDecoratedNavEntries(navigator.focusBackStack, decorators, entries)
@@ -360,13 +326,11 @@ private fun rememberNavEntryProvider(
     onFocusFloatingBarStateChange: (FocusFloatingBarState) -> Unit,
     onRoutinesFloatingBarStateChange: (RoutinesFloatingBarState) -> Unit,
     onTasksFloatingBarStateChange: (TasksFloatingBarState) -> Unit,
-    onOpenTaskInTasks: (Long) -> Unit,
 ) = entryProvider<NavKey> {
     entry<FocusRoute>(metadata = mapOf(TOP_LEVEL_ROUTE_METADATA to FocusRoute)) {
         FocusDestination(
             navigator = navigator,
             onFloatingBarStateChange = onFocusFloatingBarStateChange,
-            onOpenTaskInTasks = onOpenTaskInTasks,
         )
     }
     entry<RoutinesRoute>(metadata = mapOf(TOP_LEVEL_ROUTE_METADATA to RoutinesRoute)) {
@@ -397,7 +361,7 @@ private fun rememberNavEntryProvider(
         SettingsDestination(navigator = navigator)
     }
     entry<FocusSessionRoute>(metadata = mapOf(SETTINGS_ROUTE_METADATA to true)) {
-        FocusSessionDestination(navigator = navigator, onOpenTaskInTasks = onOpenTaskInTasks)
+        FocusSessionDestination(navigator = navigator)
     }
 }
 

@@ -9,6 +9,7 @@ import com.mandrecode.tempo.core.data.entity.DEFAULT_INBOX_CATEGORY_ENTITY
 import com.mandrecode.tempo.core.data.entity.HabitChainEntity
 import com.mandrecode.tempo.core.data.entity.HabitChainMemberEntity
 import com.mandrecode.tempo.core.data.local.TempoDatabase
+import com.mandrecode.tempo.core.data.local.dao.SavedSessionDao
 import com.mandrecode.tempo.core.domain.repository.DailyFocusActivityRepository
 import com.mandrecode.tempo.features.backup.data.BackupSettingsDataSource
 import com.mandrecode.tempo.features.backup.data.mapper.toDomain
@@ -29,6 +30,9 @@ import com.mandrecode.tempo.features.backup.domain.model.MergePlan
 import com.mandrecode.tempo.features.backup.domain.repository.BackupRepository
 import com.mandrecode.tempo.features.backup.domain.util.BackupPayloadValidator
 import com.mandrecode.tempo.features.backup.domain.util.MergePlanner
+import com.mandrecode.tempo.features.focus.data.mapper.toDomain
+import com.mandrecode.tempo.features.focus.data.mapper.toEntity
+import com.mandrecode.tempo.features.focus.domain.model.SavedSession
 import com.mandrecode.tempo.features.routines.data.mapper.toDomain
 import com.mandrecode.tempo.features.routines.data.mapper.toEntity
 import com.mandrecode.tempo.features.routines.domain.model.HabitChain
@@ -150,6 +154,7 @@ class BackupRepositoryImpl
                         ChainMembership(chainId = it.chainId, habitId = it.habitId, sortOrder = it.sortOrder)
                     },
                 dailyFocusActivity = dailyFocusActivityRepository.getAll(),
+                focusSessions = database.savedSessionDao().getAllSync().map { it.toDomain() },
             )
 
         /**
@@ -177,11 +182,15 @@ class BackupRepositoryImpl
                 database.taskAttachmentDao().deleteAll()
                 database.categoryDao().deleteAllCategories()
                 database.taskSectionDao().deleteAll()
+                database.savedSessionDao().deleteAll()
 
                 data.categories.forEach { database.categoryDao().insertCategory(it.toEntity()) }
                 val seededInboxCount = ensureDefaultCategory(data.categories)
                 data.sections.forEach { database.taskSectionDao().insertSection(it.toEntity()) }
                 data.tasks.forEach { database.taskDao().insertTask(it.toEntity()) }
+                // Already sanitized by the validator: unique ids, named, and linked only to tasks
+                // this file carries.
+                data.focusSessions.forEach { database.savedSessionDao().insert(it.toEntity()) }
                 data.habits.forEach { database.habitDao().insertHabit(it.toEntity()) }
                 data.habitChains.forEach { database.habitChainDao().insertHabitChain(it.toEntity()) }
                 memberDao.insertMembers(
@@ -252,7 +261,8 @@ class BackupRepositoryImpl
                 plan.sectionAliases.forEach { (alias, canonical) ->
                     sectionIds[canonical]?.let { sectionIds[alias] = it }
                 }
-                insertMergedTasks(plan, categoryIds, sectionIds)
+                val taskIds = insertMergedTasks(plan, categoryIds, sectionIds)
+                database.savedSessionDao().insertMerged(data.focusSessions, taskIds)
                 val habitIds = plan.habitIdMap.toMutableMap()
                 plan.habitsToInsert.forEach { habit ->
                     habitIds[habit.id] = database.habitDao().insertHabit(habit.copy(id = 0).toEntity())
@@ -306,6 +316,25 @@ class BackupRepositoryImpl
             return taskIds
         }
     }
+
+/**
+ * Adds the incoming saved sessions this device does not already have (#517).
+ *
+ * "Already has" is the same name with the same numbers: sessions carry no identity beyond that, and
+ * importing the same file twice must not double the row on Focus. A link follows its task to
+ * wherever the merge put it, and is dropped when the task did not come across.
+ */
+private suspend fun SavedSessionDao.insertMerged(
+    incoming: List<SavedSession>,
+    taskIds: Map<Long, Long>,
+) {
+    val known = getAllSync().map { it.toDomain() }.toMutableList()
+    incoming.forEach { session ->
+        if (known.any { it.hasSameSetupAs(session) }) return@forEach
+        insert(session.copy(id = 0, taskId = session.taskId?.let(taskIds::get)).toEntity())
+        known += session
+    }
+}
 
 /**
  * [BackupRepository.importFromJson] promises local data is untouched whenever it

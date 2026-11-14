@@ -700,8 +700,8 @@
         <item quantity="other">%1$d días de enfoque</item>
     </plurals>
     <plurals name="focus_undated_tasks">
-        <item quantity="one">Ponle fecha a %1$d tarea</item>
-        <item quantity="other">Ponle fecha a %1$d tareas</item>
+        <item quantity="one">Planifica %1$d tarea</item>
+        <item quantity="other">Planifica %1$d tareas</item>
     </plurals>
     <string name="plan_tasks_title">Planifica tus tareas</string>
     <plurals name="plan_tasks_subtitle">
@@ -723,7 +723,6 @@
     <string name="focus_session_finished_title">%1$d minutos completados</string>
     <string name="focus_break_finished_title">Fin del descanso, ¡a seguir!</string>
     <string name="focus_session_start">Empezar %1$s</string>
-    <string name="focus_session_start_custom">Empezar con</string>
     <string name="focus_session_length_decrease">Sesión más corta</string>
     <string name="focus_session_length_increase">Sesión más larga</string>
     <string name="focus_session_pause">Pausar</string>
@@ -751,7 +750,29 @@
     <string name="focus_replace_session_message">%1$s sigue en marcha. Empezar %2$s la termina y solo guarda los minutos que lleva.</string>
     <string name="focus_replace_session_confirm">Empezar igualmente</string>
     <string name="focus_session_not_started">Sin empezar</string>
-    <string name="focus_session_open_in_tasks">Abrir en Tareas</string>
+    <string name="add_session">Añadir sesión</string>
+    <string name="focus_session_round">Ronda %1$d de %2$d</string>
+    <string name="focus_session_rest_length">%1$s de descanso</string>
+    <plurals name="focus_session_rounds">
+        <item quantity="one">%1$d ronda</item>
+        <item quantity="other">%1$d rondas</item>
+    </plurals>
+    <string name="session_editor_title_placeholder">Nombre de la sesión</string>
+    <string name="session_editor_focus_time">Concentración</string>
+    <string name="session_editor_rest_time">Descanso</string>
+    <string name="session_editor_rounds">Rondas</string>
+    <string name="session_editor_rest_decrease">Descanso más corto</string>
+    <string name="session_editor_rest_increase">Descanso más largo</string>
+    <string name="session_editor_rounds_decrease">Menos rondas</string>
+    <string name="session_editor_rounds_increase">Más rondas</string>
+    <string name="session_editor_linked_task">Tarea vinculada</string>
+    <string name="session_editor_link_task">Vincular una tarea</string>
+    <string name="session_editor_unlink_task">Quitar la tarea vinculada</string>
+    <string name="session_linked_task_has_description">Tiene descripción</string>
+    <string name="session_editor_no_tasks">No hay tareas abiertas que vincular</string>
+    <string name="delete_session">Eliminar sesión</string>
+    <string name="delete_session_title">¿Eliminar esta sesión?</string>
+    <string name="delete_session_message">%1$s se quitará de Enfoque. El tiempo que ya le has dedicado se queda en tu historial.</string>
     <plurals name="focus_sessions_done">
         <item quantity="one">%1$d sesión hecha</item>
         <item quantity="other">%1$d sesiones hechas</item>

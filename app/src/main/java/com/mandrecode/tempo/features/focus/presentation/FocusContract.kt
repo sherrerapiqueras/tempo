@@ -4,6 +4,9 @@ import com.mandrecode.tempo.core.domain.model.DailyFocusActivity
 import com.mandrecode.tempo.features.focus.domain.model.FocusAgendaItem
 import com.mandrecode.tempo.features.focus.domain.model.FocusHeadlineBand
 import com.mandrecode.tempo.features.focus.domain.model.FocusSession
+import com.mandrecode.tempo.features.focus.domain.model.SavedSession
+import com.mandrecode.tempo.features.focus.domain.model.SavedSessionEntry
+import com.mandrecode.tempo.features.focus.domain.model.SessionCycle
 import com.mandrecode.tempo.features.focus.domain.model.TaskFocusToday
 import com.mandrecode.tempo.features.tasks.domain.model.Task
 import com.mandrecode.tempo.features.tasks.domain.model.UndatedTask
@@ -38,8 +41,30 @@ object FocusContract {
         val session: FocusSession? = null,
         /** Set when a session has just finished, driving the completion sheet. */
         val finishedSession: FinishedSession? = null,
-        /** The task the last session ran on, so "another session" restarts the same work. */
-        val lastSessionTaskId: Long? = null,
+        /** The session that last ended, so "another session" restarts the same work. */
+        val lastSession: FocusSession? = null,
+        /**
+         * The sessions the user has saved (#517), each with the task it points at. Not part of the
+         * day: they are not tasks, so they never count in [scheduledCount] or [completedCount].
+         */
+        val savedSessions: ImmutableList<SavedSessionEntry> = persistentListOf(),
+        /**
+         * The saved session the session screen is setting up before it runs: its id,
+         * [SavedSession.NEW_ID] for one not saved yet, or `null` for none.
+         */
+        val setupSessionId: Long? = null,
+        /**
+         * The id a new session was given when it was saved and started from the session screen.
+         *
+         * The screen was opened on a session with no id, and the timer it now has to follow carries
+         * this one. Said outright rather than left to be inferred from the setup passing through
+         * that id on its way to nothing: with nothing else running that passage is over before
+         * anything can observe it, and the screen took the session it had just started for a
+         * stranger and closed.
+         */
+        val startedNewSessionId: Long? = null,
+        /** The open tasks a session can be linked to, loaded while one is being set up. */
+        val linkableTasks: ImmutableList<Task> = persistentListOf(),
         /**
          * The task the session screen is showing when no session is running — opened from Up next
          * to look at the work before committing to a timer.
@@ -81,6 +106,20 @@ object FocusContract {
         val isDayEmpty: Boolean get() = overdue.isEmpty() && todayItems.isEmpty()
 
         /**
+         * Whether Focus has nothing at all to show. A day with no tasks still has its saved
+         * sessions, and whatever is counting down — and neither may be hidden behind a message
+         * saying there is nothing here.
+         */
+        val showsEmptyState: Boolean get() = isDayEmpty && savedSessions.isEmpty() && session == null
+
+        /**
+         * The saved sessions offered for starting: all of them but the one already running, which
+         * has the card above.
+         */
+        val startableSessions: List<SavedSessionEntry>
+            get() = savedSessions.filterNot { it.session.id == session?.savedSessionId }
+
+        /**
          * The day's sections without whatever the running session is on.
          *
          * That task already has the card above, counting down. Leaving it in the list as well read
@@ -90,10 +129,55 @@ object FocusContract {
 
         val visibleToday: List<FocusAgendaItem> get() = todayItems.withoutSessionTask()
 
+        /**
+         * Only for a timer started on the task itself. A saved session linked to a task runs under
+         * its own name, so the card above is not that task's, and its row stays where it was.
+         */
         private fun List<FocusAgendaItem>.withoutSessionTask(): List<FocusAgendaItem> {
-            val taskId = session?.taskId ?: return this
+            val taskId = session?.takeIf { it.savedSessionId == null }?.taskId ?: return this
             return filterNot { it is FocusAgendaItem.TaskEntry && it.task.id == taskId }
         }
+
+        /**
+         * What "another session" would run for: the saved session's own length when that is what
+         * would start again, otherwise the length in Settings.
+         */
+        val nextSessionMinutes: Int
+            get() =
+                savedSessions
+                    .firstOrNull { it.session.id == lastSession?.savedSessionId }
+                    ?.session
+                    ?.focusMinutes
+                    ?: defaultSessionLengthMinutes
+
+        /** Whether the running session's card has a task to mark done. See [canComplete]. */
+        val canCompleteRunningTask: Boolean get() = canComplete(session, runningEntry)
+
+        /** The same question for the session screen, which may be showing a previewed task. */
+        val canCompleteScreenTask: Boolean
+            get() = screenSession == null || canComplete(screenSession, sessionEntry)
+
+        /**
+         * A timer on a task always offers finishing it. A saved session offers it only while its
+         * linked task is there and open: linked to none, or to one since ticked off or deleted,
+         * there is nothing for the button to do.
+         */
+        private fun canComplete(
+            session: FocusSession?,
+            entry: FocusAgendaItem.TaskEntry?,
+        ): Boolean =
+            when {
+                session?.taskId == null -> false
+                session.savedSessionId == null -> true
+                else -> entry?.task?.isCompleted == false
+            }
+
+        /**
+         * The Up next shortlist without the task the timer is on, which has the running card. Only
+         * a timer on the task itself stands in for its card; a saved session linked to it does not.
+         */
+        val queuedUpNext: List<FocusAgendaItem.TaskEntry>
+            get() = upNext.filterNot { session?.savedSessionId == null && it.task.id == session?.taskId }
 
         /**
          * The task the session screen is about.
@@ -102,13 +186,46 @@ object FocusContract {
          * is asking for *that* task, and answering with whatever happens to be counting down was
          * the screen refusing to open the thing that was tapped.
          */
-        val sessionTaskId: Long? get() = previewTaskId ?: session?.taskId
+        val sessionTaskId: Long?
+            get() = previewTaskId ?: session?.taskId.takeIf { setupSessionId == null }
+
+        /**
+         * The session being set up on the session screen: a new one, or a saved one with its task.
+         * `null` when none is, or when the one named has since been deleted — which is how the
+         * screen comes to close on it.
+         */
+        val sessionSetup: SessionEditorTarget?
+            get() =
+                when (val id = setupSessionId) {
+                    null -> null
+                    SavedSession.NEW_ID -> SessionEditorTarget()
+                    else ->
+                        savedSessions
+                            .firstOrNull { it.session.id == id }
+                            ?.let { SessionEditorTarget(session = it.session, linkedTask = it.linkedTask) }
+                }
+
+        /**
+         * What the session screen is about, as one value: the previewed task, else the saved
+         * session being set up, else whatever the running session is on. The screen latches this,
+         * and closes when it stops being the subject.
+         */
+        val sessionSubjectKey: String?
+            get() =
+                when {
+                    previewTaskId != null -> FocusSession.subjectKeyOf(taskId = previewTaskId)
+                    // The key a saved session's timer will have once it runs, so the screen opened
+                    // to set it up is still about the same thing after Start.
+                    sessionSetup != null -> FocusSession.subjectKeyOf(taskId = null, savedSessionId = setupSessionId)
+                    setupSessionId != null -> null
+                    else -> session?.subjectKey
+                }
 
         /**
          * The session that screen should count down — none while previewing another task, so the
          * ring stands still on the work you are looking at rather than on the work under way.
          */
-        val screenSession: FocusSession? get() = session?.takeIf { it.taskId == sessionTaskId }
+        val screenSession: FocusSession? get() = session?.takeIf { it.subjectKey == sessionSubjectKey }
 
         /**
          * The entry the session screen is showing: the task being previewed, or the one the running
@@ -127,8 +244,16 @@ object FocusContract {
          */
         val runningEntry: FocusAgendaItem.TaskEntry? get() = entryFor(session?.taskId)
 
+        /**
+         * [taskId]'s entry wherever it can be found, for a task just linked to a session being set
+         * up: it may not be on today, and what it carries still has to be shown once it is chosen.
+         */
+        fun taskEntry(taskId: Long?): FocusAgendaItem.TaskEntry? =
+            entryFor(taskId)
+                ?: linkableTasks.firstOrNull { it.id == taskId }?.let { FocusAgendaItem.TaskEntry(task = it) }
+
         /** The task the last session ran on, for the choices offered once it has ended. */
-        val lastSessionEntry: FocusAgendaItem.TaskEntry? get() = entryFor(lastSessionTaskId)
+        val lastSessionEntry: FocusAgendaItem.TaskEntry? get() = entryFor(lastSession?.taskId)
 
         /**
          * The row is searched too, not only the sections. It normally mirrors them, but this is a
@@ -153,6 +278,11 @@ object FocusContract {
                             )
                         }
                 }
+                // A saved session may be for work that is not on today at all, and its controls
+                // still have to be able to name and finish that work.
+                ?: savedSessions
+                    .firstNotNullOfOrNull { saved -> saved.linkedTask?.takeIf { it.id == taskId } }
+                    ?.let { FocusAgendaItem.TaskEntry(task = it) }
         }
     }
 
@@ -250,17 +380,56 @@ object FocusContract {
 
     /** A start that would replace a running session, waiting to be confirmed. */
     data class PendingStart(
-        val taskId: Long,
-        val taskTitle: String,
+        val taskId: Long?,
+        val title: String,
         val lengthMinutes: Int?,
         val replacingTaskTitle: String,
+        /** Set when it is a saved session waiting to start, rather than a timer on a task. */
+        val savedSessionId: Long? = null,
+        /** The rest and rounds a task run was asked for; one round is a plain session. */
+        val breakMinutes: Int? = null,
+        val rounds: Int = 1,
     )
 
-    /** Why the task editor is open: to add a task, change one, or add a subtask beneath one. */
-    sealed interface TaskEditorTarget {
-        /** A new top-level task, from the floating bar's add button — the same form Tasks opens. */
-        data object NewTask : TaskEditorTarget
+    /**
+     * The session being set up: [session] to change one that exists, `null` for a new one.
+     *
+     * Only the target is state. The draft being typed lives in the sheet, the way the task and
+     * habit editors keep theirs, and comes back whole in [UiEvent.SaveSession].
+     */
+    data class SessionEditorTarget(
+        val session: SavedSession? = null,
+        val linkedTask: Task? = null,
+    ) {
+        val isNew: Boolean get() = session == null
+    }
 
+    /** What the session sheet hands back when it is saved. */
+    data class SessionDraft(
+        /** `0` for a session that does not exist yet. */
+        val id: Long = 0,
+        val title: String,
+        val focusMinutes: Int,
+        val breakMinutes: Int,
+        val rounds: Int,
+        val taskId: Long?,
+    ) {
+        fun toSavedSession(): SavedSession =
+            SavedSession(
+                id = id,
+                title = title,
+                focusMinutes = focusMinutes,
+                breakMinutes = breakMinutes,
+                rounds = rounds,
+                taskId = taskId,
+            )
+    }
+
+    /**
+     * Why the task editor is open: to change a task, or add a subtask beneath one. New top-level
+     * tasks are made in Tasks; what Focus's add button makes is a session (#517).
+     */
+    sealed interface TaskEditorTarget {
         data class Existing(
             val task: Task,
         ) : TaskEditorTarget
@@ -272,12 +441,14 @@ object FocusContract {
 
     /** What the completion sheet reports: plain facts, no score and no streak. */
     data class FinishedSession(
-        val taskTitle: String,
+        val title: String,
         val minutes: Int,
         /** A finished break offers going back to the work, not another break. */
         val wasBreak: Boolean = false,
-        /** What a break would run for, so the offer says the length Settings actually holds. */
+        /** What a break would run for: the saved session's own rest, or the length in Settings. */
         val breakMinutes: Int = 5,
+        /** Whether there is a task to mark done. A session linked to none has nothing to tick. */
+        val hasTask: Boolean = true,
     )
 
     sealed interface UiEvent {
@@ -293,7 +464,29 @@ object FocusContract {
             val task: Task,
         ) : UiEvent
 
-        data object AddTask : UiEvent
+        /** The floating bar's add button: opens the session screen on a new session. */
+        data object AddSession : UiEvent
+
+        /** A saved session's card was tapped: opens the session screen on it, not yet running. */
+        data class EditSession(
+            val sessionId: Long,
+        ) : UiEvent
+
+        /** Saves the sheet's draft and closes it; with [startNow], starts its timer as well. */
+        data class SaveSession(
+            val draft: SessionDraft,
+            val startNow: Boolean = false,
+        ) : UiEvent
+
+        /** Removes a saved session, ending its timer first if it is the one running. */
+        data class DeleteSession(
+            val sessionId: Long,
+        ) : UiEvent
+
+        /** Starts a saved session from its first round. */
+        data class StartSavedSession(
+            val sessionId: Long,
+        ) : UiEvent
 
         data class AddSubtask(
             val parentTaskId: Long,
@@ -350,6 +543,9 @@ object FocusContract {
         data class StartSession(
             val lengthMinutes: Int? = null,
             val taskId: Long? = null,
+            /** With more than one of [rounds], the run rests for this long between them. */
+            val breakMinutes: Int? = null,
+            val rounds: Int = 1,
         ) : UiEvent
 
         data object PauseSession : UiEvent
@@ -367,6 +563,12 @@ object FocusContract {
         ) : UiEvent
 
         data object ClearSessionPreview : UiEvent
+
+        /**
+         * Takes the task off the session screen that was opened on it, leaving a new session with
+         * no task: what the link's cross does when the task is where the session came from.
+         */
+        data object UnlinkPreviewTask : UiEvent
 
         data object OpenSessionScreen : UiEvent
 
@@ -398,3 +600,41 @@ object FocusContract {
         }
     }
 }
+
+/** Pause while running, resume while paused: the one toggle every session surface offers. */
+internal fun FocusSession.pauseResumeEvent(): FocusContract.UiEvent =
+    if (isPaused) FocusContract.UiEvent.ResumeSession else FocusContract.UiEvent.PauseSession
+
+/** The run [this] asks for, held while the user is asked about replacing what is running. */
+internal fun FocusContract.UiEvent.StartSession.toPendingStart(
+    task: Task,
+    replacing: String,
+): FocusContract.PendingStart =
+    FocusContract.PendingStart(
+        taskId = task.id,
+        title = task.title,
+        lengthMinutes = lengthMinutes,
+        replacingTaskTitle = replacing,
+        breakMinutes = breakMinutes,
+        rounds = rounds,
+    )
+
+/** The same start, asked for again once the user has agreed to it. */
+internal fun FocusContract.PendingStart.toStartSession(): FocusContract.UiEvent.StartSession =
+    FocusContract.UiEvent.StartSession(
+        lengthMinutes = lengthMinutes,
+        taskId = taskId,
+        breakMinutes = breakMinutes,
+        rounds = rounds,
+    )
+
+/** The rounds this run was given, or `null` for the single session a task normally gets. */
+internal fun FocusContract.UiEvent.StartSession.cycle(
+    defaultFocusMinutes: Int,
+    defaultBreakMinutes: Int,
+): SessionCycle? =
+    FocusSession.adHocCycle(
+        focusMinutes = lengthMinutes ?: defaultFocusMinutes,
+        breakMinutes = breakMinutes ?: defaultBreakMinutes,
+        rounds = rounds,
+    )

@@ -3,7 +3,8 @@ package com.mandrecode.tempo.core.ui.navigation
 import com.mandrecode.tempo.features.tasks.presentation.model.SortOption
 
 data class FocusFloatingBarState(
-    val onAddTask: () -> Unit = {},
+    /** Focus adds a session, not a task (#517). */
+    val onAddSession: () -> Unit = {},
 )
 
 data class RoutinesFloatingBarState(

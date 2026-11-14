@@ -27,7 +27,7 @@ class FocusSessionViewModelTest : FocusViewModelHarness() {
             viewModel.onEvent(FocusContract.UiEvent.StartSession())
             advanceUntilIdle()
 
-            coVerify { focusSessionUseCases.start(taskId = 9, taskTitle = "Report") }
+            coVerify { focusSessionUseCases.start(taskId = 9, title = "Report") }
         }
 
     @Test
@@ -145,7 +145,7 @@ class FocusSessionViewModelTest : FocusViewModelHarness() {
             runSessionOut()
 
             val finished = viewModel.uiState.value.finishedSession
-            assertThat(finished?.taskTitle).isEqualTo("Report")
+            assertThat(finished?.title).isEqualTo("Report")
             // The planned length, not the elapsed time: an expired session ran its full course.
             assertThat(finished?.minutes).isEqualTo(25)
             assertThat(finished?.wasBreak).isFalse()
@@ -276,7 +276,7 @@ class FocusSessionViewModelTest : FocusViewModelHarness() {
             advanceUntilIdle()
 
             assertThat(viewModel.uiState.value.finishedSession).isNull()
-            coVerify { focusSessionUseCases.start(taskId = any(), taskTitle = any(), isBreak = true) }
+            coVerify { focusSessionUseCases.start(taskId = any(), title = any(), isBreak = true) }
         }
 
     @Test
@@ -428,7 +428,7 @@ class FocusSessionViewModelTest : FocusViewModelHarness() {
             viewModel.onEvent(FocusContract.UiEvent.StartAnotherSession)
             advanceUntilIdle()
 
-            coVerify { focusSessionUseCases.start(taskId = 11, taskTitle = "Report") }
+            coVerify { focusSessionUseCases.start(taskId = 11, title = "Report") }
         }
 
     @Test
@@ -458,7 +458,7 @@ class FocusSessionViewModelTest : FocusViewModelHarness() {
 
             // A break has no minutes to lose, so there is nothing to warn about.
             assertThat(viewModel.uiState.value.pendingStart).isNull()
-            coVerify { focusSessionUseCases.start(taskId = 9, taskTitle = "Report", lengthMinutes = null) }
+            coVerify { focusSessionUseCases.start(taskId = 9, title = "Report", lengthMinutes = null) }
         }
 
     @Test
@@ -502,7 +502,7 @@ class FocusSessionViewModelTest : FocusViewModelHarness() {
             // The length the user picked survives the question — the dialog holds the start, it
             // does not rewrite it.
             assertThat(viewModel.uiState.value.pendingStart).isNull()
-            coVerify { focusSessionUseCases.start(taskId = 9, taskTitle = "Report", lengthMinutes = 45) }
+            coVerify { focusSessionUseCases.start(taskId = 9, title = "Report", lengthMinutes = 45) }
         }
 
     @Test
@@ -531,7 +531,7 @@ class FocusSessionViewModelTest : FocusViewModelHarness() {
             viewModel.onEvent(FocusContract.UiEvent.BackToWork)
             advanceUntilIdle()
 
-            coVerify { focusSessionUseCases.start(taskId = 9, taskTitle = "Report", lengthMinutes = null) }
+            coVerify { focusSessionUseCases.start(taskId = 9, title = "Report", lengthMinutes = null) }
         }
 
     @Test
