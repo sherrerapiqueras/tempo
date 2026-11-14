@@ -53,7 +53,7 @@ internal fun EditorBottomSheetFooter(
     onConfirmClick: () -> Unit,
 ) {
     Column {
-        Spacer(modifier = Modifier.height(if (hasDeleteAction) 20.dp else 40.dp))
+        if (hasDeleteAction) Spacer(modifier = Modifier.height(20.dp))
 
         if (hasDeleteAction) {
             EditorFooterDeleteAction(deleteLabel = deleteLabel, onDelete = onDelete)

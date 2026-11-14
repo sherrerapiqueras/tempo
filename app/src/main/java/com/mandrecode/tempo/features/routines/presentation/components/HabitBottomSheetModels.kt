@@ -55,8 +55,6 @@ internal data class HabitBottomSheetBodyState(
     val isTitleError: Boolean,
     val isHabitInChain: Boolean,
     val formattedReminder: String?,
-    val hasUnsavedChanges: Boolean,
-    val autoSaveEnabled: Boolean,
     val colorScheme: ColorScheme,
     val isDarkTheme: Boolean,
     val vacationPeriods: List<VacationPeriod> = emptyList(),
@@ -77,10 +75,6 @@ internal data class HabitBottomSheetBodyActions(
     val onSetReminderClicked: () -> Unit,
     val onClearReminder: () -> Unit,
     val onToggleHabitCompletion: ((habitId: Long, isCompleted: Boolean) -> Unit)?,
-    val onDeleteHabit: (() -> Unit)?,
-    val onDeleteHabitChain: (() -> Unit)?,
-    val onRequestDismiss: () -> Unit,
-    val onConfirmClick: () -> Unit,
 )
 
 internal data class HabitBottomSheetFocusConfig(

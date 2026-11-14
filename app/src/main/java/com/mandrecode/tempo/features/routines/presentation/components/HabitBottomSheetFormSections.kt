@@ -200,20 +200,6 @@ internal fun HabitBottomSheetBody(
 
             Spacer(modifier = Modifier.height(EDITOR_PROPERTY_ROW_GAP))
         }
-
-        HabitBottomSheetFooter(
-            selectedTab = state.formState.selectedTab,
-            editingHabit = editingHabit != null,
-            editingHabitChain = editingHabitChain != null,
-            selectedHabitIds = state.selectedHabitIds,
-            title = state.title,
-            hasUnsavedChanges = state.hasUnsavedChanges,
-            autoSaveEnabled = state.autoSaveEnabled,
-            onDeleteHabit = actions.onDeleteHabit,
-            onDeleteHabitChain = actions.onDeleteHabitChain,
-            onRequestDismiss = actions.onRequestDismiss,
-            onConfirmClick = actions.onConfirmClick,
-        )
     }
 }
 
