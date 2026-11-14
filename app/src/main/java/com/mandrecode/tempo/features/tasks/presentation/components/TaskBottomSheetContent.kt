@@ -1,10 +1,5 @@
 package com.mandrecode.tempo.features.tasks.presentation.components
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SelectableDates
@@ -24,16 +19,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.core.domain.model.DayOfWeek
 import com.mandrecode.tempo.core.domain.model.MonthDayOption
 import com.mandrecode.tempo.core.domain.model.Periodicity
 import com.mandrecode.tempo.core.domain.model.Priority
 import com.mandrecode.tempo.core.ui.adaptive.SheetPlacement
-import com.mandrecode.tempo.core.ui.adaptive.adaptiveHorizontalMargin
 import com.mandrecode.tempo.core.ui.components.HandleReminderPermissions
 import com.mandrecode.tempo.core.ui.components.TempoTimePickerDialog
 import com.mandrecode.tempo.core.ui.editor.EDITOR_AUTO_SAVE_DEBOUNCE_MS
+import com.mandrecode.tempo.core.ui.editor.EditorSheetLayout
 import com.mandrecode.tempo.core.ui.editor.canAutosaveEditorTitle
 import com.mandrecode.tempo.core.ui.editor.editorSaveableKey
 import com.mandrecode.tempo.core.ui.editor.rememberEditorAutosaveController
@@ -353,13 +347,29 @@ internal fun TaskBottomSheetContent(
     ) { onRequestDismiss ->
         TaskEditorBackHandler(focusState = editorFocusState)
         val focusManager = LocalFocusManager.current
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = adaptiveHorizontalMargin())
-                    .padding(top = 8.dp, bottom = 32.dp),
+        val onFooterConfirm: () -> Unit = {
+            isTitleError = taskTitle.isBlank()
+            if (!isTitleError) {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onConfirm(
+                    taskTitle,
+                    descriptionState.value.text,
+                    selectedCategoryId,
+                )
+            }
+        }
+        EditorSheetLayout(
+            pinFooter = !(isEditingTask && onDelete != null),
+            footer = {
+                TaskBottomSheetFooter(
+                    isEditingTask = isEditingTask,
+                    taskTitle = taskTitle,
+                    autoSaveEnabled = autoSaveEnabled,
+                    onDelete = onDelete,
+                    onRequestDismiss = onRequestDismiss,
+                    onConfirmClick = onFooterConfirm,
+                )
+            },
         ) {
             TaskBottomSheetBody(
                 descriptionState = descriptionState,
@@ -417,17 +427,7 @@ internal fun TaskBottomSheetContent(
                         onRequestDismiss = onRequestDismiss,
                         onDelete = onDelete,
                         onToggleCompletion = onToggleCompletion,
-                        onConfirmClick = {
-                            isTitleError = taskTitle.isBlank()
-                            if (!isTitleError) {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onConfirm(
-                                    taskTitle,
-                                    descriptionState.value.text,
-                                    selectedCategoryId,
-                                )
-                            }
-                        },
+                        onConfirmClick = onFooterConfirm,
                         attachmentActions = attachmentActions,
                         onSelectSection = onSelectSection,
                         onSetPeriodicityEndDate = onSetPeriodicityEndDate,
