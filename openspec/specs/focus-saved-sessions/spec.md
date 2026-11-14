@@ -180,7 +180,7 @@ Activating the linked task SHALL open that task's own sheet over the session she
 - **THEN** the task's sheet opens over it, and closing it returns to the session sheet
 
 ### Requirement: The session sheet is laid out as the app's other sheets are
-The session sheet SHALL start-align its title, with the session's status beneath it, and show the countdown beside the title inside a filled expressive shape with the time left traced round its edge, using a different shape while resting. The linked task SHALL be a row among the sheet's other rows, shown as a chip carrying the task's name and, beneath it, its category, priority and due day and time. The sheet SHALL NOT write out the linked task's description; the chip SHALL mark that the task has one. The sheet SHALL be as tall as its content up to the full height.
+The session sheet SHALL start-align its title, with the session's status beneath it, and show the countdown beside the title inside a filled expressive shape with the time left traced round its edge, using a different shape while resting. The linked task SHALL be a row among the sheet's other rows, shown as a chip carrying the task's name and, beneath it, its category, priority and due day and time. The sheet SHALL be as tall as its content up to the full height.
 
 #### Scenario: Short session
 - **WHEN** a session with no task is opened
@@ -189,3 +189,18 @@ The session sheet SHALL start-align its title, with the session's status beneath
 #### Scenario: Resting
 - **WHEN** a session is in its rest
 - **THEN** the timer's shape differs from the one shown while focusing
+
+### Requirement: A linked task's description is marked, not shown
+The session sheet SHALL NOT write out the linked task's description. When the linked task has a description, its chip SHALL carry a mark saying so, the same before and after the session starts; the description is read in the task's own sheet.
+
+#### Scenario: Task with a description
+- **WHEN** a session is linked to a task that has a description
+- **THEN** the chip shows the mark and the description's text appears nowhere on the session sheet
+
+#### Scenario: Task without one
+- **WHEN** the linked task has no description
+- **THEN** the chip shows no such mark
+
+#### Scenario: Starting
+- **WHEN** the session starts
+- **THEN** nothing about the task's description appears or disappears
