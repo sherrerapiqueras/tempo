@@ -359,7 +359,8 @@ internal fun TaskBottomSheetContent(
             }
         }
         EditorSheetLayout(
-            pinFooter = !(isEditingTask && onDelete != null),
+            pinFooter = !isEditingTask,
+            placement = placement,
             footer = {
                 TaskBottomSheetFooter(
                     isEditingTask = isEditingTask,
@@ -383,8 +384,6 @@ internal fun TaskBottomSheetContent(
                         selectedCategoryId = selectedCategoryId,
                         formattedReminder = formattedReminder,
                         isTitleError = isTitleError,
-                        autoSaveEnabled = autoSaveEnabled,
-                        isEditingTask = isEditingTask,
                         isPriorityReadOnly = isPriorityReadOnly,
                         sections = sectionsByCategory[selectedCategoryId].orEmpty(),
                     ),
@@ -424,10 +423,7 @@ internal fun TaskBottomSheetContent(
                         onSetPeriodicityInterval = onSetPeriodicityInterval,
                         onSetRepeatDays = onSetRepeatDays,
                         onSetMonthDayOption = onSetMonthDayOption,
-                        onRequestDismiss = onRequestDismiss,
-                        onDelete = onDelete,
                         onToggleCompletion = onToggleCompletion,
-                        onConfirmClick = onFooterConfirm,
                         attachmentActions = attachmentActions,
                         onSelectSection = onSelectSection,
                         onSetPeriodicityEndDate = onSetPeriodicityEndDate,

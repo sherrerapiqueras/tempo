@@ -507,13 +507,9 @@ internal fun HabitBottomSheetContent(
                 }
             }
         }
-        val hasDeleteAction =
-            when (formState.selectedTab) {
-                HabitSheetTab.HABIT -> formState.editingHabit != null && onDeleteHabit != null
-                HabitSheetTab.HABIT_CHAIN -> formState.editingHabitChain != null && onDeleteHabitChain != null
-            }
         EditorSheetLayout(
-            pinFooter = !hasDeleteAction,
+            pinFooter = formState.editingHabit == null && formState.editingHabitChain == null,
+            placement = placement,
             footer = {
                 HabitBottomSheetFooter(
                     selectedTab = formState.selectedTab,
@@ -542,8 +538,6 @@ internal fun HabitBottomSheetContent(
                         isTitleError = isTitleError,
                         isHabitInChain = isHabitInChain,
                         formattedReminder = formattedReminder,
-                        hasUnsavedChanges = hasUnsavedChanges,
-                        autoSaveEnabled = autoSaveEnabled,
                         colorScheme = colorScheme,
                         isDarkTheme = isDarkTheme,
                         vacationPeriods = vacationPeriods,
@@ -577,10 +571,6 @@ internal fun HabitBottomSheetContent(
                         onSetReminderClicked = onSetReminderClicked,
                         onClearReminder = onClearReminder,
                         onToggleHabitCompletion = onToggleHabitCompletion,
-                        onDeleteHabit = onDeleteHabit,
-                        onDeleteHabitChain = onDeleteHabitChain,
-                        onRequestDismiss = onRequestDismiss,
-                        onConfirmClick = onFooterConfirm,
                     ),
                 focusConfig =
                     HabitBottomSheetFocusConfig(
