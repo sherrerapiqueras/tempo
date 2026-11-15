@@ -4,6 +4,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsEqualTo
@@ -677,6 +680,8 @@ class HabitBottomSheetTest {
         }
     }
 
+    private fun SemanticsNode.unclippedBoundsInRoot(): Rect = Rect(positionInRoot, Size(size.width.toFloat(), size.height.toFloat()))
+
     private fun assertHabitSelectorVerticalAlignment(
         selectorTestTag: String,
         maxDifferenceDp: Float,
@@ -688,11 +693,16 @@ class HabitBottomSheetTest {
             composeTestRule
                 .onAllNodesWithTag(selectorTestTag, useUnmergedTree = true)[0]
 
+        // The footer is pinned, so on a short window the form's visible area can end above these rows.
+        iconNode.performScrollTo()
+        selectorNode.performScrollTo()
         iconNode.assertIsDisplayed()
         selectorNode.assertIsDisplayed()
 
-        val iconBounds = iconNode.fetchSemanticsNode().boundsInRoot
-        val selectorBounds = selectorNode.fetchSemanticsNode().boundsInRoot
+        // Unclipped layout bounds: `boundsInRoot` is cut by the form's viewport, which the pinned
+        // footer can leave shorter than the row.
+        val iconBounds = iconNode.fetchSemanticsNode().unclippedBoundsInRoot()
+        val selectorBounds = selectorNode.fetchSemanticsNode().unclippedBoundsInRoot()
         val iconCenterY = (iconBounds.top + iconBounds.bottom) / 2f
         val selectorCenterY = (selectorBounds.top + selectorBounds.bottom) / 2f
         val density =
@@ -722,6 +732,10 @@ class HabitBottomSheetTest {
         renderNewHabitChainSheet(habits = emptyList())
         val targetContext = InstrumentationRegistry.getInstrumentation().targetContext
 
+        // The footer is pinned, so on a short window the form's visible area can end above this row.
+        composeTestRule
+            .onNodeWithContentDescription(selectHabits, useUnmergedTree = true)
+            .performScrollTo()
         val icon =
             composeTestRule
                 .onNodeWithContentDescription(selectHabits, useUnmergedTree = true)
