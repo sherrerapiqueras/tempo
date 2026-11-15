@@ -432,4 +432,47 @@ class MigrationTest {
                 }
             }
     }
+
+    @Test
+    fun migrate13To14_addsEmptyFocusSessionsAndLeavesTasksAlone() {
+        helper.createDatabase(DB_NAME, 13).use { db ->
+            db.execSQL(
+                "INSERT INTO categories (id, name, color, icon, isDefault, sortOrder, sectionsEnabled) " +
+                    "VALUES (-1, 'Inbox', NULL, 'inbox', 1, -1, 0)",
+            )
+            db.execSQL(
+                """
+                INSERT INTO tasks (id, title, description, isCompleted, categoryId, priority,
+                    periodicity, parentTaskId, sortOrder, periodicityInterval)
+                VALUES (1, 'Read chapter 3', 'desc', 0, -1, NULL, NULL, NULL, 0, 1)
+                """.trimIndent(),
+            )
+        }
+
+        helper
+            .runMigrationsAndValidate(
+                DB_NAME,
+                14,
+                true,
+                TempoDatabase.MIGRATION_13_14,
+            ).use { db ->
+                db.query("SELECT COUNT(*) FROM focus_sessions").use { cursor ->
+                    assertThat(cursor.moveToFirst()).isTrue()
+                    assertThat(cursor.getInt(0)).isEqualTo(0)
+                }
+                // A recent session can be stored beside the tasks that were there before the table was.
+                db.execSQL(
+                    "INSERT INTO focus_sessions (title, focusMinutes, breakMinutes, rounds, lastUsedAt) " +
+                        "VALUES ('Study', 25, 5, 4, 1700000000000)",
+                )
+                db.query("SELECT lastUsedAt FROM focus_sessions").use { cursor ->
+                    assertThat(cursor.moveToFirst()).isTrue()
+                    assertThat(cursor.getLong(0)).isEqualTo(1_700_000_000_000)
+                }
+                db.query("SELECT title FROM tasks WHERE id = 1").use { cursor ->
+                    assertThat(cursor.moveToFirst()).isTrue()
+                    assertThat(cursor.getString(0)).isEqualTo("Read chapter 3")
+                }
+            }
+    }
 }

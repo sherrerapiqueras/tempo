@@ -7,6 +7,7 @@ import com.mandrecode.tempo.core.data.entity.CategoryEntity
 import com.mandrecode.tempo.core.data.entity.HabitChainEntity
 import com.mandrecode.tempo.core.data.entity.HabitChainMemberEntity
 import com.mandrecode.tempo.core.data.entity.HabitEntity
+import com.mandrecode.tempo.core.data.entity.SavedSessionEntity
 import com.mandrecode.tempo.core.data.entity.TaskEntity
 import com.mandrecode.tempo.core.data.entity.TaskSectionEntity
 import com.mandrecode.tempo.core.data.local.TempoDatabase
@@ -14,6 +15,7 @@ import com.mandrecode.tempo.core.data.local.dao.CategoryDao
 import com.mandrecode.tempo.core.data.local.dao.HabitChainDao
 import com.mandrecode.tempo.core.data.local.dao.HabitChainMemberDao
 import com.mandrecode.tempo.core.data.local.dao.HabitDao
+import com.mandrecode.tempo.core.data.local.dao.SavedSessionDao
 import com.mandrecode.tempo.core.data.local.dao.TaskDao
 import com.mandrecode.tempo.core.data.local.dao.TaskSectionDao
 import com.mandrecode.tempo.core.domain.model.DayOfWeek
@@ -28,6 +30,7 @@ import com.mandrecode.tempo.features.backup.domain.model.ImportMode
 import com.mandrecode.tempo.features.backup.domain.model.ImportOutcome
 import com.mandrecode.tempo.features.backup.domain.util.BackupPayloadValidator
 import com.mandrecode.tempo.features.backup.domain.util.MergePlanner
+import com.mandrecode.tempo.features.focus.domain.model.SavedSession
 import com.mandrecode.tempo.infrastructure.security.BackupEncryptionService
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -50,6 +53,7 @@ class BackupRepositoryImplTest {
     private lateinit var habitChainDao: HabitChainDao
     private lateinit var memberDao: HabitChainMemberDao
     private lateinit var sectionDao: TaskSectionDao
+    private lateinit var savedSessionDao: SavedSessionDao
     private lateinit var database: TempoDatabase
     private lateinit var context: Context
     private lateinit var settingsDataSource: BackupSettingsDataSource
@@ -65,6 +69,8 @@ class BackupRepositoryImplTest {
         memberDao = mockk(relaxed = true)
         sectionDao = mockk(relaxed = true)
         coEvery { sectionDao.getAllSectionsSync() } returns emptyList()
+        savedSessionDao = mockk(relaxed = true)
+        coEvery { savedSessionDao.getAllSync() } returns emptyList()
         context = mockk(relaxed = true)
         every { context.getString(any()) } returns "Inbox"
         settingsDataSource = mockk(relaxed = true)
@@ -76,6 +82,7 @@ class BackupRepositoryImplTest {
         every { database.habitChainDao() } returns habitChainDao
         every { database.habitChainMemberDao() } returns memberDao
         every { database.taskSectionDao() } returns sectionDao
+        every { database.savedSessionDao() } returns savedSessionDao
         mockkStatic("androidx.room.RoomDatabaseKt")
         @Suppress("UNCHECKED_CAST")
         coEvery { database.withTransaction(any<suspend () -> Any?>()) } coAnswers {
@@ -577,4 +584,69 @@ class BackupRepositoryImplTest {
         checkNotNull(javaClass.getResourceAsStream(path)) { "Missing fixture $path" }
             .bufferedReader()
             .use { it.readText() }
+
+    private val study =
+        SavedSessionEntity(
+            id = 3,
+            title = "Study",
+            focusMinutes = 50,
+            breakMinutes = 10,
+            rounds = 4,
+            lastUsedAt = 2_000,
+        )
+    private val reading =
+        SavedSessionEntity(
+            id = 5,
+            title = "Read",
+            focusMinutes = 25,
+            breakMinutes = 5,
+            lastUsedAt = 1_000,
+        )
+
+    @Test
+    fun `export then replace-import restores recent sessions with their ids, keeping only the recent few`() =
+        runTest {
+            stubLocalData()
+            coEvery { savedSessionDao.getAllSync() } returns listOf(study, reading)
+            val json = repository.exportEncrypted(testPassphrase)
+            val inserted = mutableListOf<SavedSessionEntity>()
+            coEvery { savedSessionDao.insert(capture(inserted)) } returns 0
+
+            val outcome = repository.importFromJson(json, ImportMode.REPLACE, testPassphrase)
+
+            assertThat(outcome).isInstanceOf(ImportOutcome.Success::class.java)
+            coVerify { savedSessionDao.deleteAll() }
+            assertThat(inserted).containsExactly(study, reading).inOrder()
+            coVerify { savedSessionDao.trimTo(SavedSession.RECENT_LIMIT) }
+        }
+
+    @Test
+    fun `merging an export of the same data adds no recent session twice`() =
+        runTest {
+            stubLocalData()
+            coEvery { savedSessionDao.getAllSync() } returns listOf(study, reading)
+            val json = repository.exportEncrypted(testPassphrase)
+
+            repository.importFromJson(json, ImportMode.MERGE, testPassphrase)
+
+            coVerify(exactly = 0) { savedSessionDao.insert(any()) }
+        }
+
+    @Test
+    fun `merging adds the topics this device lacks, once by name, then trims to the recent few`() =
+        runTest {
+            stubLocalData()
+            coEvery { savedSessionDao.getAllSync() } returns
+                listOf(study, study.copy(id = 9, title = "study"), reading)
+            val json = repository.exportEncrypted(testPassphrase)
+            coEvery { savedSessionDao.getAllSync() } returns listOf(reading)
+            val inserted = mutableListOf<SavedSessionEntity>()
+            coEvery { savedSessionDao.insert(capture(inserted)) } returns 0
+
+            repository.importFromJson(json, ImportMode.MERGE, testPassphrase)
+
+            // "study" is the same topic as "Study", so the second copy is not added again.
+            assertThat(inserted).containsExactly(study.copy(id = 0))
+            coVerify { savedSessionDao.trimTo(SavedSession.RECENT_LIMIT) }
+        }
 }

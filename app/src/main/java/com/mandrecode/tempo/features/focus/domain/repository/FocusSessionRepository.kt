@@ -1,6 +1,7 @@
 package com.mandrecode.tempo.features.focus.domain.repository
 
 import com.mandrecode.tempo.features.focus.domain.model.FocusSession
+import com.mandrecode.tempo.features.focus.domain.model.SavedSession
 import com.mandrecode.tempo.features.focus.domain.model.TaskFocusToday
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.datetime.LocalDate
@@ -30,6 +31,15 @@ interface FocusSessionRepository {
      * only: unlike a session, an unstarted preview is not worth surviving the process.
      */
     val previewTaskId: StateFlow<Long?>
+
+    /**
+     * The saved session the session screen is setting up before it runs: its id,
+     * [SavedSession.NEW_ID] for one not saved yet, or `null` for none (#517).
+     *
+     * Beside [previewTaskId] for the same reason, and never set together with it: the screen is
+     * about one thing. Setting either clears the other, and clearing the preview clears both.
+     */
+    val setupSessionId: StateFlow<Long?>
 
     /**
      * What each task has had out of today, by task id.
@@ -76,4 +86,6 @@ interface FocusSessionRepository {
     fun setBreakLengthMinutes(minutes: Int)
 
     fun setPreviewTaskId(taskId: Long?)
+
+    fun setSetupSessionId(sessionId: Long?)
 }

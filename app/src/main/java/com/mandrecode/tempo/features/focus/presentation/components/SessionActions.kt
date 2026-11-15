@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
 import com.mandrecode.tempo.core.ui.util.rememberPressableButtonAnimation
 import com.mandrecode.tempo.features.focus.domain.model.FocusSession
+import com.mandrecode.tempo.features.focus.domain.model.SessionCycle
 import com.mandrecode.tempo.features.focus.domain.model.TaskFocusToday
 
 /**
@@ -68,6 +69,14 @@ internal data class SessionActionColors(
     val discardBorder: Color,
     val quietContent: Color,
     val quietBorder: Color,
+)
+
+/** What a [SessionDial] is painted in, so it can sit on the sheet and on the card alike. */
+internal data class SessionDialColors(
+    val fill: Color,
+    val content: Color,
+    val progress: Color,
+    val track: Color,
 )
 
 @Composable
@@ -124,10 +133,18 @@ private const val MINUTES_PER_HOUR = 60
 internal fun sessionStatusLine(
     statusRes: Int,
     focusToday: TaskFocusToday,
+    cycle: SessionCycle? = null,
 ): String {
     val status = stringResource(statusRes)
-    val soFar = focusToday.soFarTodayLabel() ?: return status
-    return "$status · $soFar"
+    // A session that repeats says where in its rounds it is — the one thing its countdown cannot.
+    // That outranks the day's tally, which belongs to the task and reads on the task's own card.
+    val detail =
+        cycle
+            ?.takeIf { it.hasRounds }
+            ?.let { stringResource(R.string.focus_session_round, it.round, it.totalRounds) }
+            ?: focusToday.soFarTodayLabel()
+            ?: return status
+    return "$status · $detail"
 }
 
 /**
@@ -153,10 +170,18 @@ internal data class SessionAction(
 @Composable
 internal fun runningGroupActions(
     session: FocusSession,
-    onComplete: () -> Unit,
+    /** `null` when the session is linked to no task: there is then nothing to mark done (#517). */
+    onComplete: (() -> Unit)?,
     onPauseResume: () -> Unit,
     onBackToWork: () -> Unit,
 ): List<SessionAction> {
+    val doneLabel = stringResource(R.string.focus_session_mark_done)
+    val doneGlyph = doneIcon()
+    val markDone: (ButtonEmphasis) -> SessionAction? = { emphasis ->
+        onComplete?.let {
+            SessionAction(label = doneLabel, icon = doneGlyph, emphasis = emphasis, onClick = it)
+        }
+    }
     val pause =
         SessionAction(
             label =
@@ -173,31 +198,18 @@ internal fun runningGroupActions(
     // the work is done. Stopping the break said nothing about the task and left it exactly as it
     // was, which is why "Stop here" read as doing nothing here.
     if (session.isBreak) {
-        return listOf(
+        return listOfNotNull(
             SessionAction(
                 label = stringResource(R.string.focus_session_back_to_it),
                 icon = painterResource(R.drawable.ic_play_arrow),
                 emphasis = ButtonEmphasis.FILLED,
                 onClick = onBackToWork,
             ),
-            SessionAction(
-                label = stringResource(R.string.focus_session_mark_done),
-                icon = doneIcon(),
-                emphasis = ButtonEmphasis.TONAL,
-                onClick = onComplete,
-            ),
+            markDone(ButtonEmphasis.TONAL),
         )
     }
 
-    return listOf(
-        SessionAction(
-            label = stringResource(R.string.focus_session_mark_done),
-            icon = doneIcon(),
-            emphasis = ButtonEmphasis.FILLED,
-            onClick = onComplete,
-        ),
-        pause,
-    )
+    return listOfNotNull(markDone(ButtonEmphasis.FILLED), pause)
 }
 
 @Composable

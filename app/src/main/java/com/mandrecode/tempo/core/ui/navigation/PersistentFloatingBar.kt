@@ -336,8 +336,8 @@ internal fun <T : Any> rememberLastNonNull(value: T?): T? {
 }
 
 /**
- * The primary add action for the active tab, or `null` for a tab that has none. Focus adds a task,
- * through the same form Tasks opens, since tasks are what Focus is made of (#434).
+ * The primary add action for the active tab, or `null` for a tab that has none. Focus adds a
+ * session — a timer with a name, which is the one thing made on Focus rather than in Tasks (#517).
  */
 @Composable
 internal fun rememberAddAction(
@@ -349,8 +349,8 @@ internal fun rememberAddAction(
     when (topLevelRoute) {
         FocusRoute ->
             AddAction(
-                label = stringResource(R.string.add_task),
-                onClick = focusState.onAddTask,
+                label = stringResource(R.string.add_session),
+                onClick = focusState.onAddSession,
             )
 
         TasksRoute ->
