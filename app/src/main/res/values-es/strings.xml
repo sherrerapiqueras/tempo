@@ -269,6 +269,7 @@
     <string name="msg_task_updated_past_reminder">Tarea actualizada. El recordatorio está en el pasado y no se activará</string>
     <string name="msg_task_updated_failed_scheduling">Tarea actualizada, pero la programación del recordatorio falló</string>
     <string name="msg_task_add_failed">Error al añadir la tarea: %1$s</string>
+    <string name="msg_task_no_category">No se puede añadir la tarea: no hay ninguna categoría donde guardarla.</string>
     <string name="msg_task_update_failed">Error al actualizar la tarea: %1$s</string>
     <string name="msg_task_reorder_failed">Error al reordenar tareas: %1$s</string>
     <string name="msg_category_name_empty">El nombre de la categoría no puede estar vacío.</string>

@@ -1,7 +1,7 @@
 package com.mandrecode.tempo.core.data.local
 
-import android.content.ContentValues
 import android.content.Context
+import android.util.Log
 import androidx.annotation.VisibleForTesting
 import androidx.room.Database
 import androidx.room.Room
@@ -9,9 +9,11 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.mandrecode.tempo.BuildConfig
 import com.mandrecode.tempo.R
 import com.mandrecode.tempo.core.data.entity.CategoryEntity
 import com.mandrecode.tempo.core.data.entity.Converters
+import com.mandrecode.tempo.core.data.entity.DEFAULT_INBOX_CATEGORY_ENTITY
 import com.mandrecode.tempo.core.data.entity.DailyFocusActivityEntity
 import com.mandrecode.tempo.core.data.entity.HabitChainEntity
 import com.mandrecode.tempo.core.data.entity.HabitChainMemberEntity
@@ -384,30 +386,106 @@ abstract class TempoDatabase : RoomDatabase() {
                     // therefore always open with CURRENT, unconditionally, below.
                     migrator.migrateIfNeeded(DATABASE_NAME, passphrase)
                     val instance =
-                        Room
-                            .databaseBuilder(
-                                appContext,
-                                TempoDatabase::class.java,
-                                DATABASE_NAME,
-                            ).openHelperFactory(
-                                SupportOpenHelperFactory(
-                                    passphrase,
-                                    SqlCipherKdfIter.hookFor(SqlCipherKdfIter.CURRENT),
-                                    false,
+                        configure(
+                            Room
+                                .databaseBuilder(
+                                    appContext,
+                                    TempoDatabase::class.java,
+                                    DATABASE_NAME,
+                                ).openHelperFactory(
+                                    SupportOpenHelperFactory(
+                                        passphrase,
+                                        SqlCipherKdfIter.hookFor(SqlCipherKdfIter.CURRENT),
+                                        false,
+                                    ),
                                 ),
-                            ).addMigrations(*MIGRATIONS)
-                            .addCallback(inboxCallback(appContext))
-                            .addCallback(OrphanedAttachmentRowsCallback)
-                            .fallbackToDestructiveMigration(false)
-                            .build()
+                            appContext,
+                            allowDestructiveDowngrade = BuildConfig.DEBUG,
+                        ).build()
                     INSTANCE = instance
                     instance
                 }
             }
 
         /**
-         * Seeds the default Inbox category on fresh installs. After creation, the
-         * category name is user-owned data and must not be rewritten on database open.
+         * Everything about how the database opens except where it lives and how it is keyed:
+         * migrations, the callbacks, and what happens when the file's schema version does not match
+         * the build. The app and the instrumented tests both build through here, so the tests run
+         * the configuration that ships.
+         *
+         * A downgrade (the file is newer than this build) or an upgrade with no migration path
+         * makes Room throw and leaves the file untouched. The one exception is
+         * [allowDestructiveDowngrade], which the app turns on for debug builds only: switching
+         * between branches with different schema versions on one device is a normal workflow
+         * there, and the data is disposable. It drops *every* table, not just the ones this
+         * schema knows, so tables only a newer schema has do not survive with stale rows. A
+         * release build never wipes — a silent wipe cannot be undone, a failed open can (install
+         * the matching version) — and no build wipes for a missing upgrade path, which is a
+         * forgotten migration that should crash in development.
+         */
+        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+        internal fun configure(
+            builder: RoomDatabase.Builder<TempoDatabase>,
+            context: Context,
+            allowDestructiveDowngrade: Boolean,
+        ): RoomDatabase.Builder<TempoDatabase> =
+            builder
+                .addMigrations(*MIGRATIONS)
+                .addCallback(inboxCallback(context))
+                .addCallback(OrphanedAttachmentRowsCallback)
+                .addCallback(DestructiveMigrationWarningCallback)
+                .apply {
+                    if (allowDestructiveDowngrade) {
+                        fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
+                    }
+                }
+
+        /**
+         * Drops attachment rows whose task no longer exists, every time the database opens.
+         *
+         * Task deletion keeps attachment rows so that Undo can bring them back (#380); once the
+         * process that offered the Undo is gone, nothing can. Doing it here rather than in a
+         * background sweep matters: Room runs onOpen before any query reaches the database, so no
+         * deletion made in this process — and no Undo window — can exist yet.
+         */
+        @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+        internal val OrphanedAttachmentRowsCallback =
+            object : RoomDatabase.Callback() {
+                override fun onOpen(db: SupportSQLiteDatabase) {
+                    db.execSQL("DELETE FROM task_attachments WHERE taskId NOT IN (SELECT id FROM tasks)")
+                }
+            }
+
+        /**
+         * Says so in the log when Room resets the database. Only a debug build configured by
+         * [configure] with `allowDestructiveDowngrade` can get here, and a reset that nobody
+         * notices is how the missing Inbox went unexplained.
+         *
+         * This cannot restore anything itself: Room calls it after dropping the tables and before
+         * recreating them, so there is no `categories` table to write to yet. The default category
+         * comes back through [inboxCallback]'s `onOpen`, which always runs afterwards.
+         */
+        private val DestructiveMigrationWarningCallback =
+            object : RoomDatabase.Callback() {
+                override fun onDestructiveMigration(db: SupportSQLiteDatabase) {
+                    Log.w(
+                        LOG_TAG,
+                        "The database schema did not match this build: every table was dropped and recreated empty.",
+                    )
+                }
+            }
+
+        /**
+         * Keeps a default category in the database, and records a new file's [SqlCipherKdfIter]
+         * marker.
+         *
+         * [onOpen][RoomDatabase.Callback.onOpen] runs after every way a database can come up: a
+         * fresh file (after `onCreate`), a migration, and a destructive reset, which does *not* call
+         * `onCreate`. Seeding there, instead of only in `onCreate`, is what keeps a reset database
+         * from having no categories at all. The insert is conditional on there being no default
+         * category: with one present it writes nothing, so a user's rename is never overwritten, and
+         * a user who made another category the default and deleted the Inbox does not get it back as
+         * a second default. The localized name is only used when a row is actually created.
          *
          * `onCreate` only fires when Room itself creates the underlying file (i.e. a genuine
          * fresh install with no prior database) — the migrator's export/re-key paths always
@@ -417,36 +495,29 @@ abstract class TempoDatabase : RoomDatabase() {
          * sees this file on its *next* launch, once it already exists.
          */
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-        /**
-         * Drops attachment rows whose task no longer exists, every time the database opens.
-         *
-         * Task deletion keeps attachment rows so that Undo can bring them back (#380); once the
-         * process that offered the Undo is gone, nothing can. Doing it here rather than in a
-         * background sweep matters: Room runs onOpen before any query reaches the database, so no
-         * deletion made in this process — and no Undo window — can exist yet.
-         */
-        internal val OrphanedAttachmentRowsCallback =
-            object : RoomDatabase.Callback() {
-                override fun onOpen(db: SupportSQLiteDatabase) {
-                    db.execSQL("DELETE FROM task_attachments WHERE taskId NOT IN (SELECT id FROM tasks)")
-                }
-            }
-
         internal fun inboxCallback(context: Context) =
             object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     DbKdfIterMarker.write(context, SqlCipherKdfIter.CURRENT)
-                    val localizedName = context.getString(R.string.category_inbox)
-                    val values =
-                        ContentValues().apply {
-                            put("id", -1L)
-                            put("name", localizedName)
-                            put("icon", "inbox")
-                            put("isDefault", 1)
-                            put("sortOrder", -1)
-                        }
-                    db.insert("categories", android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE, values)
+                }
+
+                override fun onOpen(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        """
+                        INSERT OR IGNORE INTO categories (id, name, icon, isDefault, sortOrder)
+                        SELECT ?, ?, ?, 1, ?
+                        WHERE NOT EXISTS (SELECT 1 FROM categories WHERE isDefault = 1)
+                        """.trimIndent(),
+                        arrayOf<Any?>(
+                            DEFAULT_INBOX_CATEGORY_ENTITY.id,
+                            context.getString(R.string.category_inbox),
+                            DEFAULT_INBOX_CATEGORY_ENTITY.icon,
+                            DEFAULT_INBOX_CATEGORY_ENTITY.sortOrder,
+                        ),
+                    )
                 }
             }
+
+        private const val LOG_TAG = "TempoDatabase"
     }
 }

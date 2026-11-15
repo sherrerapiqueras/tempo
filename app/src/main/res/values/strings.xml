@@ -251,6 +251,7 @@
     <string name="msg_task_updated_past_reminder">Task updated. Reminder is in the past and won\'t fire</string>
     <string name="msg_task_updated_failed_scheduling">Task updated, but reminder scheduling failed</string>
     <string name="msg_task_add_failed">Failed to add task: %1$s</string>
+    <string name="msg_task_no_category">Task not added: there is no category to put it in.</string>
     <string name="msg_task_update_failed">Failed to update task: %1$s</string>
     <string name="msg_task_reorder_failed">Failed to reorder tasks: %1$s</string>
     <string name="msg_category_name_empty">Category name cannot be empty.</string>

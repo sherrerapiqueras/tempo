@@ -36,6 +36,7 @@ import com.mandrecode.tempo.core.ui.util.DebouncedSnapshotEffect
 import com.mandrecode.tempo.core.ui.util.DescriptionEditorState
 import com.mandrecode.tempo.core.ui.util.IncrementalLinkVisualTransformation
 import com.mandrecode.tempo.features.tasks.domain.model.Category
+import com.mandrecode.tempo.features.tasks.domain.model.NO_CATEGORY_ID
 import com.mandrecode.tempo.features.tasks.domain.model.Task
 import com.mandrecode.tempo.features.tasks.domain.model.TaskSection
 import com.mandrecode.tempo.features.tasks.presentation.TasksContract
@@ -103,7 +104,8 @@ internal fun TaskBottomSheetContent(
     }
     var isDescriptionDirty by rememberSaveable(editorKey) { mutableStateOf(false) }
 
-    val defaultCategoryId = categories.firstOrNull { it.isDefault }?.id ?: categories.firstOrNull()?.id ?: 0L
+    val defaultCategoryId =
+        categories.firstOrNull { it.isDefault }?.id ?: categories.firstOrNull()?.id ?: NO_CATEGORY_ID
     val initialCategoryId =
         when {
             task != null -> task.categoryId

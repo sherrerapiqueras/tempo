@@ -87,13 +87,13 @@ internal fun TasksViewModel.loadData() {
         ) { (tasks, allSections), dbCategories, selectedCategoryId, sortOption, _ ->
             val allCategories = dbCategories.toPersistentList()
 
+            // With no categories (still loading, or none exist) there is nothing to select: keep the
+            // current selection instead of inventing an id, which would also be stored as the choice.
             val effectiveSelectedId =
-                if (allCategories.any { it.id == selectedCategoryId }) {
-                    selectedCategoryId
-                } else {
-                    allCategories.firstOrNull { it.isDefault }?.id
-                        ?: allCategories.firstOrNull()?.id
-                        ?: 0L
+                when {
+                    allCategories.isEmpty() || allCategories.any { it.id == selectedCategoryId } ->
+                        selectedCategoryId
+                    else -> allCategories.firstOrNull { it.isDefault }?.id ?: allCategories.first().id
                 }
 
             val uncompletedTasksCounts =
