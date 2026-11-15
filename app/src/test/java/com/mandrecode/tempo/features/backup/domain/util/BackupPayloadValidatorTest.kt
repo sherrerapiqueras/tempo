@@ -4,6 +4,7 @@ import com.google.common.truth.Truth.assertThat
 import com.mandrecode.tempo.features.backup.domain.model.BackupData
 import com.mandrecode.tempo.features.backup.domain.model.ChainMembership
 import com.mandrecode.tempo.features.backup.domain.model.ValidationIssueKind
+import com.mandrecode.tempo.features.focus.domain.model.SavedSession
 import com.mandrecode.tempo.features.routines.domain.model.Habit
 import com.mandrecode.tempo.features.routines.domain.model.HabitChain
 import com.mandrecode.tempo.features.tasks.domain.model.Category
@@ -195,4 +196,31 @@ class BackupPayloadValidatorTest {
             title = "Chain $id",
             createdDate = LocalDateTime(2026, 1, 1, 8, 0),
         )
+
+    @Test
+    fun `recent sessions are cleaned up rather than refused`() {
+        fun session(
+            id: Long,
+            title: String = "Study",
+        ) = SavedSession(id = id, title = title, focusMinutes = 25, breakMinutes = 5)
+        val data =
+            backupData(
+                categories = listOf(category(id = 1)),
+                tasks = listOf(task(id = 10, categoryId = 1)),
+            ).copy(
+                focusSessions =
+                    listOf(
+                        session(1),
+                        session(1, title = "Same id again"),
+                        session(2, title = ""),
+                        session(3, title = "Read"),
+                    ),
+            )
+
+        val result = validator.validate(data) as BackupPayloadValidator.Result.Valid
+
+        assertThat(result.sanitized.focusSessions)
+            .containsExactly(session(1), session(3, title = "Read"))
+            .inOrder()
+    }
 }

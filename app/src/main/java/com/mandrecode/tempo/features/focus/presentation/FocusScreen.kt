@@ -58,7 +58,7 @@ fun FocusScreen(
      * being counted on holiday terms.
      */
     topBar: @Composable (isVacationModeActive: Boolean) -> Unit = {},
-    /** Hands the floating bar its add action, which opens the task form over Focus (#434). */
+    /** Hands the floating bar its add action, which opens the new-session sheet over Focus (#517). */
     onFloatingBarStateChange: (FocusFloatingBarState) -> Unit = {},
     /**
      * Whether the session's route is open. On a large window Focus docks it beside the agenda (#502), and
@@ -66,7 +66,6 @@ fun FocusScreen(
      */
     isSessionRouteOpen: Boolean = false,
     onCloseSession: () -> Unit = {},
-    onOpenTaskInTasks: (Long) -> Unit = {},
     viewModel: FocusViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -77,8 +76,8 @@ fun FocusScreen(
         viewModel.onTabShown()
         onPauseOrDispose { }
     }
-    val onAddTask = remember(viewModel) { { viewModel.onEvent(FocusContract.UiEvent.AddTask) } }
-    SideEffect { onFloatingBarStateChange(FocusFloatingBarState(onAddTask = onAddTask)) }
+    val onAddSession = remember(viewModel) { { viewModel.onEvent(FocusContract.UiEvent.AddSession) } }
+    SideEffect { onFloatingBarStateChange(FocusFloatingBarState(onAddSession = onAddSession)) }
     val railContentClearance = floatingRailContentClearance()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -131,7 +130,7 @@ fun FocusScreen(
             // Only while docking is possible: past the breakpoint the editor moves to the sheet in
             // the same frame the pane starts its exit, and must not be in both places.
             if (pane.canDock) {
-                FocusPaneContent(pane, onCloseSession, onOpenTaskInTasks, viewModel::onEvent)
+                FocusPaneContent(pane, onCloseSession, viewModel::onEvent)
             }
         }
     }
@@ -162,7 +161,6 @@ private fun FocusSnackbarHost(snackbarHostState: SnackbarHostState) {
 private fun FocusPaneContent(
     pane: FocusPaneHost,
     onCloseSession: () -> Unit,
-    onOpenTaskInTasks: (Long) -> Unit,
     onEvent: (FocusContract.UiEvent) -> Unit,
 ) {
     when (pane.shownPane) {
@@ -173,7 +171,6 @@ private fun FocusPaneContent(
         FocusPane.SESSION ->
             FocusSessionRoute(
                 onBack = onCloseSession,
-                onOpenTaskInTasks = onOpenTaskInTasks,
                 placement = SheetPlacement.DockedPane,
                 onEditTask = { onEvent(FocusContract.UiEvent.EditTask(it)) },
                 viewModel = viewModel(key = DOCKED_SESSION_VIEW_MODEL_KEY),

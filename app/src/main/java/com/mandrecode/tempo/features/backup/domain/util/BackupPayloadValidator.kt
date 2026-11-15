@@ -16,7 +16,7 @@ class BackupPayloadValidator
         sealed interface Result {
             /**
              * Payload is consistent. [sanitized] has dangling nextInstanceId and section references
-             * nulled, and sections of unknown categories dropped.
+             * nulled, sections of unknown categories dropped, and saved sessions cleaned up.
              */
             data class Valid(
                 val sanitized: BackupData,
@@ -55,7 +55,16 @@ class BackupPayloadValidator
                     }
                     sanitized
                 }
-            return Result.Valid(data.copy(tasks = sanitizedTasks, sections = sanitizedSections))
+            // Recent sessions are sanitized the way sections are, not refused: one with no name is
+            // dropped and a repeated id keeps its first, so nothing here can fail the insert that
+            // follows (#517).
+            val sanitizedSessions =
+                data.focusSessions
+                    .filter { it.title.isNotBlank() }
+                    .distinctBy { it.id }
+            return Result.Valid(
+                data.copy(tasks = sanitizedTasks, sections = sanitizedSections, focusSessions = sanitizedSessions),
+            )
         }
 
         private fun duplicateIdIssues(data: BackupData): List<ValidationIssue> =

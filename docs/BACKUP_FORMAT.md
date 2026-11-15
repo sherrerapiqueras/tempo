@@ -53,6 +53,7 @@ the KDF/cipher logic lives in `infrastructure/security/BackupEncryptionService.k
 | `habitChains` | array | See [Habit chain](#habit-chain). |
 | `habitChainMembers` | array | See [Chain member](#chain-member). |
 | `settings` | object? | See [Settings](#settings). Optional; absent in files written before it existed. |
+| `focusSessions` | array | See [Focus session](#focus-session). Absent in files written before sessions existed. |
 
 All collections default to empty. Original database ids are included on every record; they are
 required for referential integrity inside the file and are preserved verbatim by Replace
@@ -89,6 +90,15 @@ category, is nulled on import — the task lands unsectioned).
 `id`, `categoryId`, `name`, `sortOrder` (default `0`). A divider inside one category (#61).
 A section whose `categoryId` is not in the file is dropped on import, not fatal. Collapse state
 is device-local UI state and is never exported.
+
+### Focus session
+
+`id`, `title`, `focusMinutes` (default `25`), `breakMinutes` (default `5`), `rounds` (default
+`1`), `lastUsedAt` (epoch milliseconds, default `0`). A recent topic session (#517): a named
+timer that is not a task, remembered because it was started. Lengths and rounds outside what the
+app can run are brought into range on import, not rejected. The app keeps the five most recently
+used; an import carrying more is trimmed to those. A session running at export time is not part
+of the backup.
 
 ### Habit
 
@@ -133,6 +143,9 @@ so a hand-edited file cannot install a contradictory pause history.
   reporting conflicts by natural key (category name; task title within category/parent;
   habit/chain title). Sections never conflict: an incoming section reuses a same-named section
   of its resolved local category, otherwise it is appended to that category.
+- **Focus sessions** are restored with their ids on Replace. On Merge, a session whose name the
+  device already has (ignoring case) is skipped and any other is added. Either way only the five
+  most recently used remain.
 - **Older apps** reading a file that carries sections drop `taskSections` and `sectionId` as
   unknown fields, so every task imports unsectioned.
 

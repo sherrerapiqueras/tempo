@@ -51,7 +51,7 @@ class FocusTaskEditorTest {
         composeTestRule.setContent {
             TempoTheme {
                 FocusTaskEditor(
-                    target = FocusContract.TaskEditorTarget.NewTask,
+                    target = FocusContract.TaskEditorTarget.NewSubtask(parentTaskId = 1),
                     onDismiss = {},
                     placement = SheetPlacement.DockedPane,
                     dismissRequestKey = 0,
@@ -79,7 +79,7 @@ class FocusTaskEditorTest {
         restorationTester.setContent {
             TempoTheme {
                 FocusTaskEditor(
-                    target = FocusContract.TaskEditorTarget.NewTask,
+                    target = FocusContract.TaskEditorTarget.NewSubtask(parentTaskId = 1),
                     onDismiss = {},
                     placement = placement,
                     dismissRequestKey = 0,

@@ -6,6 +6,8 @@ import com.mandrecode.tempo.core.domain.model.DailyFocusActivity
 import com.mandrecode.tempo.core.domain.model.Priority
 import com.mandrecode.tempo.core.ui.theme.TempoTheme
 import com.mandrecode.tempo.features.focus.domain.model.FocusAgendaItem
+import com.mandrecode.tempo.features.focus.domain.model.FocusSession
+import com.mandrecode.tempo.features.focus.domain.model.SavedSession
 import com.mandrecode.tempo.features.tasks.domain.model.Task
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.datetime.DateTimeUnit
@@ -13,6 +15,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.minus
+import kotlin.time.Clock
 
 private val today = LocalDate(2026, 7, 29)
 
@@ -126,6 +129,20 @@ private fun FocusContentEmptyPreview() {
 @Composable
 private fun FocusContentAllDonePreview() {
     TempoTheme { FocusContent(uiState = allDoneState, onEvent = {}) }
+}
+
+private val study = SavedSession(id = 1, title = "Study", focusMinutes = 50, breakMinutes = 10, rounds = 4)
+
+@Preview(name = "Focus - topic session on round 2 of 4", showBackground = true, device = "id:pixel_9")
+@Composable
+private fun FocusContentRunningTopicSessionPreview() {
+    val running = FocusSession.start(study, Clock.System.now())
+    TempoTheme {
+        FocusContent(
+            uiState = midDayState.copy(session = running.copy(cycle = running.cycle?.copy(round = 2))),
+            onEvent = {},
+        )
+    }
 }
 
 @Preview(name = "Focus - loading", showBackground = true, device = "id:pixel_9")

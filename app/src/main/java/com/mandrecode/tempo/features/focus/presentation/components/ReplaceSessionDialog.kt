@@ -39,7 +39,7 @@ internal fun ReplaceSessionDialog(
                 stringResource(
                     R.string.focus_replace_session_message,
                     pending.replacingTaskTitle,
-                    pending.taskTitle,
+                    pending.title,
                 ),
             )
         },

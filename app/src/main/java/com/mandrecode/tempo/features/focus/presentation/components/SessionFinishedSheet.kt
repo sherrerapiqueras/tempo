@@ -71,11 +71,11 @@ private fun ColumnScope.FinishedHeading(finished: FocusContract.FinishedSession)
         // A break's minutes were not spent on the task, so only a focus session names them.
         text =
             if (finished.wasBreak) {
-                finished.taskTitle
+                finished.title
             } else {
                 stringResource(
                     R.string.focus_session_finished_subtitle,
-                    finished.taskTitle,
+                    finished.title,
                     finished.minutes,
                 )
             },
@@ -112,19 +112,21 @@ private fun ColumnScope.FinishedChoices(
     // closed the sheet. This is the same act, and the same word, as marking the task done anywhere
     // else in the app. Closing without deciding is still there: the sheet dismisses on a swipe or
     // a tap outside.
+    // Only where there is a task: a saved session linked to none has nothing to tick (#517), and
+    // its sheet offers the way on alone.
     val markDone =
         SessionAction(
             label = stringResource(R.string.focus_session_mark_done),
             icon = doneIcon(),
             emphasis = ButtonEmphasis.TONAL,
             onClick = { onEvent(FocusContract.UiEvent.CompleteSessionTask) },
-        )
+        ).takeIf { finished.hasTask }
 
     // The two first-class choices as one connected control, matching the card and the session
     // screen. Finishing stays a peer here rather than a dismissal in the corner: a Pomodoro app
     // that makes stopping feel like failure is the thing this feature is trying not to be.
     SessionActionGroup(
-        actions = listOf(carryOn, markDone),
+        actions = listOfNotNull(carryOn, markDone),
         colors = colors,
         modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
         compact = true,

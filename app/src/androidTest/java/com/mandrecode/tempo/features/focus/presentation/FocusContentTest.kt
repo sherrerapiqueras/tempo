@@ -13,6 +13,7 @@ import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -20,12 +21,17 @@ import androidx.compose.ui.unit.dp
 import com.google.common.truth.Truth.assertThat
 import com.mandrecode.tempo.core.ui.theme.TempoTheme
 import com.mandrecode.tempo.features.focus.domain.model.FocusAgendaItem
+import com.mandrecode.tempo.features.focus.domain.model.FocusSession
+import com.mandrecode.tempo.features.focus.domain.model.SavedSession
+import com.mandrecode.tempo.features.focus.presentation.components.SESSION_ROUNDS_TEST_TAG
 import com.mandrecode.tempo.features.tasks.domain.model.Task
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import org.junit.Rule
 import org.junit.Test
+import kotlin.time.Clock
 
 /** What the day's rows do when tapped, and how Focus offers to plan what has no day yet. */
 class FocusContentTest {
@@ -172,8 +178,8 @@ class FocusContentTest {
         val events = mutableListOf<FocusContract.UiEvent>()
         setContent(stateWith(items = listOf(taskEntry(1, "Write report")), undatedTaskCount = 3)) { events += it }
 
-        composeTestRule.onNodeWithText("Give 3 tasks a day").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Give 3 tasks a day").performClick()
+        composeTestRule.onNodeWithText("Plan 3 tasks").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Plan 3 tasks").performClick()
         composeTestRule.waitForIdle()
 
         assertThat(events).contains(FocusContract.UiEvent.UndatedTasksClicked)
@@ -236,10 +242,32 @@ class FocusContentTest {
         val events = mutableListOf<FocusContract.UiEvent>()
         setContent(stateWith(items = emptyList(), undatedTaskCount = 1)) { events += it }
 
-        composeTestRule.onNodeWithText("Give 1 task a day").performClick()
+        composeTestRule.onNodeWithText("Plan 1 task").performClick()
         composeTestRule.waitForIdle()
 
         assertThat(events).contains(FocusContract.UiEvent.UndatedTasksClicked)
+    }
+
+    private val study = SavedSession(id = 4, title = "Study", focusMinutes = 50, breakMinutes = 10, rounds = 4)
+
+    @Test
+    fun recentSessions_areNotListedOnFocus() {
+        setContent(stateWith().copy(recentSessions = persistentListOf(study))) { }
+
+        composeTestRule.onNodeWithText("Study").assertDoesNotExist()
+        composeTestRule.onNodeWithText("A clear day", substring = true).assertExists()
+    }
+
+    @Test
+    fun runningSessionWithNoTask_showsItsRoundAndOffersNoMarkDone() {
+        val running = FocusSession.start(study, Clock.System.now())
+        setContent(stateWith().copy(recentSessions = persistentListOf(study), session = running)) { }
+
+        composeTestRule.onNodeWithText("Focusing · Round 1 of 4").assertIsDisplayed()
+        // One marker per round, on the card as on the sheet.
+        composeTestRule.onNodeWithTag(SESSION_ROUNDS_TEST_TAG, useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Pause").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Mark done").assertDoesNotExist()
     }
 }
 

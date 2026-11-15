@@ -9,6 +9,7 @@ import com.mandrecode.tempo.core.data.entity.DEFAULT_INBOX_CATEGORY_ENTITY
 import com.mandrecode.tempo.core.data.entity.HabitChainEntity
 import com.mandrecode.tempo.core.data.entity.HabitChainMemberEntity
 import com.mandrecode.tempo.core.data.local.TempoDatabase
+import com.mandrecode.tempo.core.data.local.dao.SavedSessionDao
 import com.mandrecode.tempo.core.domain.repository.DailyFocusActivityRepository
 import com.mandrecode.tempo.features.backup.data.BackupSettingsDataSource
 import com.mandrecode.tempo.features.backup.data.mapper.toDomain
@@ -29,6 +30,9 @@ import com.mandrecode.tempo.features.backup.domain.model.MergePlan
 import com.mandrecode.tempo.features.backup.domain.repository.BackupRepository
 import com.mandrecode.tempo.features.backup.domain.util.BackupPayloadValidator
 import com.mandrecode.tempo.features.backup.domain.util.MergePlanner
+import com.mandrecode.tempo.features.focus.data.mapper.toDomain
+import com.mandrecode.tempo.features.focus.data.mapper.toEntity
+import com.mandrecode.tempo.features.focus.domain.model.SavedSession
 import com.mandrecode.tempo.features.routines.data.mapper.toDomain
 import com.mandrecode.tempo.features.routines.data.mapper.toEntity
 import com.mandrecode.tempo.features.routines.domain.model.HabitChain
@@ -150,6 +154,7 @@ class BackupRepositoryImpl
                         ChainMembership(chainId = it.chainId, habitId = it.habitId, sortOrder = it.sortOrder)
                     },
                 dailyFocusActivity = dailyFocusActivityRepository.getAll(),
+                focusSessions = database.savedSessionDao().getAllSync().map { it.toDomain() },
             )
 
         /**
@@ -177,11 +182,16 @@ class BackupRepositoryImpl
                 database.taskAttachmentDao().deleteAll()
                 database.categoryDao().deleteAllCategories()
                 database.taskSectionDao().deleteAll()
+                database.savedSessionDao().deleteAll()
 
                 data.categories.forEach { database.categoryDao().insertCategory(it.toEntity()) }
                 val seededInboxCount = ensureDefaultCategory(data.categories)
                 data.sections.forEach { database.taskSectionDao().insertSection(it.toEntity()) }
                 data.tasks.forEach { database.taskDao().insertTask(it.toEntity()) }
+                // Already sanitized by the validator: unique ids and named. Trimmed afterwards, in
+                // case the file was edited to carry more than the app keeps.
+                data.focusSessions.forEach { database.savedSessionDao().insert(it.toEntity()) }
+                database.savedSessionDao().trimTo(SavedSession.RECENT_LIMIT)
                 data.habits.forEach { database.habitDao().insertHabit(it.toEntity()) }
                 data.habitChains.forEach { database.habitChainDao().insertHabitChain(it.toEntity()) }
                 memberDao.insertMembers(
@@ -253,6 +263,7 @@ class BackupRepositoryImpl
                     sectionIds[canonical]?.let { sectionIds[alias] = it }
                 }
                 insertMergedTasks(plan, categoryIds, sectionIds)
+                database.savedSessionDao().insertMerged(data.focusSessions)
                 val habitIds = plan.habitIdMap.toMutableMap()
                 plan.habitsToInsert.forEach { habit ->
                     habitIds[habit.id] = database.habitDao().insertHabit(habit.copy(id = 0).toEntity())
@@ -306,6 +317,23 @@ class BackupRepositoryImpl
             return taskIds
         }
     }
+
+/**
+ * Adds the incoming recent sessions whose name this device does not already have (#517), and keeps
+ * only as many as the app ever keeps.
+ *
+ * The name is the session: importing the same file twice must not double a topic, and a topic both
+ * sides have keeps this device's lengths.
+ */
+private suspend fun SavedSessionDao.insertMerged(incoming: List<SavedSession>) {
+    val known = getAllSync().map { it.toDomain() }.toMutableList()
+    incoming.forEach { session ->
+        if (known.any { it.hasSameNameAs(session) }) return@forEach
+        insert(session.copy(id = 0).toEntity())
+        known += session
+    }
+    trimTo(SavedSession.RECENT_LIMIT)
+}
 
 /**
  * [BackupRepository.importFromJson] promises local data is untouched whenever it
