@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.20.0](https://github.com/sherrerapiqueras/tempo/compare/v1.19.2...v1.20.0) (2026-11-15)
+
+
+### Features
+
+* **#517:** saved focus sessions as their own entity ([#532](https://github.com/sherrerapiqueras/tempo/issues/532)) ([98ff1c1](https://github.com/sherrerapiqueras/tempo/commit/98ff1c183c117f6bf5a66b2b7a89e268a4916d6a))
+* **#523:** pin editor sheet footer above the keyboard ([#533](https://github.com/sherrerapiqueras/tempo/issues/533)) ([e7bc90f](https://github.com/sherrerapiqueras/tempo/commit/e7bc90fd0289e779261c92e93560c658d9240962))
+
+
+### Bug Fixes
+
+* ensure the default Inbox category always exists ([#535](https://github.com/sherrerapiqueras/tempo/issues/535)) ([af22442](https://github.com/sherrerapiqueras/tempo/commit/af22442e9b8116ee0f1bb3676b0622a10815e641))
+
 ## [1.19.2](https://github.com/sherrerapiqueras/tempo/compare/v1.19.1...v1.19.2) (2026-11-02)
 
 
