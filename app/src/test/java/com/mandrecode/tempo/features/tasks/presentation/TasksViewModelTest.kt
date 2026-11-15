@@ -13,6 +13,7 @@ import com.mandrecode.tempo.core.domain.util.ValidationUtils
 import com.mandrecode.tempo.features.tasks.domain.model.AttachmentImportResult
 import com.mandrecode.tempo.features.tasks.domain.model.Category
 import com.mandrecode.tempo.features.tasks.domain.model.DEFAULT_INBOX_CATEGORY
+import com.mandrecode.tempo.features.tasks.domain.model.NO_CATEGORY_ID
 import com.mandrecode.tempo.features.tasks.domain.model.Task
 import com.mandrecode.tempo.features.tasks.domain.model.TaskAttachment
 import com.mandrecode.tempo.features.tasks.domain.model.TaskDeletionSnapshot
@@ -293,27 +294,96 @@ class TasksViewModelTest {
         }
 
     @Test
-    fun `falls back to Inbox when selected category is removed`() =
+    fun `falls back to the default category when the selected category is removed`() =
         runTest {
-            val category = Category(id = 10L, name = "Work")
-            coEvery { categoryRepository.getAllCategories() } returns
-                flowOf(listOf(category))
-            every {
-                tasksScreenPreferencesRepository.getSelectedCategoryId()
-            } returns 10L
+            val work = Category(id = 10L, name = "Work")
+            val inbox = Category(id = -1L, name = "Inbox", isDefault = true)
+            coEvery { categoryRepository.getAllCategories() } returns flowOf(listOf(work, inbox))
+            every { tasksScreenPreferencesRepository.getSelectedCategoryId() } returns 10L
 
-            val vm =
-                createViewModel()
+            val vm = createViewModel()
             advanceUntilIdle()
             assertThat(vm.uiState.value.selectedCategoryId).isEqualTo(10L)
 
             // Category removed
-            coEvery { categoryRepository.getAllCategories() } returns flowOf(emptyList())
-            val vm2 =
-                createViewModel()
+            coEvery { categoryRepository.getAllCategories() } returns flowOf(listOf(inbox))
+            val vm2 = createViewModel()
             advanceUntilIdle()
-            assertThat(vm2.uiState.value.selectedCategoryId).isEqualTo(0L)
-            verify { tasksScreenPreferencesRepository.setSelectedCategoryId(0L) }
+            assertThat(vm2.uiState.value.selectedCategoryId).isEqualTo(-1L)
+            verify { tasksScreenPreferencesRepository.setSelectedCategoryId(-1L) }
+        }
+
+    @Test
+    fun `keeps the selection and stores nothing when there are no categories`() =
+        runTest {
+            coEvery { categoryRepository.getAllCategories() } returns flowOf(emptyList())
+            every { tasksScreenPreferencesRepository.getSelectedCategoryId() } returns 10L
+
+            val vm = createViewModel()
+            advanceUntilIdle()
+
+            assertThat(vm.uiState.value.isLoading).isFalse()
+            assertThat(vm.uiState.value.selectedCategoryId).isEqualTo(10L)
+            verify(exactly = 0) { tasksScreenPreferencesRepository.setSelectedCategoryId(any()) }
+        }
+
+    @Test
+    fun `ShowTaskDialog does not open the editor when categories loaded and there are none`() =
+        runTest {
+            val effects = mutableListOf<TasksContract.UiEffect>()
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiEffect.toList(effects) }
+            advanceUntilIdle()
+
+            viewModel.onEvent(TasksContract.UiEvent.ShowTaskDialog())
+            advanceUntilIdle()
+
+            assertThat(viewModel.uiState.value.taskForm.isVisible).isFalse()
+            assertThat(effects.snackbarMessages()).containsExactly(R.string.msg_task_no_category)
+        }
+
+    @Test
+    fun `ShowTaskDialog opens the editor while categories are still loading`() =
+        runTest {
+            val effects = mutableListOf<TasksContract.UiEffect>()
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiEffect.toList(effects) }
+            assertThat(viewModel.uiState.value.isLoading).isTrue()
+
+            viewModel.onEvent(TasksContract.UiEvent.ShowTaskDialog())
+            advanceUntilIdle()
+
+            assertThat(viewModel.uiState.value.taskForm.isVisible).isTrue()
+            assertThat(effects.snackbarMessages()).isEmpty()
+        }
+
+    @Test
+    fun `ShowTaskDialog opens the editor when a category exists`() =
+        runTest {
+            coEvery { categoryRepository.getAllCategories() } returns
+                flowOf(listOf(Category(id = -1L, name = "Inbox", isDefault = true)))
+            val vm = createViewModel()
+            advanceUntilIdle()
+
+            vm.onEvent(TasksContract.UiEvent.ShowTaskDialog())
+            advanceUntilIdle()
+
+            assertThat(vm.uiState.value.taskForm.isVisible).isTrue()
+        }
+
+    @Test
+    fun `createOrUpdateTask refuses the no-category placeholder and keeps the editor open`() =
+        runTest {
+            val effects = mutableListOf<TasksContract.UiEffect>()
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiEffect.toList(effects) }
+            viewModel.onEvent(TasksContract.UiEvent.ShowTaskDialog())
+            advanceUntilIdle()
+            assertThat(viewModel.uiState.value.taskForm.isVisible).isTrue()
+
+            viewModel.onEvent(TasksContract.UiEvent.CreateOrUpdateTask("Buy milk", "", NO_CATEGORY_ID))
+            advanceUntilIdle()
+
+            coVerify(exactly = 0) { createTaskUseCase.invoke(any()) }
+            assertThat(viewModel.uiState.value.taskForm.isVisible).isTrue()
+            assertThat(effects.snackbarMessages()).contains(R.string.msg_task_no_category)
         }
 
     @Test
@@ -1255,15 +1325,18 @@ class TasksViewModelTest {
     @Test
     fun `reopening task dialog starts a new editor session`() =
         runTest {
-            viewModel.onEvent(TasksContract.UiEvent.ShowTaskDialog())
+            coEvery { categoryRepository.getAllCategories() } returns
+                flowOf(listOf(Category(id = -1L, name = "Inbox", isDefault = true)))
+            val vm = createViewModel()
+            vm.onEvent(TasksContract.UiEvent.ShowTaskDialog())
             advanceUntilIdle()
-            val firstSessionId = viewModel.uiState.value.taskForm.editorSessionId
+            val firstSessionId = vm.uiState.value.taskForm.editorSessionId
 
-            viewModel.onEvent(TasksContract.UiEvent.HideTaskDialog)
-            viewModel.onEvent(TasksContract.UiEvent.ShowTaskDialog())
+            vm.onEvent(TasksContract.UiEvent.HideTaskDialog)
+            vm.onEvent(TasksContract.UiEvent.ShowTaskDialog())
             advanceUntilIdle()
 
-            assertThat(viewModel.uiState.value.taskForm.editorSessionId).isGreaterThan(firstSessionId)
+            assertThat(vm.uiState.value.taskForm.editorSessionId).isGreaterThan(firstSessionId)
         }
 
     /** Permission granted somewhere else — the task sheet, another tab — is not this screen's news (#437). */

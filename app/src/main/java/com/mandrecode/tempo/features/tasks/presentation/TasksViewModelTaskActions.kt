@@ -10,6 +10,7 @@ import com.mandrecode.tempo.core.domain.model.ScheduleResult
 import com.mandrecode.tempo.core.domain.util.TitleDescriptionValidationResult
 import com.mandrecode.tempo.core.domain.util.ValidationUtils
 import com.mandrecode.tempo.core.ui.util.toUserFacingMessage
+import com.mandrecode.tempo.features.tasks.domain.model.NO_CATEGORY_ID
 import com.mandrecode.tempo.features.tasks.domain.model.Task
 import com.mandrecode.tempo.features.tasks.domain.model.TaskAttachment
 import com.mandrecode.tempo.features.tasks.domain.usecase.CreateTaskUseCase
@@ -50,6 +51,13 @@ internal fun TasksViewModel.createOrUpdateTask(
     parentTaskId: Long? = null,
     autoSave: Boolean = false,
 ) {
+    // The sheet falls back to the placeholder while categories are still loading or when there are
+    // none. A task saved with it belongs to nothing and shows up nowhere, so it is refused here,
+    // before the editor closes: what the user typed stays on screen.
+    if (categoryId == NO_CATEGORY_ID) {
+        viewModelScope.launch { showSnackbar(R.string.msg_task_no_category) }
+        return
+    }
     val validationResult = ValidationUtils.validateTitleAndDescription(title, description)
     if (applyTaskFormValidationError(validationResult)) return
 
@@ -430,6 +438,14 @@ internal fun TasksViewModel.showTaskDialog(
     parentTaskId: Long? = null,
     sectionId: Long? = null,
 ) {
+    // Categories have loaded and there are none: a new task would have nowhere to go, and the editor
+    // would show an empty category row. Say so instead of opening it. Before the first load the list is
+    // empty too, and the editor handles that itself by re-keying once the default category arrives.
+    val current = mutableUiState.value
+    if (task == null && !current.isLoading && current.categories.isEmpty()) {
+        viewModelScope.launch { showSnackbar(R.string.msg_task_no_category) }
+        return
+    }
     pendingOriginalReminderDate = null
     viewModelScope.launch {
         val parentTask =

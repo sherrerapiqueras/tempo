@@ -8,6 +8,7 @@ import com.mandrecode.tempo.core.domain.model.Priority
 import com.mandrecode.tempo.core.ui.components.SnackbarBoldSegment
 import com.mandrecode.tempo.core.ui.model.PermissionInfo
 import com.mandrecode.tempo.features.tasks.domain.model.Category
+import com.mandrecode.tempo.features.tasks.domain.model.NO_CATEGORY_ID
 import com.mandrecode.tempo.features.tasks.domain.model.Task
 import com.mandrecode.tempo.features.tasks.domain.model.TaskAttachment
 import com.mandrecode.tempo.features.tasks.domain.model.TaskSection
@@ -36,7 +37,7 @@ object TasksContract {
         val tasks: ImmutableList<Task> = persistentListOf(),
         val categories: ImmutableList<Category> = persistentListOf(),
         val isLoading: Boolean = true,
-        val selectedCategoryId: Long = 0L,
+        val selectedCategoryId: Long = NO_CATEGORY_ID,
         val sortOption: SortOption = SortOption.MANUAL,
         val taskForm: TaskFormState = TaskFormState(),
         val categoryForm: CategoryFormState = CategoryFormState(),
