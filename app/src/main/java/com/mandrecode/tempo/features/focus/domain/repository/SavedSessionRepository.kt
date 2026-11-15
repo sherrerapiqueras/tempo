@@ -3,16 +3,17 @@ package com.mandrecode.tempo.features.focus.domain.repository
 import com.mandrecode.tempo.features.focus.domain.model.SavedSession
 import kotlinx.coroutines.flow.Flow
 
-/** The sessions the user has saved, in the order they were made. */
+/** The topic sessions most recently started, most recent first, never more than a handful. */
 interface SavedSessionRepository {
     fun getAll(): Flow<List<SavedSession>>
 
     suspend fun getById(id: Long): SavedSession?
 
-    /** @return the new session's id. */
-    suspend fun insert(session: SavedSession): Long
-
-    suspend fun update(session: SavedSession)
-
-    suspend fun delete(id: Long)
+    /**
+     * Notes that [session] was just used. One of the same name takes its lengths, rounds and time;
+     * otherwise it is added, and the least recently used drops off past the limit.
+     *
+     * @return the session as remembered, under its id.
+     */
+    suspend fun remember(session: SavedSession): SavedSession
 }

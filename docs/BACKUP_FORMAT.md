@@ -53,7 +53,7 @@ the KDF/cipher logic lives in `infrastructure/security/BackupEncryptionService.k
 | `habitChains` | array | See [Habit chain](#habit-chain). |
 | `habitChainMembers` | array | See [Chain member](#chain-member). |
 | `settings` | object? | See [Settings](#settings). Optional; absent in files written before it existed. |
-| `focusSessions` | array | See [Focus session](#focus-session). Absent in files written before saved sessions existed. |
+| `focusSessions` | array | See [Focus session](#focus-session). Absent in files written before sessions existed. |
 
 All collections default to empty. Original database ids are included on every record; they are
 required for referential integrity inside the file and are preserved verbatim by Replace
@@ -94,9 +94,11 @@ is device-local UI state and is never exported.
 ### Focus session
 
 `id`, `title`, `focusMinutes` (default `25`), `breakMinutes` (default `5`), `rounds` (default
-`1`), `taskId?`. A saved focus session (#517): a named timer that is not a task. `taskId` links
-it to a task in the same file. Lengths and rounds outside what the app can run are brought into
-range on import, not rejected. A session running at export time is not part of the backup.
+`1`), `lastUsedAt` (epoch milliseconds, default `0`). A recent topic session (#517): a named
+timer that is not a task, remembered because it was started. Lengths and rounds outside what the
+app can run are brought into range on import, not rejected. The app keeps the five most recently
+used; an import carrying more is trimmed to those. A session running at export time is not part
+of the backup.
 
 ### Habit
 
@@ -141,10 +143,9 @@ so a hand-edited file cannot install a contradictory pause history.
   reporting conflicts by natural key (category name; task title within category/parent;
   habit/chain title). Sections never conflict: an incoming section reuses a same-named section
   of its resolved local category, otherwise it is appended to that category.
-- **Focus sessions** are restored with their ids on Replace; a `taskId` naming a task the file
-  does not carry is dropped. On Merge, a session with the same title, lengths and rounds as a
-  local one is skipped; any other is added, linked to wherever its task was merged or unlinked
-  if the task did not come across.
+- **Focus sessions** are restored with their ids on Replace. On Merge, a session whose name the
+  device already has (ignoring case) is skipped and any other is added. Either way only the five
+  most recently used remain.
 - **Older apps** reading a file that carries sections drop `taskSections` and `sectionId` as
   unknown fields, so every task imports unsectioned.
 

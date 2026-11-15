@@ -198,12 +198,11 @@ class BackupPayloadValidatorTest {
         )
 
     @Test
-    fun `saved sessions are cleaned up rather than refused`() {
+    fun `recent sessions are cleaned up rather than refused`() {
         fun session(
             id: Long,
             title: String = "Study",
-            taskId: Long? = null,
-        ) = SavedSession(id = id, title = title, focusMinutes = 25, breakMinutes = 5, taskId = taskId)
+        ) = SavedSession(id = id, title = title, focusMinutes = 25, breakMinutes = 5)
         val data =
             backupData(
                 categories = listOf(category(id = 1)),
@@ -211,17 +210,17 @@ class BackupPayloadValidatorTest {
             ).copy(
                 focusSessions =
                     listOf(
-                        session(1, taskId = 10),
+                        session(1),
                         session(1, title = "Same id again"),
                         session(2, title = ""),
-                        session(3, taskId = 404),
+                        session(3, title = "Read"),
                     ),
             )
 
         val result = validator.validate(data) as BackupPayloadValidator.Result.Valid
 
         assertThat(result.sanitized.focusSessions)
-            .containsExactly(session(1, taskId = 10), session(3))
+            .containsExactly(session(1), session(3, title = "Read"))
             .inOrder()
     }
 }

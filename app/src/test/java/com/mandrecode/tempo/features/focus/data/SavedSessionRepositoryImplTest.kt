@@ -20,9 +20,16 @@ class SavedSessionRepositoryImplTest {
     private val repository = SavedSessionRepositoryImpl(dao)
 
     private val entity =
-        SavedSessionEntity(id = 3, title = "Study", focusMinutes = 50, breakMinutes = 10, rounds = 4, taskId = 7)
+        SavedSessionEntity(
+            id = 3,
+            title = "Study",
+            focusMinutes = 50,
+            breakMinutes = 10,
+            rounds = 4,
+            lastUsedAt = 1_700,
+        )
     private val session =
-        SavedSession(id = 3, title = "Study", focusMinutes = 50, breakMinutes = 10, rounds = 4, taskId = 7)
+        SavedSession(id = 3, title = "Study", focusMinutes = 50, breakMinutes = 10, rounds = 4, lastUsedAt = 1_700)
 
     @Test
     fun `entity and domain map to each other field for field`() {
@@ -31,12 +38,7 @@ class SavedSessionRepositoryImplTest {
     }
 
     @Test
-    fun `an unlinked session maps with no task`() {
-        assertThat(entity.copy(taskId = null).toDomain().taskId).isNull()
-    }
-
-    @Test
-    fun `all sessions are read as domain models`() =
+    fun `recent sessions are read as domain models`() =
         runTest {
             every { dao.getAll() } returns flowOf(listOf(entity))
 
@@ -57,15 +59,13 @@ class SavedSessionRepositoryImplTest {
         }
 
     @Test
-    fun `inserting returns the new id, and updates and deletes reach the dao`() =
+    fun `remembering keeps the most recent few and returns the session under its id`() =
         runTest {
-            coEvery { dao.insert(any()) } returns 11
+            coEvery { dao.remember(any(), any()) } returns 11
 
-            assertThat(repository.insert(session.copy(id = 0))).isEqualTo(11)
-            repository.update(session)
-            repository.delete(3)
+            val remembered = repository.remember(session.copy(id = 0))
 
-            coVerify { dao.update(entity) }
-            coVerify { dao.deleteById(3) }
+            assertThat(remembered).isEqualTo(session.copy(id = 11))
+            coVerify { dao.remember(entity.copy(id = 0), keep = SavedSession.RECENT_LIMIT) }
         }
 }

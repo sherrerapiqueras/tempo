@@ -19,9 +19,6 @@ class SavedSessionRepositoryImpl
 
         override suspend fun getById(id: Long): SavedSession? = dao.getById(id)?.toDomain()
 
-        override suspend fun insert(session: SavedSession): Long = dao.insert(session.toEntity())
-
-        override suspend fun update(session: SavedSession) = dao.update(session.toEntity())
-
-        override suspend fun delete(id: Long) = dao.deleteById(id)
+        override suspend fun remember(session: SavedSession): SavedSession =
+            session.copy(id = dao.remember(session.toEntity(), keep = SavedSession.RECENT_LIMIT))
     }

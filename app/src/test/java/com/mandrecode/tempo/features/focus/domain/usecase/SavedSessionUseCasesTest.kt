@@ -2,10 +2,9 @@ package com.mandrecode.tempo.features.focus.domain.usecase
 
 import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
+import com.mandrecode.tempo.features.focus.domain.model.FocusSession
 import com.mandrecode.tempo.features.focus.domain.model.SavedSession
 import com.mandrecode.tempo.features.focus.domain.repository.SavedSessionRepository
-import com.mandrecode.tempo.features.tasks.domain.model.Task
-import com.mandrecode.tempo.features.tasks.domain.repository.TaskRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -13,114 +12,52 @@ import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 class SavedSessionUseCasesTest {
-    private val savedSessionRepository = mockk<SavedSessionRepository>(relaxed = true)
-    private val taskRepository = mockk<TaskRepository>(relaxed = true)
+    private val repository = mockk<SavedSessionRepository>(relaxed = true)
+    private val now = Instant.fromEpochMilliseconds(1_700_000_000_000)
+    private val clock =
+        object : Clock {
+            override fun now(): Instant = now
+        }
 
-    private val study = SavedSession(id = 1, title = "Study", focusMinutes = 25, breakMinutes = 5)
-
-    private fun task(
-        id: Long,
-        title: String,
-        isCompleted: Boolean = false,
-        parentTaskId: Long? = null,
-    ) = Task(id = id, title = title, description = "", isCompleted = isCompleted, parentTaskId = parentTaskId)
+    private val study = SavedSession(id = 0, title = "Study", focusMinutes = 25, breakMinutes = 5)
 
     @Test
-    fun `sessions come with the task they point at`() =
+    fun `recent sessions are read as the repository orders them`() =
         runTest {
-            val chapter = task(7, "Read chapter 3")
-            every { savedSessionRepository.getAll() } returns flowOf(listOf(study, study.copy(id = 2, taskId = 7)))
-            every { taskRepository.getAllTasks() } returns flowOf(listOf(chapter))
+            val recents = listOf(study.copy(id = 2, title = "Work"), study.copy(id = 1))
+            every { repository.getAll() } returns flowOf(recents)
 
-            GetSavedSessionsUseCase(savedSessionRepository, taskRepository)().test {
-                val entries = awaitItem()
-                assertThat(entries.map { it.linkedTask }).containsExactly(null, chapter).inOrder()
+            GetSavedSessionsUseCase(repository)().test {
+                assertThat(awaitItem()).isEqualTo(recents)
                 awaitComplete()
             }
         }
 
     @Test
-    fun `a link whose task is gone resolves to nothing`() =
+    fun `remembering stamps the start time, normalizes, and returns the session with its id`() =
         runTest {
-            every { savedSessionRepository.getAll() } returns flowOf(listOf(study.copy(taskId = 99)))
-            every { taskRepository.getAllTasks() } returns flowOf(emptyList())
+            coEvery { repository.remember(any()) } answers { firstArg<SavedSession>().copy(id = 7) }
 
-            GetSavedSessionsUseCase(savedSessionRepository, taskRepository)().test {
-                assertThat(awaitItem().single().linkedTask).isNull()
-                awaitComplete()
-            }
-        }
+            val remembered = RememberSessionUseCase(repository, clock)(study.copy(title = " Study ", focusMinutes = 0))
 
-    @Test
-    fun `a new session is inserted and comes back with its id`() =
-        runTest {
-            coEvery { savedSessionRepository.insert(any()) } returns 12
-
-            val saved = SaveSavedSessionUseCase(savedSessionRepository)(study.copy(id = 0, title = " Study "))
-
-            assertThat(saved).isEqualTo(study.copy(id = 12))
-            coVerify { savedSessionRepository.insert(study.copy(id = 0)) }
-        }
-
-    @Test
-    fun `an existing session is updated, normalized`() =
-        runTest {
-            val saved = SaveSavedSessionUseCase(savedSessionRepository)(study.copy(rounds = 0))
-
-            assertThat(saved).isEqualTo(study)
-            coVerify { savedSessionRepository.update(study) }
-            coVerify(exactly = 0) { savedSessionRepository.insert(any()) }
-        }
-
-    @Test
-    fun `a session with no name is not saved`() =
-        runTest {
-            val saved = SaveSavedSessionUseCase(savedSessionRepository)(study.copy(title = "   "))
-
-            assertThat(saved).isNull()
-            coVerify(exactly = 0) { savedSessionRepository.insert(any()) }
-            coVerify(exactly = 0) { savedSessionRepository.update(any()) }
-        }
-
-    @Test
-    fun `deleting removes the session by id`() =
-        runTest {
-            DeleteSavedSessionUseCase(savedSessionRepository)(1)
-
-            coVerify { savedSessionRepository.delete(1) }
-        }
-
-    @Test
-    fun `only open top-level tasks can be linked, by name`() =
-        runTest {
-            every { taskRepository.getAllTasks() } returns
-                flowOf(
-                    listOf(
-                        task(1, "write"),
-                        task(2, "Done already", isCompleted = true),
-                        task(3, "A step", parentTaskId = 1),
-                        task(4, "Call"),
-                    ),
+            val expected =
+                study.copy(
+                    id = 7,
+                    focusMinutes = FocusSession.SESSION_LENGTH_RANGE.first,
+                    lastUsedAt = now.toEpochMilliseconds(),
                 )
-
-            GetLinkableTasksUseCase(taskRepository)().test {
-                assertThat(awaitItem().map { it.id }).containsExactly(4L, 1L).inOrder()
-                awaitComplete()
-            }
+            assertThat(remembered).isEqualTo(expected)
         }
 
     @Test
-    fun `tasks are not read while no session points at one`() =
+    fun `a session with no name is not remembered`() =
         runTest {
-            every { savedSessionRepository.getAll() } returns flowOf(listOf(study), emptyList())
+            assertThat(RememberSessionUseCase(repository, clock)(study.copy(title = "  "))).isNull()
 
-            GetSavedSessionsUseCase(savedSessionRepository, taskRepository)().test {
-                assertThat(awaitItem().single().session).isEqualTo(study)
-                assertThat(awaitItem()).isEmpty()
-                awaitComplete()
-            }
-            io.mockk.verify(exactly = 0) { taskRepository.getAllTasks() }
+            coVerify(exactly = 0) { repository.remember(any()) }
         }
 }

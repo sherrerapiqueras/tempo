@@ -223,7 +223,7 @@ class BackupMapperTest {
     }
 
     @Test
-    fun `saved focus sessions round trip, linked and unlinked`() {
+    fun `recent focus sessions round trip with when they were last used`() {
         val data =
             BackupData(
                 categories = emptyList(),
@@ -233,7 +233,7 @@ class BackupMapperTest {
                 chainMemberships = emptyList(),
                 focusSessions =
                     listOf(
-                        SavedSession(1, "Study", focusMinutes = 50, breakMinutes = 10, rounds = 4, taskId = 7),
+                        SavedSession(1, "Study", focusMinutes = 50, breakMinutes = 10, rounds = 4, lastUsedAt = 1_700),
                         SavedSession(id = 2, title = "Read", focusMinutes = 25, breakMinutes = 5),
                     ),
             )

@@ -30,6 +30,7 @@ import com.mandrecode.tempo.features.backup.domain.model.ImportMode
 import com.mandrecode.tempo.features.backup.domain.model.ImportOutcome
 import com.mandrecode.tempo.features.backup.domain.util.BackupPayloadValidator
 import com.mandrecode.tempo.features.backup.domain.util.MergePlanner
+import com.mandrecode.tempo.features.focus.domain.model.SavedSession
 import com.mandrecode.tempo.infrastructure.security.BackupEncryptionService
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -584,15 +585,29 @@ class BackupRepositoryImplTest {
             .bufferedReader()
             .use { it.readText() }
 
-    private val linkedSession =
-        SavedSessionEntity(id = 3, title = "Study", focusMinutes = 50, breakMinutes = 10, rounds = 4, taskId = 1)
-    private val looseSession = SavedSessionEntity(id = 5, title = "Read", focusMinutes = 25, breakMinutes = 5)
+    private val study =
+        SavedSessionEntity(
+            id = 3,
+            title = "Study",
+            focusMinutes = 50,
+            breakMinutes = 10,
+            rounds = 4,
+            lastUsedAt = 2_000,
+        )
+    private val reading =
+        SavedSessionEntity(
+            id = 5,
+            title = "Read",
+            focusMinutes = 25,
+            breakMinutes = 5,
+            lastUsedAt = 1_000,
+        )
 
     @Test
-    fun `export then replace-import restores saved sessions with their ids and links`() =
+    fun `export then replace-import restores recent sessions with their ids, keeping only the recent few`() =
         runTest {
             stubLocalData()
-            coEvery { savedSessionDao.getAllSync() } returns listOf(linkedSession, looseSession)
+            coEvery { savedSessionDao.getAllSync() } returns listOf(study, reading)
             val json = repository.exportEncrypted(testPassphrase)
             val inserted = mutableListOf<SavedSessionEntity>()
             coEvery { savedSessionDao.insert(capture(inserted)) } returns 0
@@ -601,28 +616,15 @@ class BackupRepositoryImplTest {
 
             assertThat(outcome).isInstanceOf(ImportOutcome.Success::class.java)
             coVerify { savedSessionDao.deleteAll() }
-            assertThat(inserted).containsExactly(linkedSession, looseSession).inOrder()
+            assertThat(inserted).containsExactly(study, reading).inOrder()
+            coVerify { savedSessionDao.trimTo(SavedSession.RECENT_LIMIT) }
         }
 
     @Test
-    fun `a restored session whose task the file does not carry comes back unlinked`() =
+    fun `merging an export of the same data adds no recent session twice`() =
         runTest {
             stubLocalData()
-            coEvery { savedSessionDao.getAllSync() } returns listOf(linkedSession.copy(taskId = 404))
-            val json = repository.exportEncrypted(testPassphrase)
-            val inserted = mutableListOf<SavedSessionEntity>()
-            coEvery { savedSessionDao.insert(capture(inserted)) } returns 0
-
-            repository.importFromJson(json, ImportMode.REPLACE, testPassphrase)
-
-            assertThat(inserted.single().taskId).isNull()
-        }
-
-    @Test
-    fun `merging an export of the same data adds no saved session twice`() =
-        runTest {
-            stubLocalData()
-            coEvery { savedSessionDao.getAllSync() } returns listOf(linkedSession, looseSession)
+            coEvery { savedSessionDao.getAllSync() } returns listOf(study, reading)
             val json = repository.exportEncrypted(testPassphrase)
 
             repository.importFromJson(json, ImportMode.MERGE, testPassphrase)
@@ -631,20 +633,20 @@ class BackupRepositoryImplTest {
         }
 
     @Test
-    fun `merging adds the sessions this device lacks, once, linked to the matching local task`() =
+    fun `merging adds the topics this device lacks, once by name, then trims to the recent few`() =
         runTest {
             stubLocalData()
             coEvery { savedSessionDao.getAllSync() } returns
-                listOf(linkedSession, linkedSession.copy(id = 9), looseSession)
+                listOf(study, study.copy(id = 9, title = "study"), reading)
             val json = repository.exportEncrypted(testPassphrase)
-            coEvery { savedSessionDao.getAllSync() } returns listOf(looseSession)
+            coEvery { savedSessionDao.getAllSync() } returns listOf(reading)
             val inserted = mutableListOf<SavedSessionEntity>()
             coEvery { savedSessionDao.insert(capture(inserted)) } returns 0
 
             repository.importFromJson(json, ImportMode.MERGE, testPassphrase)
 
-            // The incoming task matches the local one, so the link follows it there; the second
-            // copy in the file is the same session and is not added again.
-            assertThat(inserted).containsExactly(linkedSession.copy(id = 0, taskId = 1))
+            // "study" is the same topic as "Study", so the second copy is not added again.
+            assertThat(inserted).containsExactly(study.copy(id = 0))
+            coVerify { savedSessionDao.trimTo(SavedSession.RECENT_LIMIT) }
         }
 }

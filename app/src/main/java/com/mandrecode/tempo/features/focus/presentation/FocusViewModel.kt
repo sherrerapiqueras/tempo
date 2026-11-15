@@ -7,15 +7,13 @@ import com.mandrecode.tempo.core.domain.model.VacationPeriod
 import com.mandrecode.tempo.core.domain.repository.VacationModeRepository
 import com.mandrecode.tempo.features.focus.domain.model.FocusSession
 import com.mandrecode.tempo.features.focus.domain.repository.FocusSessionRepository
-import com.mandrecode.tempo.features.focus.domain.usecase.DeleteSavedSessionUseCase
 import com.mandrecode.tempo.features.focus.domain.usecase.FocusSessionUseCases
 import com.mandrecode.tempo.features.focus.domain.usecase.GetFocusAgendaUseCase
 import com.mandrecode.tempo.features.focus.domain.usecase.GetFocusHistoryUseCase
 import com.mandrecode.tempo.features.focus.domain.usecase.GetFocusStreakUseCase
-import com.mandrecode.tempo.features.focus.domain.usecase.GetLinkableTasksUseCase
 import com.mandrecode.tempo.features.focus.domain.usecase.GetSavedSessionsUseCase
 import com.mandrecode.tempo.features.focus.domain.usecase.RecordDailyActivityUseCase
-import com.mandrecode.tempo.features.focus.domain.usecase.SaveSavedSessionUseCase
+import com.mandrecode.tempo.features.focus.domain.usecase.RememberSessionUseCase
 import com.mandrecode.tempo.features.tasks.domain.usecase.GetUndatedTasksUseCase
 import com.mandrecode.tempo.features.tasks.domain.usecase.RestoreTaskRemindersUseCase
 import com.mandrecode.tempo.features.tasks.domain.usecase.ToggleTaskCompletionUseCase
@@ -58,9 +56,7 @@ class FocusViewModel
         internal val updateTask: UpdateTaskUseCase,
         internal val restoreTaskReminders: RestoreTaskRemindersUseCase,
         internal val getSavedSessions: GetSavedSessionsUseCase,
-        internal val getLinkableTasks: GetLinkableTasksUseCase,
-        internal val saveSavedSession: SaveSavedSessionUseCase,
-        internal val deleteSavedSession: DeleteSavedSessionUseCase,
+        internal val rememberSession: RememberSessionUseCase,
         private val vacationModeRepository: VacationModeRepository,
         internal val clock: Clock,
     ) : ViewModel() {
@@ -75,14 +71,11 @@ class FocusViewModel
         /** Cancelled when the sheet closes, so a closed sheet is not still collecting for nobody. */
         internal var planSheetJob: Job? = null
 
-        /** Cancelled when no session is being set up any more, for the same reason. */
-        internal var linkableTasksJob: Job? = null
-
         /**
-         * Held for as long as a session is on its way to the database, so a second tap on save or
-         * start cannot write it twice.
+         * Held for as long as a new session is on its way to the database and its timer, so a
+         * second tap on start cannot begin it twice.
          */
-        internal var isSavingSession = false
+        internal var isStartingSession = false
 
         /** Replaced when an interaction finds that the open screen has crossed into a new day. */
         private var observeDayJob: Job? = null
@@ -96,7 +89,7 @@ class FocusViewModel
 
         init {
             observeSession()
-            observeSavedSessions()
+            observeRecentSessions()
             refreshDayIfStale()
         }
 
@@ -160,9 +153,9 @@ class FocusViewModel
                 FocusContract.UiEvent.ConfirmPendingStart -> {
                     val pending = mutableUiState.value.pendingStart ?: return
                     mutableUiState.update { it.copy(pendingStart = null) }
-                    val savedSessionId = pending.savedSessionId
-                    if (savedSessionId != null) {
-                        startSavedSession(savedSessionId, force = true)
+                    val newSession = pending.newSession
+                    if (newSession != null) {
+                        startNewSession(newSession, force = true)
                     } else {
                         startSessionOn(pending.toStartSession(), force = true)
                     }
@@ -291,8 +284,7 @@ class FocusViewModel
             // tasks mid-session is a real loss of the current one's remaining time. Ask first —
             // unless it is the same task, where "starting" is just carrying on.
             // Only a focus session on something else is at risk of being thrown away; the same
-            // task is carrying on, and a break has nothing to lose. A saved session linked to this
-            // task is something else too: it has rounds of its own that a plain start would drop.
+            // task is carrying on, and a break has nothing to lose.
             val taskKey = FocusSession.subjectKeyOf(taskId = task.id)
             val replaced = state.session?.takeIf { !it.isBreak && it.subjectKey != taskKey }
             if (!force && replaced != null) {
@@ -381,7 +373,9 @@ class FocusViewModel
                 }
             }
             viewModelScope.launch {
-                focusSessionRepository.setupSessionId.collect { onSetupSessionChanged(it) }
+                focusSessionRepository.setupSessionId.collect { sessionId ->
+                    mutableUiState.update { it.copy(setupSessionId = sessionId) }
+                }
             }
             viewModelScope.launch {
                 focusSessionRepository.breakLengthMinutes.collect { minutes ->

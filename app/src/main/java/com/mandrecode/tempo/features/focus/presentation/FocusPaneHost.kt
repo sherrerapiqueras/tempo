@@ -68,36 +68,26 @@ private val NewSessionKey = FocusSession.subjectKeyOf(taskId = null, savedSessio
 /**
  * What the session surface is still latched on, given what it is now being asked to show.
  *
- * Two cases let the latch go, both of them the same surface carrying on rather than a different
- * subject arriving:
- *
- * - A new session has no id until it is saved, so the key it was latched under is a stand-in. Once
- *   it has an id of its own the surface takes up its real key: while it is still being set up
- *   under that id, or once it is the session the surface itself just started ([startedSessionId]).
- * - A surface opened on a task whose link was taken off is now about a new session.
- *
- * Otherwise the latch is kept — a new session saved without starting, with something else running
- * — which is what closes the surface instead of handing it to whatever else there is.
+ * A new session has no id until it starts, so the key it was latched under is a stand-in. Once
+ * the timer the surface itself just started ([startedSessionId]) is the subject, the surface takes
+ * up its real key: the same session carrying on, not a different subject arriving. Otherwise the
+ * latch is kept, which is what closes the surface instead of handing it to whatever else there is.
  */
 internal fun latchedSessionSubject(
     latched: String?,
     current: String?,
-    setupSessionId: Long?,
     startedSessionId: Long? = null,
 ): String? {
-    val isSetUpUnderRealId = setupSessionId != null && setupSessionId != SavedSession.NEW_ID
     val startedKey = startedSessionId?.let { FocusSession.subjectKeyOf(taskId = null, savedSessionId = it) }
-    val isWhatItStarted = startedKey != null && current == startedKey
-    val hasBecomeReal = latched == NewSessionKey && (isSetUpUnderRealId || isWhatItStarted)
-    val hasBecomeNew = latched != NewSessionKey && setupSessionId == SavedSession.NEW_ID
-    return latched.takeUnless { hasBecomeReal || hasBecomeNew }
+    val hasStarted = latched == NewSessionKey && startedKey != null && current == startedKey
+    return latched.takeUnless { hasStarted }
 }
 
 /**
  * Whether a task opened from the docked session goes to the pane, taking the session's place.
  *
  * Not while a session is being set up. Giving up the pane closes the session surface, and with it
- * whatever had been typed into a session not yet saved — so there the task opens as a sheet over
+ * whatever had been typed into a session not started yet — so there the task opens as a sheet over
  * the pane instead, and the draft is still underneath when it closes.
  */
 internal fun handsTaskToPane(setupSessionId: Long?): Boolean = setupSessionId == null

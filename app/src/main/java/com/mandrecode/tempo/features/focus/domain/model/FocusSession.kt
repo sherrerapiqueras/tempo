@@ -11,9 +11,8 @@ import kotlin.time.Instant
  * rather than queueing. Modelled as a single nullable value everywhere for that reason, never a
  * collection.
  *
- * It runs on a task, on a saved session, or on a saved session linked to a task. [taskId] is the
- * task the work belongs to, if any; [cycle] is set when the run has rounds — a [SavedSession]'s, or
- * ones given to a task for this run alone (#517).
+ * It runs on a task, or on a topic session that has none. [taskId] is the task the work belongs
+ * to, if any; [cycle] is set when the run is a topic session's or has rounds of its own (#517).
  *
  * Time is kept as two pieces: [completedBeforeNow], the time banked by earlier run segments, and
  * [runningSince], when the current segment began. Nothing has to tick — remaining time is always
@@ -21,9 +20,9 @@ import kotlin.time.Instant
  * chronometer counts down against the same [endsAt] the alarm fires at.
  */
 data class FocusSession(
-    /** The task this time is spent on, or `null` for a saved session linked to none. */
+    /** The task this time is spent on, or `null` for a topic session. */
     val taskId: Long?,
-    /** The task's title, or the saved session's own name. */
+    /** The task's title, or the topic session's name. */
     val title: String,
     val plannedLength: Duration,
     /** A break counts down and notifies like a session, but banks no focus minutes. */
@@ -144,7 +143,7 @@ data class FocusSession(
             now: Instant,
         ): FocusSession =
             start(
-                taskId = saved.taskId,
+                taskId = null,
                 title = saved.title,
                 now = now,
                 length = lengthOf(saved.focusMinutes),
@@ -199,7 +198,7 @@ data class FocusSession(
  * receiver that advances the rounds has no business opening the database to ask.
  */
 data class SessionCycle(
-    /** The saved session this run came from, or `null` for rounds set on a task for one run. */
+    /** The remembered session this run came from, or `null` for rounds set on a task for one run. */
     val savedSessionId: Long?,
     /** The focus round under way, or the one the current rest follows. Starts at 1. */
     val round: Int,

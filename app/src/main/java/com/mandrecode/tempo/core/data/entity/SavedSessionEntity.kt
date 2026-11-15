@@ -1,21 +1,16 @@
 package com.mandrecode.tempo.core.data.entity
 
 import androidx.room.Entity
-import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
- * A saved focus session (#517): a name, its lengths and rounds, and optionally the task it works
- * on. Not a task and never listed with them.
+ * A topic session the user has started before (#517): a name with the lengths and rounds it last
+ * ran with, and when that was. Not a task and never listed with them.
  *
- * [taskId] carries no foreign key, like every other reference in this database. A link whose task
- * has gone simply resolves to nothing when it is read, and task ids are never reused, so a stale
- * one cannot come to point at something else.
+ * Kept by use rather than saved: the table holds only the few most recently used, see
+ * [com.mandrecode.tempo.core.data.local.dao.SavedSessionDao.remember].
  */
-@Entity(
-    tableName = "focus_sessions",
-    indices = [Index("taskId")],
-)
+@Entity(tableName = "focus_sessions")
 data class SavedSessionEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
@@ -23,5 +18,6 @@ data class SavedSessionEntity(
     val focusMinutes: Int,
     val breakMinutes: Int,
     val rounds: Int = 1,
-    val taskId: Long? = null,
+    /** Epoch milliseconds of the last start; what orders the recents and decides which drop off. */
+    val lastUsedAt: Long = 0,
 )

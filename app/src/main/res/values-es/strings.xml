@@ -752,7 +752,6 @@
     <string name="focus_session_not_started">Sin empezar</string>
     <string name="add_session">Añadir sesión</string>
     <string name="focus_session_round">Ronda %1$d de %2$d</string>
-    <string name="focus_session_rest_length">%1$s de descanso</string>
     <plurals name="focus_session_rounds">
         <item quantity="one">%1$d ronda</item>
         <item quantity="other">%1$d rondas</item>
@@ -766,13 +765,8 @@
     <string name="session_editor_rounds_decrease">Menos rondas</string>
     <string name="session_editor_rounds_increase">Más rondas</string>
     <string name="session_editor_linked_task">Tarea vinculada</string>
-    <string name="session_editor_link_task">Vincular una tarea</string>
-    <string name="session_editor_unlink_task">Quitar la tarea vinculada</string>
+    <string name="session_editor_recent">Sesiones recientes</string>
     <string name="session_linked_task_has_description">Tiene descripción</string>
-    <string name="session_editor_no_tasks">No hay tareas abiertas que vincular</string>
-    <string name="delete_session">Eliminar sesión</string>
-    <string name="delete_session_title">¿Eliminar esta sesión?</string>
-    <string name="delete_session_message">%1$s se quitará de Enfoque. El tiempo que ya le has dedicado se queda en tu historial.</string>
     <plurals name="focus_sessions_done">
         <item quantity="one">%1$d sesión hecha</item>
         <item quantity="other">%1$d sesiones hechas</item>

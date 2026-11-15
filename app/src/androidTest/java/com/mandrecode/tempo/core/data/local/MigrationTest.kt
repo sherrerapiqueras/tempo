@@ -460,11 +460,15 @@ class MigrationTest {
                     assertThat(cursor.moveToFirst()).isTrue()
                     assertThat(cursor.getInt(0)).isEqualTo(0)
                 }
-                // A session can be linked to a task that was there before the table was.
+                // A recent session can be stored beside the tasks that were there before the table was.
                 db.execSQL(
-                    "INSERT INTO focus_sessions (title, focusMinutes, breakMinutes, rounds, taskId) " +
-                        "VALUES ('Study', 25, 5, 4, 1)",
+                    "INSERT INTO focus_sessions (title, focusMinutes, breakMinutes, rounds, lastUsedAt) " +
+                        "VALUES ('Study', 25, 5, 4, 1700000000000)",
                 )
+                db.query("SELECT lastUsedAt FROM focus_sessions").use { cursor ->
+                    assertThat(cursor.moveToFirst()).isTrue()
+                    assertThat(cursor.getLong(0)).isEqualTo(1_700_000_000_000)
+                }
                 db.query("SELECT title FROM tasks WHERE id = 1").use { cursor ->
                     assertThat(cursor.moveToFirst()).isTrue()
                     assertThat(cursor.getString(0)).isEqualTo("Read chapter 3")

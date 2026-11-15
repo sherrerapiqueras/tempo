@@ -333,8 +333,8 @@ abstract class TempoDatabase : RoomDatabase() {
             }
 
         /**
-         * Adds saved focus sessions (#517). A new table and nothing else: no existing row changes,
-         * and a timer already running is stored outside the database.
+         * Adds the topic sessions remembered from Focus (#517). A new table and nothing else: no
+         * existing row changes, and a timer already running is stored outside the database.
          */
         val MIGRATION_13_14 =
             object : Migration(13, 14) {
@@ -346,10 +346,7 @@ abstract class TempoDatabase : RoomDatabase() {
                             "`focusMinutes` INTEGER NOT NULL, " +
                             "`breakMinutes` INTEGER NOT NULL, " +
                             "`rounds` INTEGER NOT NULL, " +
-                            "`taskId` INTEGER)",
-                    )
-                    db.execSQL(
-                        "CREATE INDEX IF NOT EXISTS `index_focus_sessions_taskId` ON `focus_sessions` (`taskId`)",
+                            "`lastUsedAt` INTEGER NOT NULL)",
                     )
                 }
             }

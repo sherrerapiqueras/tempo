@@ -4,67 +4,52 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import com.google.common.truth.Truth.assertThat
 import com.mandrecode.tempo.features.focus.domain.model.SavedSession
+import com.mandrecode.tempo.features.focus.presentation.FocusContract
 import org.junit.Test
 
-/** What the session sheet makes of what is typed into it, and what it saves as it closes. */
+/** What the session sheet makes of what is typed into it. */
 class SessionEditorFormTest {
-    private val study = SavedSession(3, "Study", focusMinutes = 50, breakMinutes = 10, rounds = 4, taskId = 7)
-
-    private fun formOf(original: SavedSession?) =
+    private fun newForm() =
         SessionEditorForm(
-            original = original,
-            title = mutableStateOf(original?.title.orEmpty()),
-            focusMinutes = mutableIntStateOf(original?.focusMinutes ?: 25),
-            breakMinutes = mutableIntStateOf(original?.breakMinutes ?: 5),
-            rounds = mutableIntStateOf(original?.rounds ?: 1),
-            linkedTaskId = mutableStateOf(original?.taskId),
+            isNew = true,
+            title = mutableStateOf(""),
+            focusMinutes = mutableIntStateOf(25),
+            breakMinutes = mutableIntStateOf(5),
+            rounds = mutableIntStateOf(1),
             showsTitleError = mutableStateOf(false),
         )
 
     @Test
-    fun `a new session cannot be saved until it has a name, and never saves on close`() {
-        val form = formOf(null)
+    fun `a new session cannot start until it has a name, and starts with no id`() {
+        val form = newForm()
 
-        assertThat(form.isNew).isTrue()
-        assertThat(form.canSave).isFalse()
+        assertThat(form.canStart).isFalse()
         form.title = "Read"
 
-        assertThat(form.canSave).isTrue()
-        assertThat(form.savesOnClose).isFalse()
-        assertThat(form.draft.id).isEqualTo(0)
+        assertThat(form.canStart).isTrue()
+        assertThat(form.newSession)
+            .isEqualTo(SavedSession(id = SavedSession.NEW_ID, title = "Read", focusMinutes = 25, breakMinutes = 5))
     }
 
     @Test
-    fun `an existing session left as it was does not save on close`() {
-        assertThat(formOf(study).savesOnClose).isFalse()
+    fun `picking a recent session fills the form with it and clears a name error`() {
+        val form = newForm()
+        form.showsTitleError = true
+
+        form.fillFrom(SavedSession(id = 3, title = "Study", focusMinutes = 50, breakMinutes = 10, rounds = 4))
+
+        assertThat(form.newSession)
+            .isEqualTo(SavedSession(id = 0, title = "Study", focusMinutes = 50, breakMinutes = 10, rounds = 4))
+        assertThat(form.showsTitleError).isFalse()
     }
 
     @Test
-    fun `an existing session that was changed saves what it was changed to`() {
-        val form = formOf(study)
-        form.rounds = 2
-        form.linkedTaskId = null
+    fun `a run on a task takes the lengths and rounds set`() {
+        val form = newForm()
+        form.focusMinutes = 50
+        form.rounds = 3
 
-        assertThat(form.savesOnClose).isTrue()
-        assertThat(form.closingDraft.toSavedSession()).isEqualTo(study.copy(rounds = 2, taskId = null))
-    }
-
-    @Test
-    fun `a name rubbed out goes back to what it was and keeps the other changes`() {
-        val form = formOf(study)
-        form.title = "  "
-        form.focusMinutes = 25
-
-        assertThat(form.canSave).isFalse()
-        assertThat(form.savesOnClose).isTrue()
-        assertThat(form.closingDraft.toSavedSession()).isEqualTo(study.copy(focusMinutes = 25))
-    }
-
-    @Test
-    fun `only surrounding spaces added to the name is no change`() {
-        val form = formOf(study)
-        form.title = " Study "
-
-        assertThat(form.savesOnClose).isFalse()
+        assertThat(form.startOnTask())
+            .isEqualTo(FocusContract.UiEvent.StartSession(lengthMinutes = 50, breakMinutes = 5, rounds = 3))
     }
 }

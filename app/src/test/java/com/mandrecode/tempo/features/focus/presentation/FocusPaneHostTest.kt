@@ -153,33 +153,19 @@ class FocusPaneHostTest {
     }
 
     @Test
-    fun givenANewSessionJustSaved_whenItIsStillBeingSetUp_thenTheLatchIsLetGoForItsRealKey() {
-        assertThat(latchedSessionSubject("session:0", current = null, setupSessionId = 12)).isNull()
+    fun givenANewSession_whenNothingHasStarted_thenTheLatchIsKeptSoTheSurfaceCloses() {
+        assertThat(latchedSessionSubject("session:0", current = null)).isEqualTo("session:0")
     }
 
     @Test
-    fun givenANewSession_whenNothingIsBeingSetUpAnyMore_thenTheLatchIsKeptSoTheSurfaceCloses() {
-        assertThat(latchedSessionSubject("session:0", current = null, setupSessionId = null)).isEqualTo("session:0")
-        assertThat(latchedSessionSubject("session:0", current = null, setupSessionId = 0)).isEqualTo("session:0")
-    }
-
-    @Test
-    fun givenAnythingElseLatched_whenASessionIsBeingSetUp_thenTheLatchIsUntouched() {
-        assertThat(latchedSessionSubject("session:4", current = null, setupSessionId = 12)).isEqualTo("session:4")
-        assertThat(latchedSessionSubject("task:1", current = null, setupSessionId = 12)).isEqualTo("task:1")
-        assertThat(latchedSessionSubject(null, current = null, setupSessionId = 12)).isNull()
-    }
-
-    @Test
-    fun givenASurfaceOpenedOnATask_whenItsLinkIsTakenOff_thenItBecomesTheNewSessionInPlace() {
-        assertThat(latchedSessionSubject("task:1", current = null, setupSessionId = 0)).isNull()
-        assertThat(latchedSessionSubject("session:4", current = null, setupSessionId = 0)).isNull()
+    fun givenAnythingElseLatched_whenASessionStarts_thenTheLatchIsUntouched() {
+        assertThat(latchedSessionSubject("task:1", "session:12", startedSessionId = 12)).isEqualTo("task:1")
+        assertThat(latchedSessionSubject(null, "session:12", startedSessionId = 12)).isNull()
     }
 
     @Test
     fun givenASessionBeingSetUp_whenItsTaskIsOpened_thenThePaneIsNotGivenUpAndTheDraftSurvives() {
         assertThat(handsTaskToPane(setupSessionId = 0)).isFalse()
-        assertThat(handsTaskToPane(setupSessionId = 12)).isFalse()
         assertThat(handsTaskToPane(setupSessionId = null)).isTrue()
     }
 
@@ -187,15 +173,12 @@ class FocusPaneHostTest {
     fun givenANewSessionJustStarted_whenItsTimerIsTheSubject_thenTheSurfaceFollowsItInsteadOfClosing() {
         // Nothing is being set up any more: starting cleared it, in the same breath that gave the
         // session its id. What says this timer is the surface's own is that the surface started it.
-        val latched = latchedSessionSubject("session:0", "session:12", setupSessionId = null, startedSessionId = 12)
-
-        assertThat(latched).isNull()
+        assertThat(latchedSessionSubject("session:0", "session:12", startedSessionId = 12)).isNull()
     }
 
     @Test
-    fun givenANewSessionSavedWithoutStarting_whenSomethingElseIsRunning_thenTheSurfaceCloses() {
-        assertThat(latchedSessionSubject("session:0", "session:4", setupSessionId = null)).isEqualTo("session:0")
-        assertThat(latchedSessionSubject("session:0", "session:4", setupSessionId = null, startedSessionId = 12))
-            .isEqualTo("session:0")
+    fun givenANewSessionNotStarted_whenSomethingElseIsRunning_thenTheSurfaceCloses() {
+        assertThat(latchedSessionSubject("session:0", "session:4")).isEqualTo("session:0")
+        assertThat(latchedSessionSubject("session:0", "session:4", startedSessionId = 12)).isEqualTo("session:0")
     }
 }

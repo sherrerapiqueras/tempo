@@ -251,10 +251,7 @@ class FocusSessionUseCasesTest {
             assertThat(useCases.reconcile()).isNull()
         }
 
-    private fun saved(
-        rounds: Int = 2,
-        taskId: Long? = null,
-    ) = SavedSession(id = 4, title = "Study", focusMinutes = 25, breakMinutes = 5, rounds = rounds, taskId = taskId)
+    private fun saved(rounds: Int = 2) = SavedSession(4, "Study", focusMinutes = 25, breakMinutes = 5, rounds = rounds)
 
     @Test
     fun `starting a saved session runs its first round at its own length`() =
@@ -400,15 +397,15 @@ class FocusSessionUseCasesTest {
         }
 
     @Test
-    fun `a session linked to a task banks its minutes and its run against that task`() =
+    fun `a topic session banks its minutes against the day and no task`() =
         runTest {
-            useCases.startSaved(saved(rounds = 1, taskId = 9))
+            useCases.startSaved(saved(rounds = 1))
             now = start + 25.minutes
 
             useCases.end()
 
-            verify { sessionRepository.addFocusMinutesFor(9, 25, any()) }
-            verify { sessionRepository.recordSessionFor(9, any()) }
+            coVerify { activityRepository.addFocusMinutes(any<LocalDate>(), 25) }
+            verify(exactly = 0) { sessionRepository.addFocusMinutesFor(any(), any(), any()) }
         }
 
     @Test

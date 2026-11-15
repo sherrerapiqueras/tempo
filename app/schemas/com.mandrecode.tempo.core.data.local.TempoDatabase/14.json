@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 14,
-    "identityHash": "46a4d264ed30bea8310824b65b6c0a54",
+    "identityHash": "7cba907f1ef6b24b563b82372842e13b",
     "entities": [
       {
         "tableName": "tasks",
@@ -544,7 +544,7 @@
       },
       {
         "tableName": "focus_sessions",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `title` TEXT NOT NULL, `focusMinutes` INTEGER NOT NULL, `breakMinutes` INTEGER NOT NULL, `rounds` INTEGER NOT NULL, `taskId` INTEGER)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `title` TEXT NOT NULL, `focusMinutes` INTEGER NOT NULL, `breakMinutes` INTEGER NOT NULL, `rounds` INTEGER NOT NULL, `lastUsedAt` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -577,9 +577,10 @@
             "notNull": true
           },
           {
-            "fieldPath": "taskId",
-            "columnName": "taskId",
-            "affinity": "INTEGER"
+            "fieldPath": "lastUsedAt",
+            "columnName": "lastUsedAt",
+            "affinity": "INTEGER",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -587,23 +588,12 @@
           "columnNames": [
             "id"
           ]
-        },
-        "indices": [
-          {
-            "name": "index_focus_sessions_taskId",
-            "unique": false,
-            "columnNames": [
-              "taskId"
-            ],
-            "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_focus_sessions_taskId` ON `${TABLE_NAME}` (`taskId`)"
-          }
-        ]
+        }
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '46a4d264ed30bea8310824b65b6c0a54')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7cba907f1ef6b24b563b82372842e13b')"
     ]
   }
 }

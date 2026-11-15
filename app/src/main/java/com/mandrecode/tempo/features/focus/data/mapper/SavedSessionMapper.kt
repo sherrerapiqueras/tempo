@@ -10,7 +10,7 @@ fun SavedSessionEntity.toDomain(): SavedSession =
         focusMinutes = focusMinutes,
         breakMinutes = breakMinutes,
         rounds = rounds,
-        taskId = taskId,
+        lastUsedAt = lastUsedAt,
     )
 
 fun SavedSession.toEntity(): SavedSessionEntity =
@@ -20,5 +20,5 @@ fun SavedSession.toEntity(): SavedSessionEntity =
         focusMinutes = focusMinutes,
         breakMinutes = breakMinutes,
         rounds = rounds,
-        taskId = taskId,
+        lastUsedAt = lastUsedAt,
     )

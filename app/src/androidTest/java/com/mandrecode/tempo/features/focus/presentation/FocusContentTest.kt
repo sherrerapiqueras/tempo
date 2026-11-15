@@ -23,7 +23,6 @@ import com.mandrecode.tempo.core.ui.theme.TempoTheme
 import com.mandrecode.tempo.features.focus.domain.model.FocusAgendaItem
 import com.mandrecode.tempo.features.focus.domain.model.FocusSession
 import com.mandrecode.tempo.features.focus.domain.model.SavedSession
-import com.mandrecode.tempo.features.focus.domain.model.SavedSessionEntry
 import com.mandrecode.tempo.features.focus.presentation.components.SESSION_ROUNDS_TEST_TAG
 import com.mandrecode.tempo.features.tasks.domain.model.Task
 import kotlinx.collections.immutable.persistentListOf
@@ -252,42 +251,23 @@ class FocusContentTest {
     private val study = SavedSession(id = 4, title = "Study", focusMinutes = 50, breakMinutes = 10, rounds = 4)
 
     @Test
-    fun savedSessions_shareTheUpNextRowAndStartInOneTap() {
-        val events = mutableListOf<FocusContract.UiEvent>()
-        setContent(stateWith().copy(savedSessions = persistentListOf(SavedSessionEntry(study)))) { events += it }
+    fun recentSessions_areNotListedOnFocus() {
+        setContent(stateWith().copy(recentSessions = persistentListOf(study))) { }
 
-        composeTestRule.onNodeWithText("UP NEXT").assertIsDisplayed()
-        composeTestRule.onNodeWithText("SESSIONS").assertDoesNotExist()
-        composeTestRule.onNodeWithText("4 ROUNDS · 10 MIN REST").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Start 50 min").performClick()
-        composeTestRule.onNodeWithText("Study").performClick()
-        composeTestRule.waitForIdle()
-
-        assertThat(events)
-            .containsExactly(FocusContract.UiEvent.StartSavedSession(4), FocusContract.UiEvent.EditSession(4))
-            .inOrder()
-    }
-
-    @Test
-    fun emptyDayWithSavedSessions_showsThemInsteadOfTheEmptyMessage() {
-        setContent(stateWith().copy(savedSessions = persistentListOf(SavedSessionEntry(study)))) { }
-
-        composeTestRule.onNodeWithText("Study").assertIsDisplayed()
-        composeTestRule.onNodeWithText("A clear day", substring = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("Study").assertDoesNotExist()
+        composeTestRule.onNodeWithText("A clear day", substring = true).assertExists()
     }
 
     @Test
     fun runningSessionWithNoTask_showsItsRoundAndOffersNoMarkDone() {
         val running = FocusSession.start(study, Clock.System.now())
-        setContent(stateWith().copy(savedSessions = persistentListOf(SavedSessionEntry(study)), session = running)) { }
+        setContent(stateWith().copy(recentSessions = persistentListOf(study), session = running)) { }
 
         composeTestRule.onNodeWithText("Focusing · Round 1 of 4").assertIsDisplayed()
         // One marker per round, on the card as on the sheet.
         composeTestRule.onNodeWithTag(SESSION_ROUNDS_TEST_TAG, useUnmergedTree = true).assertIsDisplayed()
         composeTestRule.onNodeWithText("Pause").assertIsDisplayed()
         composeTestRule.onNodeWithText("Mark done").assertDoesNotExist()
-        // The running session has the card above, so it is not offered for starting again.
-        composeTestRule.onNodeWithText("Start 50 min").assertDoesNotExist()
     }
 }
 

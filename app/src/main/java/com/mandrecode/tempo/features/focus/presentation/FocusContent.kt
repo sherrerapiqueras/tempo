@@ -227,9 +227,7 @@ private fun LazyListScope.upNextSection(
     onEvent: (FocusContract.UiEvent) -> Unit,
 ) {
     val session = uiState.session
-    // The day's tasks worth starting and the saved sessions are one row (#517): both are a card
-    // with a start on it, and two rows of those under two labels was the same offer made twice.
-    if (session == null && uiState.upNext.isEmpty() && uiState.startableSessions.isEmpty()) return
+    if (session == null && uiState.upNext.isEmpty()) return
 
     item(key = "up_next_label") {
         Text(
@@ -270,11 +268,10 @@ private fun LazyListScope.upNextRow(
 ) {
     val session = uiState.session
     val queued = uiState.queuedUpNext
-    val sessions = uiState.startableSessions
 
     item(key = "up_next_row") {
         PeekingCardRow(
-            cardCount = queued.size + sessions.size + if (session != null) 1 else 0,
+            cardCount = queued.size + if (session != null) 1 else 0,
             modifier = Modifier.animateItem(),
             // The running card is put first and has to be seen there.
             startKey = session?.subjectKey,
@@ -316,9 +313,6 @@ private fun LazyListScope.upNextRow(
                     },
                 )
             }
-            // After the day's work, not before it: they are here every day, and what is due today
-            // is what Focus is opened for.
-            savedSessionCards(sessions = sessions, cardWidth = cardWidth, onEvent = onEvent)
         }
     }
 }

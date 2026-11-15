@@ -7,19 +7,21 @@ import com.mandrecode.tempo.core.ui.theme.TempoTheme
 import com.mandrecode.tempo.features.focus.domain.model.FocusAgendaItem
 import com.mandrecode.tempo.features.focus.domain.model.FocusSession
 import com.mandrecode.tempo.features.focus.domain.model.SavedSession
-import com.mandrecode.tempo.features.focus.domain.model.SavedSessionEntry
 import com.mandrecode.tempo.features.tasks.domain.model.Task
 import kotlinx.collections.immutable.persistentListOf
 import kotlin.time.Clock
 
 private val chapter = Task(id = 7, title = "Read chapter 3", description = "Pages 41 to 68")
-private val study =
-    SavedSession(id = 1, title = "Study", focusMinutes = 50, breakMinutes = 10, rounds = 4, taskId = chapter.id)
+private val study = SavedSession(id = 1, title = "Study", focusMinutes = 50, breakMinutes = 10, rounds = 4)
 private val base =
     FocusContract.UiState(
         isLoading = false,
-        savedSessions = persistentListOf(SavedSessionEntry(study, linkedTask = chapter)),
-        linkableTasks = persistentListOf(chapter),
+        recentSessions =
+            persistentListOf(
+                study,
+                SavedSession(id = 2, title = "Work", focusMinutes = 25, breakMinutes = 5),
+                SavedSession(id = 3, title = "Reading", focusMinutes = 30, breakMinutes = 5, rounds = 2),
+            ),
     )
 
 @Composable
@@ -27,21 +29,15 @@ private fun Sheet(uiState: FocusContract.UiState) {
     TempoTheme { FocusSessionSheet(uiState = uiState, onEvent = {}, onDismiss = {}) }
 }
 
-@Preview(name = "Session sheet – new session", showBackground = true)
-@Composable
-private fun SessionSheetNewPreview() {
-    Sheet(base.copy(setupSessionId = SavedSession.NEW_ID))
-}
-
-@Preview(name = "Session sheet – saved session, before starting", showBackground = true)
+@Preview(name = "Session sheet – new session with recents", showBackground = true)
 @Preview(
-    name = "Session sheet – saved session, before starting, dark",
+    name = "Session sheet – new session with recents, dark",
     showBackground = true,
     uiMode = Configuration.UI_MODE_NIGHT_YES,
 )
 @Composable
-private fun SessionSheetSavedPreview() {
-    Sheet(base.copy(setupSessionId = study.id))
+private fun SessionSheetNewPreview() {
+    Sheet(base.copy(setupSessionId = SavedSession.NEW_ID))
 }
 
 @Preview(name = "Session sheet – task, before starting", showBackground = true)

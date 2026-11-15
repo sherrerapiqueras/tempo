@@ -5,51 +5,6 @@ Defines saved focus sessions: named, reusable timers with a focus length, a rest
 
 ## Requirements
 
-### Requirement: A session is created with a name, a focus length, a rest and rounds
-The session sheet opened for a new session SHALL ask for a name, a focus length, a rest length and a number of rounds, pre-filled with the configured session length, the configured break length and one round, around the same countdown ring a running session shows. Saving SHALL require a non-blank name. The sheet SHALL offer saving, and saving and starting at once.
-
-#### Scenario: Create a session
-- **WHEN** the user enters "Study", leaves the defaults and saves
-- **THEN** a session named "Study" exists with the configured focus and break lengths and one round
-
-#### Scenario: Blank name
-- **WHEN** the name is empty or only spaces
-- **THEN** the sheet does not offer saving
-
-#### Scenario: Save and start
-- **WHEN** the user fills the sheet and chooses to start
-- **THEN** the session is saved and its timer starts at once
-
-### Requirement: Saved sessions are listed on Focus and reusable
-Focus SHALL show saved sessions as cards in the Up next row, after the day's tasks, each with its name, its rest and rounds, and a start action. A session SHALL remain listed after it runs, until the user deletes it. The row SHALL be shown even when the day has no tasks.
-
-#### Scenario: Session runs to the end
-- **WHEN** a saved session finishes or is stopped
-- **THEN** it is still listed on Focus and can be started again
-
-#### Scenario: Empty day with sessions
-- **WHEN** there are no tasks today or overdue but a saved session exists
-- **THEN** Focus shows the sessions row rather than only the empty-day message
-
-#### Scenario: Tasks and sessions together
-- **WHEN** the day has tasks worth starting and saved sessions exist
-- **THEN** one row holds the tasks first and the sessions after them
-
-### Requirement: A saved session can be edited and deleted
-Tapping a saved session's card SHALL open it in the session sheet with its values, where they can be changed and are saved when the sheet closes, or the session deleted after confirmation. Deleting a session that is running SHALL end its timer, keeping the minutes already earned.
-
-#### Scenario: Edit
-- **WHEN** the user opens "Study", changes the focus length to 50 minutes and saves
-- **THEN** the card shows 50 minutes and the next start runs for 50 minutes
-
-#### Scenario: Delete
-- **WHEN** the user deletes a session and confirms
-- **THEN** it is no longer listed on Focus
-
-#### Scenario: Delete while running
-- **WHEN** the user deletes the session whose timer is running
-- **THEN** the timer ends and the minutes it earned stay in the day's focus time
-
 ### Requirement: A session is not a task
 A saved session SHALL NOT appear in the Tasks tab, SHALL have no completion state, date or reminder, and SHALL NOT count in the day's scheduled or completed totals. Focus minutes earned by a session SHALL count in the day's focus time.
 
@@ -60,21 +15,6 @@ A saved session SHALL NOT appear in the Tasks tab, SHALL have no completion stat
 #### Scenario: Day progress
 - **WHEN** a saved session finishes on a day with two tasks, one completed
 - **THEN** the day's progress still reads one of two, and its focus minutes include the session's
-
-### Requirement: A session can be linked to a task
-The session sheet SHALL offer an optional link to one open task, which can be changed or removed. A running linked session SHALL bank its minutes against that task and offer marking the task done; an unlinked session SHALL offer no task actions. Deleting the task SHALL leave the session, unlinked.
-
-#### Scenario: Linked session offers the task
-- **WHEN** a session linked to "Read chapter 3" is running
-- **THEN** its controls offer Mark done, which completes "Read chapter 3" and ends the timer
-
-#### Scenario: Unlinked session
-- **WHEN** a session with no linked task is running
-- **THEN** its card, its sheet and its notification offer no Mark done action
-
-#### Scenario: Linked task deleted
-- **WHEN** the task a session is linked to is deleted
-- **THEN** the session is still listed, with no link
 
 ### Requirement: Rounds cycle by themselves
 A session with more than one round SHALL, when a focus round's time runs out, start its rest by itself, and when the rest runs out start the next focus round, until the last focus round ends. Each change SHALL notify the user. The running session SHALL show which round it is on. No rest SHALL follow the last round by itself.
@@ -101,17 +41,6 @@ Starting a saved session while a focus timer on something else is running SHALL 
 #### Scenario: Another timer is running
 - **WHEN** a task timer is running and the user starts a saved session
 - **THEN** the user is asked to confirm, and confirming ends the task timer with its earned minutes banked
-
-### Requirement: Saved sessions are part of backups
-A backup SHALL carry saved sessions. A full restore SHALL bring them back with their task links; a merge SHALL add the sessions the device does not already have, linked to the matching task where it came across and unlinked otherwise. Backups written before sessions existed SHALL still import.
-
-#### Scenario: Restore
-- **WHEN** a backup holding a session linked to a task is restored in full
-- **THEN** the session is listed on Focus, linked to that task
-
-#### Scenario: Older backup
-- **WHEN** a backup written before this change is imported
-- **THEN** the import succeeds and no sessions are added
 
 ### Requirement: The undated-tasks action speaks of planning
 The Focus action that opens the planning sheet SHALL be labelled as planning the undated tasks, with their count.
@@ -153,25 +82,6 @@ The session sheet opened on a task SHALL offer the same focus, rest and rounds c
 - **WHEN** the user opens a task and presses start without changing anything
 - **THEN** a single session of the configured length starts, as before
 
-### Requirement: The linked task has one place and can always be taken off
-The session sheet SHALL show the task a session is for in the same row whether the sheet was opened from that task or the task was linked to a session, with the task's details beneath it. Before the session starts the row SHALL offer taking the link off; with no task it SHALL offer linking one where the sheet is setting up a session. Choosing a task SHALL show its details in place.
-
-#### Scenario: Opened from a task
-- **WHEN** the user opens the session sheet from a task
-- **THEN** the task is shown in the linked-task row with its details beneath, as for a saved session linked to it
-
-#### Scenario: Link taken off a sheet opened from a task
-- **WHEN** the user takes the link off a sheet that was opened from a task
-- **THEN** the same sheet becomes a new session with no task, offering to link one
-
-#### Scenario: Linking loads the task
-- **WHEN** the user links a task to a session being set up
-- **THEN** the task's details appear under the row without leaving the sheet
-
-#### Scenario: Running
-- **WHEN** the session is running
-- **THEN** the task is still shown and the link cannot be taken off
-
 ### Requirement: The linked task opens in its own sheet
 Activating the linked task SHALL open that task's own sheet over the session sheet, without leaving the Focus tab. The session sheet SHALL NOT offer opening the task in the Tasks tab.
 
@@ -204,3 +114,66 @@ The session sheet SHALL NOT write out the linked task's description. When the li
 #### Scenario: Starting
 - **WHEN** the session starts
 - **THEN** nothing about the task's description appears or disappears
+
+### Requirement: A topic session is started from the add action
+The session sheet opened from Focus's add action SHALL ask for a name, a focus length, a rest length and a number of rounds, pre-filled with the configured session length, the configured break length and one round, and SHALL offer starting it. Starting SHALL require a non-blank name. The sheet SHALL NOT offer saving, editing or deleting a session.
+
+#### Scenario: Start a topic
+- **WHEN** the user enters "Study" and starts
+- **THEN** a session named "Study" runs at the configured lengths, in the same sheet
+
+#### Scenario: Blank name
+- **WHEN** the user starts with an empty name
+- **THEN** nothing starts and the sheet asks for a name
+
+#### Scenario: Closed without starting
+- **WHEN** the user closes the sheet without starting
+- **THEN** no session runs and nothing is remembered
+
+### Requirement: Recent topic sessions are offered in the sheet
+The new-session sheet SHALL offer the topic sessions most recently started, most recent first, at most five. Choosing one SHALL fill in its name, focus length, rest length and rounds. Starting a session whose name matches a recent one SHALL update that one rather than add another. When a sixth distinct topic is started, the least recently used SHALL no longer be offered.
+
+#### Scenario: Reuse a topic
+- **WHEN** the user opens the sheet, chooses "Study" from the recents and starts
+- **THEN** the session runs with the lengths and rounds "Study" last ran with, and "Study" is first among the recents
+
+#### Scenario: Same name again
+- **WHEN** the user starts "study" having started "Study" before
+- **THEN** there is still one such recent, with the latest lengths and rounds
+
+#### Scenario: Sixth topic
+- **WHEN** five topics are remembered and a sixth is started
+- **THEN** five are offered, and the one used longest ago is not among them
+
+#### Scenario: None yet
+- **WHEN** no topic session has been started
+- **THEN** the sheet shows no recents
+
+### Requirement: Focus lists tasks, not sessions
+Focus's Up next row SHALL hold the running session's card and the day's tasks worth starting, and SHALL NOT hold cards for topic sessions.
+
+#### Scenario: Topics remembered
+- **WHEN** topic sessions have been started before and none is running
+- **THEN** Up next shows only tasks
+
+### Requirement: A session opened from a task shows that task as a link
+The session sheet opened from a task, or running on a task, SHALL show the task as a chip with its details. The chip SHALL open the task's own sheet. The sheet SHALL NOT offer removing the task or choosing another, and a topic session SHALL NOT show a task.
+
+#### Scenario: Task session
+- **WHEN** the session sheet is opened from a task
+- **THEN** the task's chip is shown, with no way to remove it
+
+#### Scenario: Topic session
+- **WHEN** the session sheet is opened from the add action
+- **THEN** no task row is shown
+
+### Requirement: Recent topic sessions are part of backups
+A backup SHALL carry the remembered topic sessions with when each was last used. A full restore SHALL bring them back; a merge SHALL add those whose name the device does not already have. No more than five SHALL remain after either. Backups written before sessions existed SHALL still import.
+
+#### Scenario: Restore
+- **WHEN** a backup holding three topic sessions is restored in full
+- **THEN** the sheet offers those three, in the order they were last used
+
+#### Scenario: Older backup
+- **WHEN** a backup written before this change is imported
+- **THEN** the import succeeds and no sessions are added

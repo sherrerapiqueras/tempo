@@ -109,14 +109,14 @@ class FocusSessionTest {
         assertThat(resumed.endsAt).isEqualTo(start + 75.minutes)
     }
 
-    private fun saved(rounds: Int) = SavedSession(4, "Study", 25, 5, rounds = rounds, taskId = 9)
+    private fun saved(rounds: Int) = SavedSession(4, "Study", 25, 5, rounds = rounds)
 
     @Test
-    fun `a saved session starts on its first round with its own lengths and task`() {
+    fun `a topic session starts on its first round with its own lengths and no task`() {
         val session = FocusSession.start(saved(rounds = 3), start)
 
         assertThat(session.title).isEqualTo("Study")
-        assertThat(session.taskId).isEqualTo(9)
+        assertThat(session.taskId).isNull()
         assertThat(session.plannedLength).isEqualTo(25.minutes)
         assertThat(session.cycle)
             .isEqualTo(SessionCycle(4, round = 1, totalRounds = 3, focusLength = 25.minutes, breakLength = 5.minutes))

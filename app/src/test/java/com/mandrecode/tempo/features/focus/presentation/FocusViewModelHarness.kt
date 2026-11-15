@@ -7,18 +7,15 @@ import com.mandrecode.tempo.features.focus.domain.model.FocusAgenda
 import com.mandrecode.tempo.features.focus.domain.model.FocusAgendaItem
 import com.mandrecode.tempo.features.focus.domain.model.FocusSession
 import com.mandrecode.tempo.features.focus.domain.model.SavedSession
-import com.mandrecode.tempo.features.focus.domain.model.SavedSessionEntry
 import com.mandrecode.tempo.features.focus.domain.model.SessionCycle
 import com.mandrecode.tempo.features.focus.domain.repository.FocusSessionRepository
-import com.mandrecode.tempo.features.focus.domain.usecase.DeleteSavedSessionUseCase
 import com.mandrecode.tempo.features.focus.domain.usecase.FocusSessionUseCases
 import com.mandrecode.tempo.features.focus.domain.usecase.GetFocusAgendaUseCase
 import com.mandrecode.tempo.features.focus.domain.usecase.GetFocusHistoryUseCase
 import com.mandrecode.tempo.features.focus.domain.usecase.GetFocusStreakUseCase
-import com.mandrecode.tempo.features.focus.domain.usecase.GetLinkableTasksUseCase
 import com.mandrecode.tempo.features.focus.domain.usecase.GetSavedSessionsUseCase
 import com.mandrecode.tempo.features.focus.domain.usecase.RecordDailyActivityUseCase
-import com.mandrecode.tempo.features.focus.domain.usecase.SaveSavedSessionUseCase
+import com.mandrecode.tempo.features.focus.domain.usecase.RememberSessionUseCase
 import com.mandrecode.tempo.features.tasks.domain.model.Category
 import com.mandrecode.tempo.features.tasks.domain.model.Task
 import com.mandrecode.tempo.features.tasks.domain.model.UndatedTask
@@ -108,22 +105,27 @@ abstract class FocusViewModelHarness {
     protected val updateTask = mockk<UpdateTaskUseCase>(relaxed = true)
     protected val restoreTaskReminders = mockk<RestoreTaskRemindersUseCase>(relaxed = true)
 
-    /** The saved sessions on Focus. None unless a test says otherwise. */
-    protected val savedSessions = MutableStateFlow<List<SavedSessionEntry>>(emptyList())
+    /** The recent topic sessions. None unless a test says otherwise. */
+    protected val recentSessions = MutableStateFlow<List<SavedSession>>(emptyList())
     protected val getSavedSessions =
-        mockk<GetSavedSessionsUseCase> { every { this@mockk.invoke() } returns savedSessions }
-    protected val linkableTasks = MutableStateFlow<List<Task>>(emptyList())
-    protected val getLinkableTasks =
-        mockk<GetLinkableTasksUseCase> { every { this@mockk.invoke() } returns linkableTasks }
-    protected val saveSavedSession = mockk<SaveSavedSessionUseCase>(relaxed = true)
-    protected val deleteSavedSession = mockk<DeleteSavedSessionUseCase>(relaxed = true)
+        mockk<GetSavedSessionsUseCase> { every { this@mockk.invoke() } returns recentSessions }
+
+    /** Remembers a session as the real one does: a new one is given [REMEMBERED_ID]. */
+    protected val rememberSession =
+        mockk<RememberSessionUseCase> {
+            coEvery { this@mockk.invoke(any()) } answers {
+                val session = firstArg<SavedSession>()
+                session.takeIf { it.title.isNotBlank() }?.let {
+                    if (it.id == SavedSession.NEW_ID) it.copy(id = REMEMBERED_ID) else it
+                }
+            }
+        }
 
     protected fun savedSession(
         id: Long,
         title: String = "Study",
         rounds: Int = 1,
-        taskId: Long? = null,
-    ) = SavedSession(id = id, title = title, focusMinutes = 25, breakMinutes = 5, rounds = rounds, taskId = taskId)
+    ) = SavedSession(id = id, title = title, focusMinutes = 25, breakMinutes = 5, rounds = rounds)
 
     protected val vacationPeriods = MutableStateFlow<List<VacationPeriod>>(emptyList())
     protected val vacationModeRepository =
@@ -191,9 +193,7 @@ abstract class FocusViewModelHarness {
             updateTask = updateTask,
             restoreTaskReminders = restoreTaskReminders,
             getSavedSessions = getSavedSessions,
-            getLinkableTasks = getLinkableTasks,
-            saveSavedSession = saveSavedSession,
-            deleteSavedSession = deleteSavedSession,
+            rememberSession = rememberSession,
             vacationModeRepository = vacationModeRepository,
             clock = clock,
         )
@@ -229,5 +229,10 @@ abstract class FocusViewModelHarness {
         advanceUntilIdle()
         sessionFlow.value = null
         advanceUntilIdle()
+    }
+
+    protected companion object {
+        /** The id [rememberSession] gives a session it has not seen before. */
+        const val REMEMBERED_ID = 42L
     }
 }

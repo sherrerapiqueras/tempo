@@ -65,7 +65,7 @@ fun BackupData.toDto(
                     focusMinutes = session.focusMinutes,
                     breakMinutes = session.breakMinutes,
                     rounds = session.rounds,
-                    taskId = session.taskId,
+                    lastUsedAt = session.lastUsedAt,
                 )
             },
     )
@@ -100,7 +100,7 @@ fun BackupFileDto.toDomain(): BackupData =
                     focusMinutes = dto.focusMinutes,
                     breakMinutes = dto.breakMinutes,
                     rounds = dto.rounds,
-                    taskId = dto.taskId,
+                    lastUsedAt = dto.lastUsedAt,
                 ).normalized()
             },
     )

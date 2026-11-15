@@ -29,7 +29,7 @@ data class BackupData(
     val settings: BackupSettings? = null,
     val dailyFocusActivity: List<DailyFocusActivity> = emptyList(),
     val sections: List<TaskSection> = emptyList(),
-    /** Saved focus sessions (#517); empty for files written before they existed. */
+    /** Recent topic sessions (#517); empty for files written before they existed. */
     val focusSessions: List<SavedSession> = emptyList(),
 )
 

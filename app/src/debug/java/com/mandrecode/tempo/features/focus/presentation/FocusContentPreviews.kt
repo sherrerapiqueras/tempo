@@ -8,7 +8,6 @@ import com.mandrecode.tempo.core.ui.theme.TempoTheme
 import com.mandrecode.tempo.features.focus.domain.model.FocusAgendaItem
 import com.mandrecode.tempo.features.focus.domain.model.FocusSession
 import com.mandrecode.tempo.features.focus.domain.model.SavedSession
-import com.mandrecode.tempo.features.focus.domain.model.SavedSessionEntry
 import com.mandrecode.tempo.features.tasks.domain.model.Task
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.datetime.DateTimeUnit
@@ -132,42 +131,15 @@ private fun FocusContentAllDonePreview() {
     TempoTheme { FocusContent(uiState = allDoneState, onEvent = {}) }
 }
 
-private val savedSessions =
-    persistentListOf(
-        SavedSessionEntry(
-            session = SavedSession(id = 1, title = "Study", focusMinutes = 50, breakMinutes = 10, rounds = 4),
-        ),
-        SavedSessionEntry(
-            session = SavedSession(id = 2, title = "Deep work", focusMinutes = 25, breakMinutes = 5, taskId = 3),
-            linkedTask = task(3, "Reply to client emails", hour = 12),
-        ),
-    )
+private val study = SavedSession(id = 1, title = "Study", focusMinutes = 50, breakMinutes = 10, rounds = 4)
 
-@Preview(name = "Focus - saved sessions", showBackground = true, device = "id:pixel_9")
+@Preview(name = "Focus - topic session on round 2 of 4", showBackground = true, device = "id:pixel_9")
 @Composable
-private fun FocusContentSavedSessionsPreview() {
-    TempoTheme { FocusContent(uiState = midDayState.copy(savedSessions = savedSessions), onEvent = {}) }
-}
-
-@Preview(name = "Focus - nothing due, saved sessions", showBackground = true, device = "id:pixel_9")
-@Composable
-private fun FocusContentEmptyDaySavedSessionsPreview() {
-    TempoTheme(darkTheme = true) {
-        FocusContent(uiState = emptyDayState.copy(savedSessions = savedSessions), onEvent = {})
-    }
-}
-
-@Preview(name = "Focus - saved session on round 2 of 4", showBackground = true, device = "id:pixel_9")
-@Composable
-private fun FocusContentRunningSavedSessionPreview() {
-    val running = FocusSession.start(savedSessions.first().session, Clock.System.now())
+private fun FocusContentRunningTopicSessionPreview() {
+    val running = FocusSession.start(study, Clock.System.now())
     TempoTheme {
         FocusContent(
-            uiState =
-                midDayState.copy(
-                    savedSessions = savedSessions,
-                    session = running.copy(cycle = running.cycle?.copy(round = 2)),
-                ),
+            uiState = midDayState.copy(session = running.copy(cycle = running.cycle?.copy(round = 2))),
             onEvent = {},
         )
     }

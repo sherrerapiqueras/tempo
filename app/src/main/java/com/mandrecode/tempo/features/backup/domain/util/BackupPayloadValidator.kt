@@ -55,14 +55,13 @@ class BackupPayloadValidator
                     }
                     sanitized
                 }
-            // Saved sessions are sanitized the way sections are, not refused: one with no name is
-            // dropped, a repeated id keeps its first, and a link to a task the file does not carry
-            // is cleared, so nothing here can fail the insert that follows (#517).
+            // Recent sessions are sanitized the way sections are, not refused: one with no name is
+            // dropped and a repeated id keeps its first, so nothing here can fail the insert that
+            // follows (#517).
             val sanitizedSessions =
                 data.focusSessions
                     .filter { it.title.isNotBlank() }
                     .distinctBy { it.id }
-                    .map { session -> session.copy(taskId = session.taskId?.takeIf { it in taskIds }) }
             return Result.Valid(
                 data.copy(tasks = sanitizedTasks, sections = sanitizedSections, focusSessions = sanitizedSessions),
             )

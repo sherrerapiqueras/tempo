@@ -24,11 +24,8 @@ class SavedSessionTest {
     }
 
     @Test
-    fun `the same setup is the same name and numbers, whatever the id or the link`() {
-        assertThat(study.hasSameSetupAs(study.copy(id = 9, taskId = 3))).isTrue()
-        assertThat(study.hasSameSetupAs(study.copy(title = "Read"))).isFalse()
-        assertThat(study.hasSameSetupAs(study.copy(focusMinutes = 50))).isFalse()
-        assertThat(study.hasSameSetupAs(study.copy(breakMinutes = 10))).isFalse()
-        assertThat(study.hasSameSetupAs(study.copy(rounds = 1))).isFalse()
+    fun `the same topic is the same name, whatever its case, spacing or numbers`() {
+        assertThat(study.hasSameNameAs(study.copy(id = 9, title = " study ", focusMinutes = 50))).isTrue()
+        assertThat(study.hasSameNameAs(study.copy(title = "Read"))).isFalse()
     }
 }

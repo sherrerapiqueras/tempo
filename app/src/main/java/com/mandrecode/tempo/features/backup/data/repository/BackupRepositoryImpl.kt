@@ -188,9 +188,10 @@ class BackupRepositoryImpl
                 val seededInboxCount = ensureDefaultCategory(data.categories)
                 data.sections.forEach { database.taskSectionDao().insertSection(it.toEntity()) }
                 data.tasks.forEach { database.taskDao().insertTask(it.toEntity()) }
-                // Already sanitized by the validator: unique ids, named, and linked only to tasks
-                // this file carries.
+                // Already sanitized by the validator: unique ids and named. Trimmed afterwards, in
+                // case the file was edited to carry more than the app keeps.
                 data.focusSessions.forEach { database.savedSessionDao().insert(it.toEntity()) }
+                database.savedSessionDao().trimTo(SavedSession.RECENT_LIMIT)
                 data.habits.forEach { database.habitDao().insertHabit(it.toEntity()) }
                 data.habitChains.forEach { database.habitChainDao().insertHabitChain(it.toEntity()) }
                 memberDao.insertMembers(
@@ -261,8 +262,8 @@ class BackupRepositoryImpl
                 plan.sectionAliases.forEach { (alias, canonical) ->
                     sectionIds[canonical]?.let { sectionIds[alias] = it }
                 }
-                val taskIds = insertMergedTasks(plan, categoryIds, sectionIds)
-                database.savedSessionDao().insertMerged(data.focusSessions, taskIds)
+                insertMergedTasks(plan, categoryIds, sectionIds)
+                database.savedSessionDao().insertMerged(data.focusSessions)
                 val habitIds = plan.habitIdMap.toMutableMap()
                 plan.habitsToInsert.forEach { habit ->
                     habitIds[habit.id] = database.habitDao().insertHabit(habit.copy(id = 0).toEntity())
@@ -318,22 +319,20 @@ class BackupRepositoryImpl
     }
 
 /**
- * Adds the incoming saved sessions this device does not already have (#517).
+ * Adds the incoming recent sessions whose name this device does not already have (#517), and keeps
+ * only as many as the app ever keeps.
  *
- * "Already has" is the same name with the same numbers: sessions carry no identity beyond that, and
- * importing the same file twice must not double the row on Focus. A link follows its task to
- * wherever the merge put it, and is dropped when the task did not come across.
+ * The name is the session: importing the same file twice must not double a topic, and a topic both
+ * sides have keeps this device's lengths.
  */
-private suspend fun SavedSessionDao.insertMerged(
-    incoming: List<SavedSession>,
-    taskIds: Map<Long, Long>,
-) {
+private suspend fun SavedSessionDao.insertMerged(incoming: List<SavedSession>) {
     val known = getAllSync().map { it.toDomain() }.toMutableList()
     incoming.forEach { session ->
-        if (known.any { it.hasSameSetupAs(session) }) return@forEach
-        insert(session.copy(id = 0, taskId = session.taskId?.let(taskIds::get)).toEntity())
+        if (known.any { it.hasSameNameAs(session) }) return@forEach
+        insert(session.copy(id = 0).toEntity())
         known += session
     }
+    trimTo(SavedSession.RECENT_LIMIT)
 }
 
 /**

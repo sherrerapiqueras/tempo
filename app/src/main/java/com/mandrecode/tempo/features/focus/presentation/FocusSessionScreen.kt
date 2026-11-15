@@ -11,13 +11,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -28,18 +25,14 @@ import com.mandrecode.tempo.core.ui.components.TempoModalBottomSheet
 import com.mandrecode.tempo.core.ui.editor.EDITOR_TEXT_FIELD_TOP_INSET
 import com.mandrecode.tempo.core.ui.theme.inputTitle
 import com.mandrecode.tempo.features.focus.domain.model.TaskFocusToday
-import com.mandrecode.tempo.features.focus.presentation.components.DeleteSessionDialog
-import com.mandrecode.tempo.features.focus.presentation.components.LinkTaskSheet
+import com.mandrecode.tempo.features.focus.presentation.components.RecentSessionsRow
 import com.mandrecode.tempo.features.focus.presentation.components.ReplaceSessionDialog
 import com.mandrecode.tempo.features.focus.presentation.components.SessionBody
 import com.mandrecode.tempo.features.focus.presentation.components.SessionBodyActions
 import com.mandrecode.tempo.features.focus.presentation.components.SessionEditorForm
-import com.mandrecode.tempo.features.focus.presentation.components.SessionLinkActions
 import com.mandrecode.tempo.features.focus.presentation.components.SessionNameField
-import com.mandrecode.tempo.features.focus.presentation.components.SessionSetupActions
 import com.mandrecode.tempo.features.focus.presentation.components.rememberSessionEditorForm
 import com.mandrecode.tempo.features.tasks.domain.model.Task
-import kotlinx.collections.immutable.ImmutableList
 
 /**
  * Entry point for the session sheet: resolves state and closes itself when the session ends, so the
@@ -75,17 +68,16 @@ fun FocusSessionRoute(
     // screen the moment it opened. Raw ids, not the resolved entry, for the same reason — the
     // agenda the task is looked up in loads later still.
     //
-    // A key rather than a task id: the subject may be a saved session, with or without a task (#517).
+    // A key rather than a task id: the subject may be a topic session, with no task (#517).
     //
-    // A new session has no id until it is saved, so the key it was latched under is a stand-in:
-    // once it is saved and still the subject, the screen moves on to its real one. That is the one
-    // case where the subject is the same thing under a new name rather than a different thing.
+    // A new session has no id until it starts, so the key it was latched under is a stand-in: once
+    // it is running, the screen moves on to its real one. That is the one case where the subject
+    // is the same thing under a new name rather than a different thing.
     val subject = rememberSaveable { mutableStateOf<String?>(null) }
     val latched =
         latchedSessionSubject(
             latched = subject.value,
             current = uiState.sessionSubjectKey,
-            setupSessionId = uiState.setupSessionId,
             startedSessionId = uiState.startedNewSessionId,
         )
     subject.value = nextSessionSubject(placement == SheetPlacement.DockedPane, latched, uiState.sessionSubjectKey)
@@ -136,16 +128,15 @@ fun FocusSessionRoute(
 }
 
 /**
- * The session, as a bottom sheet opened to its full height, or docked beside the Focus agenda on a
+ * The session, as a bottom sheet as tall as what it holds, or docked beside the Focus agenda on a
  * large window.
  *
  * A sheet rather than a slide-in screen of its own. Everything else in this app that shows you one
- * item — a task, a habit, the length of a break — arrives as a sheet from the bottom, and the
- * session arriving from the side made it the one surface with its own way of appearing.
+ * item — a task, a habit, the length of a break — arrives as a sheet from the bottom.
  *
- * The one surface a session has (#517): a task, a saved session and a new session all open here,
- * are set up here, and run here. Its heading is the task's title, or the session's name — typed in
- * place while a saved session is being set up.
+ * The one surface a session has (#517): a task and a new topic session both open here, are set up
+ * here, and run here. Its heading is the task's title, or the topic's name — typed in place while
+ * a new one is being set up, with the recent ones offered to run again.
  */
 @Composable
 fun FocusSessionSheet(
@@ -157,32 +148,25 @@ fun FocusSessionSheet(
 ) {
     val session = uiState.screenSession
     // Only while it has not started: once running it is a timer like any other.
-    val target = uiState.sessionSetup.takeIf { session == null }
+    val isSettingUp = uiState.isSettingUpSession && session == null
     val form =
         rememberSessionEditorForm(
             subjectKey = uiState.sessionSubjectKey,
-            target = uiState.sessionSetup,
+            isNew = uiState.isSettingUpSession,
             defaultFocusMinutes = uiState.defaultSessionLengthMinutes,
             defaultBreakMinutes = uiState.breakLengthMinutes,
         )
-    val dialogs = remember { SessionSetupDialogState() }
 
     TempoModalBottomSheet(
-        // A saved session keeps what was changed as the sheet closes, as an existing task does. A
-        // new one that was never confirmed is not created by closing the sheet on it.
-        onDismissRequest = {
-            if (target != null && form.savesOnClose) onEvent(FocusContract.UiEvent.SaveSession(form.closingDraft))
-            onDismiss()
-        },
+        onDismissRequest = onDismiss,
         modifier = modifier,
-        hasUnsavedChanges = target?.isNew == true && form.canSave,
+        // A new session that was never started is not created by closing the sheet on it, so a
+        // name typed and left is asked about first.
+        hasUnsavedChanges = isSettingUp && form.canStart,
         placement = placement,
-    ) { onRequestDismiss ->
-        // The task the session is for: the one it is running on or was opened from, or the one
-        // just chosen for a session still being set up.
-        val linked = if (target != null) uiState.taskEntry(form.linkedTaskId) else uiState.sessionEntry
+    ) { _ ->
+        val linked = uiState.sessionEntry
         val topRoom = if (placement == SheetPlacement.DockedPane) DockedTitleTopPadding else 0.dp
-        val setup = target?.let { sessionSetupActions(it, form, dialogs, onEvent, onRequestDismiss) }
         SessionBody(
             session = session,
             // Docked there is no drag handle above the sheet, so it takes the room the docked task
@@ -191,7 +175,7 @@ fun FocusSessionSheet(
             heading = {
                 SessionSheetHeading(
                     title = session?.title ?: linked?.task?.title.orEmpty(),
-                    form = form.takeIf { target != null },
+                    form = form.takeIf { isSettingUp },
                 )
             },
             form = form,
@@ -199,79 +183,19 @@ fun FocusSessionSheet(
             subtasks = linked?.subtasks.orEmpty(),
             task = linked?.task,
             categoryName = linked?.categoryName,
-            actions =
-                sessionBodyActions(
-                    uiState = uiState,
-                    form = form,
-                    target = target,
-                    onEvent = onEvent,
-                    link = sessionLinkActions(uiState, form, target, dialogs, onEvent),
-                    setupActions = setup,
-                ),
-        )
-    }
-
-    if (target != null) {
-        SessionSetupDialogs(
-            state = dialogs,
-            target = target,
-            form = form,
-            linkableTasks = uiState.linkableTasks,
-            onEvent = onEvent,
-        )
-    }
-}
-
-/** What only a saved session being set up can do: save, back out, delete. */
-private fun sessionSetupActions(
-    target: FocusContract.SessionEditorTarget,
-    form: SessionEditorForm,
-    dialogs: SessionSetupDialogState,
-    onEvent: (FocusContract.UiEvent) -> Unit,
-    onCancel: () -> Unit,
-): SessionSetupActions =
-    SessionSetupActions(
-        onSave = { onEvent(FocusContract.UiEvent.SaveSession(form.draft)) },
-        onCancel = onCancel,
-        // One not saved yet has nothing to delete; backing out of it is the same thing.
-        onDelete = { dialogs.isConfirmingDelete = true }.takeIf { !target.isNew },
-    )
-
-/** Which of a session's two questions is being asked: which task it is for, or whether to delete it. */
-@Stable
-private class SessionSetupDialogState {
-    var isPickingTask by mutableStateOf(false)
-    var isConfirmingDelete by mutableStateOf(false)
-}
-
-/** The task picker and the delete confirmation, over the sheet that asked for them. */
-@Composable
-private fun SessionSetupDialogs(
-    state: SessionSetupDialogState,
-    target: FocusContract.SessionEditorTarget,
-    form: SessionEditorForm,
-    linkableTasks: ImmutableList<Task>,
-    onEvent: (FocusContract.UiEvent) -> Unit,
-) {
-    if (state.isPickingTask) {
-        LinkTaskSheet(
-            tasks = linkableTasks,
-            selectedTaskId = form.linkedTaskId,
-            onPick = { task ->
-                form.linkedTaskId = task.id
-                state.isPickingTask = false
-            },
-            onDismiss = { state.isPickingTask = false },
-        )
-    }
-    target.session?.takeIf { state.isConfirmingDelete }?.let { saved ->
-        DeleteSessionDialog(
-            session = saved,
-            onConfirm = {
-                state.isConfirmingDelete = false
-                onEvent(FocusContract.UiEvent.DeleteSession(saved.id))
-            },
-            onCancel = { state.isConfirmingDelete = false },
+            setupExtras =
+                if (isSettingUp && uiState.recentSessions.isNotEmpty()) {
+                    {
+                        RecentSessionsRow(
+                            sessions = uiState.recentSessions,
+                            selectedTitle = form.title,
+                            onPick = form::fillFrom,
+                        )
+                    }
+                } else {
+                    null
+                },
+            actions = sessionBodyActions(uiState, form, isSettingUp, onEvent),
         )
     }
 }
@@ -279,23 +203,21 @@ private fun SessionSetupDialogs(
 /**
  * What the body's buttons do, for whichever subject the sheet has.
  *
- * Start is where the two kinds of subject differ: a saved session is saved as it stands and run,
+ * Start is where the two kinds of subject differ: a new topic session is started and remembered,
  * and one with no name yet is asked for one instead; a task is run at the lengths and rounds set,
  * for this run alone.
  */
 private fun sessionBodyActions(
     uiState: FocusContract.UiState,
     form: SessionEditorForm,
-    target: FocusContract.SessionEditorTarget?,
+    isSettingUp: Boolean,
     onEvent: (FocusContract.UiEvent) -> Unit,
-    link: SessionLinkActions,
-    setupActions: SessionSetupActions?,
 ): SessionBodyActions =
     SessionBodyActions(
         onStart = {
             when {
-                target == null -> onEvent(form.startOnTask())
-                form.canSave -> onEvent(FocusContract.UiEvent.SaveSession(form.draft, startNow = true))
+                !isSettingUp -> onEvent(form.startOnTask())
+                form.canStart -> onEvent(FocusContract.UiEvent.StartNewSession(form.newSession))
                 else -> form.showsTitleError = true
             }
         },
@@ -305,40 +227,11 @@ private fun sessionBodyActions(
         onBackToWork = { onEvent(FocusContract.UiEvent.BackToWork) },
         onToggleSubtask = { onEvent(FocusContract.UiEvent.ToggleTaskCompletion(it)) },
         onEditSubtask = { onEvent(FocusContract.UiEvent.EditTask(it)) },
-        link = link,
-        setup = setupActions,
-    )
-
-/**
- * What the linked-task row does, for whichever subject the sheet has.
- *
- * The chip always opens the task, in its own sheet over this one. Before the session starts the
- * link can always be taken off: a session being set up simply forgets it, and a sheet opened on a
- * task becomes a new session without one. Only a session being set up can pick a task — a sheet
- * opened on a task already has it. Once running, the task is what the timer is on.
- */
-private fun sessionLinkActions(
-    uiState: FocusContract.UiState,
-    form: SessionEditorForm,
-    target: FocusContract.SessionEditorTarget?,
-    dialogs: SessionSetupDialogState,
-    onEvent: (FocusContract.UiEvent) -> Unit,
-): SessionLinkActions {
-    val isRunning = uiState.screenSession != null
-    return SessionLinkActions(
         onOpenTask = { onEvent(FocusContract.UiEvent.EditTask(it)) },
-        onPick = { dialogs.isPickingTask = true }.takeIf { target != null },
-        onUnlink =
-            when {
-                isRunning -> null
-                target != null -> ({ form.linkedTaskId = null })
-                else -> ({ onEvent(FocusContract.UiEvent.UnlinkPreviewTask) })
-            },
     )
-}
 
 /**
- * The sheet's heading: the name field while a saved session is being set up, otherwise the title of
+ * The sheet's heading: the name field while a new session is being set up, otherwise the title of
  * what is running or being looked at. The two cross over in place when a session starts.
  *
  * Start-aligned and in the style the task and habit editors give their titles, so a session reads

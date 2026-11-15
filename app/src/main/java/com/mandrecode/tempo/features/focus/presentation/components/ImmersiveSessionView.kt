@@ -33,7 +33,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
-import com.mandrecode.tempo.core.ui.editor.EditorBottomSheetFooter
 import com.mandrecode.tempo.core.ui.util.color
 import com.mandrecode.tempo.core.ui.util.titleResId
 import com.mandrecode.tempo.features.focus.domain.model.FocusSession
@@ -56,39 +55,20 @@ private val RowGap = 20.dp
 private val SetupRowsGap = 12.dp
 
 /**
- * What the session screen's body can do, as one value: starting and saving before it runs, the
- * timer's own controls while it does, and the task's rows throughout.
+ * What the session screen's body can do, as one value: starting before it runs, the timer's own
+ * controls while it does, and the task's rows throughout.
  */
 internal data class SessionBodyActions(
     val onStart: () -> Unit,
     val onPauseResume: () -> Unit,
     val onStop: () -> Unit,
-    /** `null` when there is no open task to finish: a saved session linked to none (#517). */
+    /** `null` when there is no open task to finish: a topic session (#517). */
     val onComplete: (() -> Unit)?,
     val onBackToWork: () -> Unit,
     val onToggleSubtask: (Task) -> Unit,
     val onEditSubtask: (Task) -> Unit,
-    /** The linked task's row: opening it, choosing one, taking it off. */
-    val link: SessionLinkActions,
-    /** Set while a saved session is being set up: its save and its way out. */
-    val setup: SessionSetupActions? = null,
-)
-
-/**
- * What the linked-task row can do. [onPick] and [onUnlink] are `null` once the session is running:
- * the task is then what the timer is on, and not something to swap under it.
- */
-internal data class SessionLinkActions(
+    /** Opens the session's task in its own sheet, from the chip that names it. */
     val onOpenTask: (Task) -> Unit,
-    val onPick: (() -> Unit)?,
-    val onUnlink: (() -> Unit)?,
-)
-
-/** What only a saved session being set up offers. [onDelete] is `null` for one not saved yet. */
-internal data class SessionSetupActions(
-    val onSave: () -> Unit,
-    val onCancel: () -> Unit,
-    val onDelete: (() -> Unit)?,
 )
 
 /**
@@ -116,6 +96,8 @@ internal fun SessionBody(
     actions: SessionBodyActions,
     modifier: Modifier = Modifier,
     clock: Clock = Clock.System,
+    /** What a new session being set up offers under the hero: the recent ones to run again. */
+    setupExtras: (@Composable () -> Unit)? = null,
     /** The title — a name field or plain text — and anything under it, beside the dial. */
     heading: @Composable ColumnScope.() -> Unit,
 ) {
@@ -153,16 +135,22 @@ internal fun SessionBody(
             heading = heading,
         )
 
-        // The task the session is for, in the same place whether the session was opened from the
-        // task or had it linked: its row, then what the row's task carries.
-        SessionLinkedTask(
-            task = task,
-            categoryName = categoryName,
+        // The task the session is on, as a link to the task itself. A topic session has none.
+        LinkedTaskRow(
+            linkedTask = task,
+            onOpen = actions.onOpenTask,
             // While the status line is saying which round it is, what the task has already had out
             // of today has nowhere else to be said.
-            spentToday = focusToday.takeIf { session?.cycle?.hasRounds == true },
-            link = actions.link,
+            supporting =
+                task?.let {
+                    sessionTaskSummary(it, categoryName, focusToday.takeIf { session?.cycle?.hasRounds == true })
+                },
+            modifier = Modifier.padding(top = RowGap),
         )
+
+        AnimatedVisibility(visible = session == null && setupExtras != null) {
+            Column(modifier = Modifier.padding(top = RowGap)) { setupExtras?.invoke() }
+        }
 
         SessionSubtasks(subtasks = subtasks, actions = actions)
 
@@ -225,12 +213,8 @@ private fun SessionSubtasks(
 /**
  * What a session that has not started yet offers: starting it at the length set above.
  *
- * One button, saying the length it will run for. The lengths and rounds have their own rows now,
- * shared with saved sessions, so the second "start with" button that used to carry a stepper of its
- * own is gone — it was a second place to say the same thing.
- *
- * A saved session being set up adds the editors' footer: saving without starting for a new one,
- * deleting for one that exists.
+ * One button, saying the length it will run for. The lengths and rounds have their own rows, so
+ * there is no second place to say the same thing.
  */
 @Composable
 private fun ColumnScope.PreStartControls(
@@ -239,9 +223,8 @@ private fun ColumnScope.PreStartControls(
     sessionsToday: Int,
     actions: SessionBodyActions,
 ) {
-    val setup = actions.setup
     val onComplete = actions.onComplete
-    if (setup == null && sessionsToday > 0 && onComplete != null) {
+    if (sessionsToday > 0 && onComplete != null) {
         WorkedOnControls(colors = colors, onStart = actions.onStart, onComplete = onComplete)
         return
     }
@@ -257,19 +240,6 @@ private fun ColumnScope.PreStartControls(
         colors = colors,
         modifier = Modifier.padding(top = 32.dp),
     )
-
-    if (setup != null) {
-        EditorBottomSheetFooter(
-            hasDeleteAction = setup.onDelete != null,
-            deleteLabel = stringResource(R.string.delete_session),
-            onDelete = setup.onDelete,
-            autoSaveEnabled = false,
-            confirmEnabled = form.canSave,
-            confirmLabel = stringResource(R.string.add_session),
-            onRequestDismiss = setup.onCancel,
-            onConfirmClick = setup.onSave,
-        )
-    }
 }
 
 /**
@@ -377,34 +347,6 @@ private fun SessionHero(
             )
         }
     }
-}
-
-/**
- * The linked task as a row among the session's other rows: the chip that names it, and under the
- * chip one quiet line of what the task carries — its category, its priority, when it is due.
- *
- * A line rather than a row of coloured pills. The pills were three more shapes competing with the
- * dial for the eye, for facts that are there to be glanced at; the task's own sheet, one tap on
- * the chip away, is where they are shown in full.
- *
- * One block for a session opened from a task and for one that had a task linked to it. They are
- * the same thing once the link is there, and showing them two ways said otherwise.
- */
-@Composable
-private fun SessionLinkedTask(
-    task: Task?,
-    categoryName: String?,
-    spentToday: TaskFocusToday?,
-    link: SessionLinkActions,
-) {
-    LinkedTaskRow(
-        linkedTask = task,
-        onOpen = link.onOpenTask,
-        onPick = link.onPick,
-        onClear = link.onUnlink,
-        supporting = task?.let { sessionTaskSummary(it, categoryName, spentToday) },
-        modifier = Modifier.padding(top = RowGap),
-    )
 }
 
 /**

@@ -4,7 +4,6 @@ import com.google.common.truth.Truth.assertThat
 import com.mandrecode.tempo.features.focus.domain.model.FocusAgendaItem
 import com.mandrecode.tempo.features.focus.domain.model.FocusSession
 import com.mandrecode.tempo.features.focus.domain.model.SavedSession
-import com.mandrecode.tempo.features.focus.domain.model.SavedSessionEntry
 import com.mandrecode.tempo.features.focus.domain.model.TaskFocusToday
 import com.mandrecode.tempo.features.tasks.domain.model.Task
 import kotlinx.collections.immutable.persistentListOf
@@ -178,55 +177,27 @@ class FocusUiStateTest {
         assertThat(state.screenSession).isEqualTo(session)
     }
 
-    private fun saved(
-        id: Long,
-        taskId: Long? = null,
-    ) = SavedSession(id = id, title = "Study $id", focusMinutes = 25, breakMinutes = 5, rounds = 2, taskId = taskId)
+    private fun saved(id: Long) = SavedSession(id, "Study $id", focusMinutes = 25, breakMinutes = 5, rounds = 2)
 
     @Test
-    fun `an empty day with saved sessions or a running session is not shown as empty`() {
-        val study = SavedSessionEntry(saved(1))
-
+    fun `an empty day with a running session is not shown as empty, and recents alone do not count`() {
         assertThat(FocusContract.UiState().showsEmptyState).isTrue()
-        assertThat(FocusContract.UiState(savedSessions = persistentListOf(study)).showsEmptyState).isFalse()
+        assertThat(FocusContract.UiState(recentSessions = persistentListOf(saved(1))).showsEmptyState).isTrue()
         assertThat(FocusContract.UiState(session = FocusSession.start(saved(1), now)).showsEmptyState).isFalse()
     }
 
     @Test
-    fun `the running saved session is not offered for starting again`() {
-        val state =
-            FocusContract.UiState(
-                savedSessions = persistentListOf(SavedSessionEntry(saved(1)), SavedSessionEntry(saved(2))),
-                session = FocusSession.start(saved(1), now),
-            )
-
-        assertThat(state.startableSessions.map { it.session.id }).containsExactly(2L)
-    }
-
-    @Test
-    fun `a saved session linked to a task leaves that task's row in the day`() {
-        val entry = FocusAgendaItem.TaskEntry(task(1))
-        val state =
-            FocusContract.UiState(
-                todayItems = persistentListOf(entry),
-                session = FocusSession.start(saved(4, taskId = 1), now),
-            )
-
-        assertThat(state.visibleToday).containsExactly(entry)
-    }
-
-    @Test
-    fun `the screen's subject tells a task from a saved session with the same id`() {
+    fun `the screen's subject tells a task from a topic session with the same id`() {
         val onTask = FocusContract.UiState(session = FocusSession.start(taskId = 1, title = "Report", now = now))
-        val onSaved = FocusContract.UiState(session = FocusSession.start(saved(1), now))
+        val onTopic = FocusContract.UiState(session = FocusSession.start(saved(1), now))
 
         assertThat(onTask.sessionSubjectKey).isEqualTo("task:1")
-        assertThat(onSaved.sessionSubjectKey).isEqualTo("session:1")
+        assertThat(onTopic.sessionSubjectKey).isEqualTo("session:1")
         assertThat(FocusContract.UiState().sessionSubjectKey).isNull()
     }
 
     @Test
-    fun `previewing a task makes it the subject and stills the saved session's countdown`() {
+    fun `previewing a task makes it the subject and stills the topic session's countdown`() {
         val running = FocusSession.start(saved(4), now)
         val state = FocusContract.UiState(session = running, previewTaskId = 2)
 
@@ -236,20 +207,7 @@ class FocusUiStateTest {
     }
 
     @Test
-    fun `a linked task that is not on today is still found for the session's controls`() {
-        val elsewhere = task(8)
-        val state =
-            FocusContract.UiState(
-                savedSessions = persistentListOf(SavedSessionEntry(saved(4, taskId = 8), linkedTask = elsewhere)),
-                session = FocusSession.start(saved(4, taskId = 8), now),
-            )
-
-        assertThat(state.sessionEntry?.task).isEqualTo(elsewhere)
-        assertThat(state.runningEntry?.task).isEqualTo(elsewhere)
-    }
-
-    @Test
-    fun `a session linked to no task has no entry`() {
+    fun `a topic session has no entry`() {
         val state = FocusContract.UiState(session = FocusSession.start(saved(4), now))
 
         assertThat(state.sessionEntry).isNull()
@@ -257,29 +215,18 @@ class FocusUiStateTest {
     }
 
     @Test
-    fun `a draft becomes the session it describes`() {
-        val draft =
-            FocusContract.SessionDraft(3, "Study", focusMinutes = 50, breakMinutes = 10, rounds = 4, taskId = 7)
-
-        assertThat(draft.toSavedSession())
-            .isEqualTo(SavedSession(3, "Study", focusMinutes = 50, breakMinutes = 10, rounds = 4, taskId = 7))
-        assertThat(FocusContract.SessionEditorTarget().isNew).isTrue()
-        assertThat(FocusContract.SessionEditorTarget(session = saved(1)).isNew).isFalse()
-    }
-
-    @Test
-    fun `another session after a saved one is offered at that session's own length`() {
+    fun `another session after a recent topic is offered at that topic's own length`() {
         val study = saved(1).copy(focusMinutes = 50)
         val state =
             FocusContract.UiState(
                 defaultSessionLengthMinutes = 25,
-                savedSessions = persistentListOf(SavedSessionEntry(study)),
+                recentSessions = persistentListOf(study),
                 lastSession = FocusSession.start(study, now),
             )
 
         assertThat(state.nextSessionMinutes).isEqualTo(50)
-        // Deleted since, or a plain task timer: what starts again is a session at the set length.
-        assertThat(state.copy(savedSessions = persistentListOf()).nextSessionMinutes).isEqualTo(25)
+        // Dropped off the recents, or a plain task timer: what starts again is at the set length.
+        assertThat(state.copy(recentSessions = persistentListOf()).nextSessionMinutes).isEqualTo(25)
         assertThat(FocusContract.UiState(defaultSessionLengthMinutes = 30).nextSessionMinutes).isEqualTo(30)
     }
 
@@ -292,21 +239,11 @@ class FocusUiStateTest {
     }
 
     @Test
-    fun `a saved session offers finishing only while its linked task is there and open`() {
-        val open = task(8)
-        val running = FocusSession.start(saved(4, taskId = 8), now)
+    fun `a topic session has nothing to finish`() {
+        val state = FocusContract.UiState(session = FocusSession.start(saved(4), now))
 
-        fun stateWith(linked: Task?) =
-            FocusContract.UiState(
-                savedSessions = persistentListOf(SavedSessionEntry(saved(4, taskId = 8), linkedTask = linked)),
-                session = running,
-            )
-
-        assertThat(stateWith(open).canCompleteRunningTask).isTrue()
-        assertThat(stateWith(open.copy(isCompleted = true)).canCompleteRunningTask).isFalse()
-        assertThat(stateWith(null).canCompleteRunningTask).isFalse()
-        assertThat(stateWith(null).canCompleteScreenTask).isFalse()
-        assertThat(FocusContract.UiState(session = FocusSession.start(saved(4), now)).canCompleteRunningTask).isFalse()
+        assertThat(state.canCompleteRunningTask).isFalse()
+        assertThat(state.canCompleteScreenTask).isFalse()
     }
 
     @Test
@@ -326,22 +263,6 @@ class FocusUiStateTest {
     }
 
     @Test
-    fun `a saved session being set up has the key its timer will have, so the screen stays on it`() {
-        val study = saved(4, taskId = 8)
-        val setUp =
-            FocusContract.UiState(
-                savedSessions = persistentListOf(SavedSessionEntry(study, linkedTask = task(8))),
-                setupSessionId = 4,
-            )
-        val running = setUp.copy(setupSessionId = null, session = FocusSession.start(study, now))
-
-        assertThat(setUp.sessionSetup?.session).isEqualTo(study)
-        assertThat(setUp.sessionSetup?.linkedTask).isEqualTo(task(8))
-        assertThat(setUp.sessionSubjectKey).isEqualTo(running.sessionSubjectKey)
-        assertThat(setUp.screenSession).isNull()
-    }
-
-    @Test
     fun `a new session is set up under a stand-in key and shows nothing of what else is running`() {
         val elsewhere = FocusSession.start(taskId = 1, title = "Report", now = now)
         val state =
@@ -351,19 +272,11 @@ class FocusUiStateTest {
                 setupSessionId = SavedSession.NEW_ID,
             )
 
-        assertThat(state.sessionSetup?.isNew).isTrue()
+        assertThat(state.isSettingUpSession).isTrue()
         assertThat(state.sessionSubjectKey).isEqualTo("session:0")
         assertThat(state.screenSession).isNull()
         // Not the running task's details under a session that has nothing to do with it.
         assertThat(state.sessionEntry).isNull()
-    }
-
-    @Test
-    fun `a session deleted while it was being set up leaves the screen nothing to show`() {
-        val state = FocusContract.UiState(setupSessionId = 4, session = FocusSession.start(taskId = 1, "Report", now))
-
-        assertThat(state.sessionSetup).isNull()
-        assertThat(state.sessionSubjectKey).isNull()
     }
 
     @Test
@@ -393,22 +306,5 @@ class FocusUiStateTest {
         assertThat(pending.toStartSession()).isEqualTo(request)
         assertThat(request.cycle(defaultFocusMinutes = 25, defaultBreakMinutes = 5)?.totalRounds).isEqualTo(3)
         assertThat(FocusContract.UiEvent.StartSession().cycle(25, 5)).isNull()
-    }
-
-    @Test
-    fun `a task just linked is found wherever it is, so what it carries can be shown`() {
-        val onToday = FocusAgendaItem.TaskEntry(task(1), categoryName = "Work")
-        val elsewhere = task(8)
-        val state =
-            FocusContract.UiState(
-                todayItems = persistentListOf(onToday),
-                linkableTasks = persistentListOf(task(1), elsewhere),
-            )
-
-        // The day's own entry when it has one: that is the one carrying its category and its time.
-        assertThat(state.taskEntry(1)).isEqualTo(onToday)
-        assertThat(state.taskEntry(8)?.task).isEqualTo(elsewhere)
-        assertThat(state.taskEntry(99)).isNull()
-        assertThat(state.taskEntry(null)).isNull()
     }
 }

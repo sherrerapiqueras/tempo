@@ -1,15 +1,13 @@
 package com.mandrecode.tempo.features.focus.domain.model
 
-import com.mandrecode.tempo.features.tasks.domain.model.Task
-
 /**
- * A session the user has named and kept: "Study", 25 minutes, 5 of rest, four rounds (#517).
+ * A topic session the user has started before: "Study", 25 minutes, 5 of rest, four rounds (#517).
  *
- * Not a task. It has nothing to complete, no date and no reminder, and it lives on Focus alone — it
- * is a way of spending time, where a task is a thing to get done. It may point at a task, and then
- * the time it runs is that task's time.
+ * Not a task. It has nothing to complete, no date and no reminder — it is a way of spending time
+ * on something general, where a task is a thing to get done.
  *
- * Listed in the order they were made, which is the order of [id].
+ * Remembered by use rather than saved. Only the [RECENT_LIMIT] most recently started are kept, so
+ * the list offered when starting a new one limits itself: there is nothing to tidy.
  */
 data class SavedSession(
     val id: Long = 0,
@@ -17,8 +15,8 @@ data class SavedSession(
     val focusMinutes: Int,
     val breakMinutes: Int,
     val rounds: Int = 1,
-    /** The task this session works on, or `null` when it stands alone. */
-    val taskId: Long? = null,
+    /** Epoch milliseconds of the last start. */
+    val lastUsedAt: Long = 0,
 ) {
     /** The same session with every number inside what a timer can run, and its name trimmed. */
     fun normalized(): SavedSession =
@@ -29,21 +27,14 @@ data class SavedSession(
             rounds = rounds.coerceIn(FocusSession.ROUNDS_RANGE),
         )
 
+    /** The same topic: names are what tell sessions apart, and "study" is "Study". */
+    fun hasSameNameAs(other: SavedSession): Boolean = title.trim().equals(other.title.trim(), ignoreCase = true)
+
     companion object {
-        /** The id of a session that has not been saved yet. */
+        /** The id of a session that has not been remembered yet. */
         const val NEW_ID: Long = 0
+
+        /** How many recent sessions are kept. */
+        const val RECENT_LIMIT: Int = 5
     }
-
-    /** Same name and same numbers: what a merge import calls "already here". */
-    fun hasSameSetupAs(other: SavedSession): Boolean =
-        title == other.title &&
-            focusMinutes == other.focusMinutes &&
-            breakMinutes == other.breakMinutes &&
-            rounds == other.rounds
 }
-
-/** A saved session with the task it points at resolved, for the surfaces that show both. */
-data class SavedSessionEntry(
-    val session: SavedSession,
-    val linkedTask: Task? = null,
-)

@@ -344,7 +344,7 @@ class FocusSessionRepositoryImplTest {
         val stored = mutableMapOf<String, Any>()
         val session =
             FocusSession.start(
-                SavedSession(id = 4, title = "Study", focusMinutes = 50, breakMinutes = 10, rounds = 3, taskId = 9),
+                SavedSession(id = 4, title = "Study", focusMinutes = 50, breakMinutes = 10, rounds = 3),
                 start,
             )
 
