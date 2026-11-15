@@ -124,15 +124,6 @@ internal fun TaskBottomSheetBody(
                 onAttachmentOpenFail = attachmentActions.onAttachmentOpenFail,
             )
         }
-
-        TaskBottomSheetFooter(
-            isEditingTask = state.isEditingTask,
-            taskTitle = state.taskTitle,
-            autoSaveEnabled = state.autoSaveEnabled,
-            onDelete = actions.onDelete,
-            onRequestDismiss = actions.onRequestDismiss,
-            onConfirmClick = actions.onConfirmClick,
-        )
     }
 }
 

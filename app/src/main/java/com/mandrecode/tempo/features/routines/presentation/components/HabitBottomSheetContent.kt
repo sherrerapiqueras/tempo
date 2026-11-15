@@ -1,10 +1,5 @@
 package com.mandrecode.tempo.features.routines.presentation.components
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -23,14 +18,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.core.domain.model.DayOfWeek
 import com.mandrecode.tempo.core.domain.model.VacationPeriod
 import com.mandrecode.tempo.core.ui.adaptive.SheetPlacement
-import com.mandrecode.tempo.core.ui.adaptive.adaptiveHorizontalMargin
 import com.mandrecode.tempo.core.ui.components.HandleReminderPermissions
 import com.mandrecode.tempo.core.ui.components.TempoTimePickerDialog
 import com.mandrecode.tempo.core.ui.editor.EDITOR_AUTO_SAVE_DEBOUNCE_MS
+import com.mandrecode.tempo.core.ui.editor.EditorSheetLayout
 import com.mandrecode.tempo.core.ui.editor.canAutosaveEditorTitle
 import com.mandrecode.tempo.core.ui.editor.editorSaveableKey
 import com.mandrecode.tempo.core.ui.editor.rememberEditorAutosaveController
@@ -497,13 +491,40 @@ internal fun HabitBottomSheetContent(
         dismissRequestKey = dismissRequestKey,
     ) { onRequestDismiss ->
         val focusManager = LocalFocusManager.current
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = adaptiveHorizontalMargin())
-                    .padding(top = 8.dp, bottom = 32.dp),
+        val onFooterConfirm: () -> Unit = {
+            isTitleError = title.isBlank()
+            if (!isTitleError) {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                when (formState.selectedTab) {
+                    HabitSheetTab.HABIT ->
+                        onConfirmHabit(title, descriptionState.value.text)
+                    HabitSheetTab.HABIT_CHAIN ->
+                        onConfirmHabitChain(
+                            title,
+                            descriptionState.value.text,
+                            selectedHabitIds,
+                        )
+                }
+            }
+        }
+        EditorSheetLayout(
+            pinFooter = formState.editingHabit == null && formState.editingHabitChain == null,
+            placement = placement,
+            footer = {
+                HabitBottomSheetFooter(
+                    selectedTab = formState.selectedTab,
+                    editingHabit = formState.editingHabit != null,
+                    editingHabitChain = formState.editingHabitChain != null,
+                    selectedHabitIds = selectedHabitIds,
+                    title = title,
+                    hasUnsavedChanges = hasUnsavedChanges,
+                    autoSaveEnabled = autoSaveEnabled,
+                    onDeleteHabit = onDeleteHabit,
+                    onDeleteHabitChain = onDeleteHabitChain,
+                    onRequestDismiss = onRequestDismiss,
+                    onConfirmClick = onFooterConfirm,
+                )
+            },
         ) {
             HabitBottomSheetBody(
                 descriptionState = descriptionState,
@@ -517,8 +538,6 @@ internal fun HabitBottomSheetContent(
                         isTitleError = isTitleError,
                         isHabitInChain = isHabitInChain,
                         formattedReminder = formattedReminder,
-                        hasUnsavedChanges = hasUnsavedChanges,
-                        autoSaveEnabled = autoSaveEnabled,
                         colorScheme = colorScheme,
                         isDarkTheme = isDarkTheme,
                         vacationPeriods = vacationPeriods,
@@ -552,25 +571,6 @@ internal fun HabitBottomSheetContent(
                         onSetReminderClicked = onSetReminderClicked,
                         onClearReminder = onClearReminder,
                         onToggleHabitCompletion = onToggleHabitCompletion,
-                        onDeleteHabit = onDeleteHabit,
-                        onDeleteHabitChain = onDeleteHabitChain,
-                        onRequestDismiss = onRequestDismiss,
-                        onConfirmClick = {
-                            isTitleError = title.isBlank()
-                            if (!isTitleError) {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                when (formState.selectedTab) {
-                                    HabitSheetTab.HABIT ->
-                                        onConfirmHabit(title, descriptionState.value.text)
-                                    HabitSheetTab.HABIT_CHAIN ->
-                                        onConfirmHabitChain(
-                                            title,
-                                            descriptionState.value.text,
-                                            selectedHabitIds,
-                                        )
-                                }
-                            }
-                        },
                     ),
                 focusConfig =
                     HabitBottomSheetFocusConfig(
