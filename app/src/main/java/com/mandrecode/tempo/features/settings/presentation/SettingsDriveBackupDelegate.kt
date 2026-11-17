@@ -1,6 +1,7 @@
 package com.mandrecode.tempo.features.settings.presentation
 
 import com.mandrecode.tempo.R
+import com.mandrecode.tempo.core.di.IoDispatcher
 import com.mandrecode.tempo.features.backup.domain.repository.CloudBackupException
 import com.mandrecode.tempo.features.backup.domain.repository.DriveBackupPreferences
 import com.mandrecode.tempo.features.backup.domain.usecase.ChangeBackupPassphraseUseCase
@@ -12,8 +13,10 @@ import com.mandrecode.tempo.features.backup.domain.usecase.RunDriveBackupNowUseC
 import com.mandrecode.tempo.features.backup.domain.usecase.UpdateDriveBackupScheduleUseCase
 import com.mandrecode.tempo.infrastructure.backup.drive.GoogleDriveAuthorization
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import com.mandrecode.tempo.features.settings.presentation.SettingsContract.DriveBackupDialog as Dialog
 import com.mandrecode.tempo.features.settings.presentation.SettingsContract.UiEvent.DriveBackup as Event
@@ -34,6 +37,7 @@ class SettingsDriveBackupDelegate
         private val updateSchedule: UpdateDriveBackupScheduleUseCase,
         private val backUpNow: RunDriveBackupNowUseCase,
         private val refreshStatus: RefreshDriveBackupStatusUseCase,
+        @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
         /** What the consent being shown was asked for. */
         private enum class ConsentPurpose { TURN_ON, RECONNECT }
@@ -140,15 +144,36 @@ class SettingsDriveBackupDelegate
             host: SettingsBackupDelegate.Host,
         ) {
             val setPassphrase = dialog as? Dialog.SetPassphrase ?: return
-            val check =
-                if (setPassphrase.isChange) {
-                    changePassphrase(event.passphrase, event.confirmation)
-                } else {
-                    enable(event.passphrase, event.confirmation)
+            host.scope.launch {
+                // Off the main thread: storing it generates a Keystore key and commits to disk.
+                val check =
+                    withContext(ioDispatcher) {
+                        try {
+                            if (setPassphrase.isChange) {
+                                changePassphrase(event.passphrase, event.confirmation)
+                            } else {
+                                enable(event.passphrase, event.confirmation)
+                            }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (_: Exception) {
+                            // A Keystore that cannot create or use a key, or a failed write.
+                            null
+                        }
+                    }
+                when (check) {
+                    PassphraseCheck.OK -> {
+                        showDialog(null, host)
+                        host.sendEffect(SettingsContract.UiEffect.ShowMessage(R.string.drive_backup_now_started))
+                    }
+                    null -> {
+                        showDialog(null, host)
+                        host.sendEffect(
+                            SettingsContract.UiEffect.ShowMessage(R.string.drive_backup_passphrase_store_failed),
+                        )
+                    }
+                    else -> Unit
                 }
-            if (check == PassphraseCheck.OK) {
-                showDialog(null, host)
-                host.sendEffect(SettingsContract.UiEffect.ShowMessage(R.string.drive_backup_now_started))
             }
         }
 

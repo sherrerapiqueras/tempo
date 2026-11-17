@@ -21,6 +21,13 @@ interface BackupPassphraseStore {
 
 /** Drive backup settings and the record of recent attempts (#306). */
 interface DriveBackupPreferences {
+    /**
+     * This install's id, in the name of every backup it writes. Every install on a Google account
+     * shares one app folder in Drive: the id is what keeps this device's retention and status to
+     * its own backups. Device-local, so a new phone gets a new one.
+     */
+    val installId: String
+
     val settings: StateFlow<DriveBackupSettings>
     val status: StateFlow<DriveBackupStatus>
 

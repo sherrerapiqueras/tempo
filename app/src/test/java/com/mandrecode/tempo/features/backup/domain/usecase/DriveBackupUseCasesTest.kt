@@ -4,6 +4,7 @@ import com.google.common.truth.Truth.assertThat
 import com.mandrecode.tempo.features.backup.domain.model.BackupFrequency
 import com.mandrecode.tempo.features.backup.domain.model.DriveBackupFailure
 import com.mandrecode.tempo.features.backup.domain.model.DriveBackupSettings
+import com.mandrecode.tempo.features.backup.domain.model.backupFileName
 import com.mandrecode.tempo.features.backup.domain.repository.BackupRepository
 import com.mandrecode.tempo.features.backup.domain.repository.CloudAuthorizationResult
 import com.mandrecode.tempo.features.backup.domain.repository.CloudBackupException
@@ -105,7 +106,7 @@ class DriveBackupUseCasesTest {
 
             assertThat(result).isEqualTo(RunDriveBackupUseCase.Result.Succeeded)
             assertThat(cloud.contents.values.single()).isEqualTo("encrypted:secret")
-            assertThat(cloud.files.single().name).matches("tempo-backup-\\d+\\.tempo")
+            assertThat(cloud.files.single().name).matches("tempo-backup-this-install-\\d+\\.tempo")
             assertThat(preferences.status.value.lastSuccessAt).isNotNull()
             assertThat(preferences.status.failure).isNull()
         }
@@ -138,8 +139,9 @@ class DriveBackupUseCasesTest {
         runTest {
             enabled()
             preferences.recordSuccess(500)
-            cloud.upload("t", "tempo-backup-300.tempo", "x")
-            cloud.upload("t", "tempo-backup-400.tempo", "y")
+            cloud.upload("t", backupFileName("this-install", 300), "x")
+            cloud.upload("t", backupFileName("this-install", 400), "y")
+            cloud.upload("t", backupFileName("other-phone", 900), "z")
 
             refresh()
 
@@ -155,6 +157,7 @@ class DriveBackupUseCasesTest {
             refresh()
             assertThat(preferences.status.value.lastSuccessAt).isEqualTo(500)
 
+            clock.millis += RefreshDriveBackupStatusUseCase.MIN_INTERVAL_MILLIS
             auth.result = CloudAuthorizationResult.NeedsUserConsent
             refresh()
             assertThat(preferences.status.failure).isEqualTo(DriveBackupFailure.AUTHORIZATION_NEEDED)
@@ -175,6 +178,35 @@ class DriveBackupUseCasesTest {
 
             assertThat(cloud.files).hasSize(RunDriveBackupUseCase.RETENTION)
             assertThat(cloud.files.map { it.createdAt }).isEqualTo(cloud.files.map { it.createdAt }.sorted())
+        }
+
+    @Test
+    fun `retention and status ignore another device's backups on the same account`() =
+        runTest {
+            store.stored = "secret"
+            enabled()
+            repeat(RunDriveBackupUseCase.RETENTION + 1) {
+                cloud.upload("t", backupFileName("other-phone", 10L + it), "o")
+            }
+
+            run()
+
+            assertThat(cloud.files.count { it.isFrom("other-phone") }).isEqualTo(RunDriveBackupUseCase.RETENTION + 1)
+            assertThat(cloud.files.count { it.isFrom("this-install") }).isEqualTo(1)
+        }
+
+    @Test
+    fun `opening Settings again soon does not check Drive again`() =
+        runTest {
+            enabled()
+            preferences.recordSuccess(500)
+            refresh()
+            assertThat(preferences.status.value.lastSuccessAt).isNull()
+
+            cloud.upload("t", backupFileName("this-install", 700), "x")
+            refresh()
+
+            assertThat(preferences.status.value.lastSuccessAt).isNull()
         }
 
     @Test

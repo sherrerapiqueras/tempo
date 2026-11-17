@@ -1,6 +1,7 @@
 package com.mandrecode.tempo.features.backup.domain.usecase
 
 import com.mandrecode.tempo.features.backup.domain.model.DriveBackupFailure
+import com.mandrecode.tempo.features.backup.domain.model.backupFileName
 import com.mandrecode.tempo.features.backup.domain.repository.BackupPassphraseStore
 import com.mandrecode.tempo.features.backup.domain.repository.BackupRepository
 import com.mandrecode.tempo.features.backup.domain.repository.CloudAuthorization
@@ -81,15 +82,19 @@ class RunDriveBackupUseCase
                     passphrase.fill('\u0000')
                 }
             val now = clock.now().toEpochMilliseconds()
-            cloudStore.upload(token, "$FILE_PREFIX$now$FILE_SUFFIX", content)
+            cloudStore.upload(token, backupFileName(preferences.installId, now), content)
             prune(token)
         }
 
-        /** Keeps the newest [RETENTION] backups. Failing to prune never fails the backup itself. */
+        /**
+         * Keeps this install's newest [RETENTION] backups. Other devices on the same account share
+         * the folder and keep their own. Failing to prune never fails the backup itself.
+         */
         private suspend fun prune(token: String) {
             try {
                 cloudStore
                     .list(token)
+                    .filter { it.isFrom(preferences.installId) }
                     .sortedByDescending { it.createdAt }
                     .drop(RETENTION)
                     .forEach { cloudStore.delete(token, it.id) }
@@ -103,7 +108,5 @@ class RunDriveBackupUseCase
         companion object {
             /** How many backups are kept in Drive. */
             const val RETENTION = 5
-            const val FILE_PREFIX = "tempo-backup-"
-            const val FILE_SUFFIX = ".tempo"
         }
     }

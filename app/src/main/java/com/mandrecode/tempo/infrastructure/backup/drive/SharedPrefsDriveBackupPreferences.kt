@@ -10,6 +10,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,6 +22,12 @@ class SharedPrefsDriveBackupPreferences
         @ApplicationContext context: Context,
     ) : DriveBackupPreferences {
         private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+        /** Minted once and kept in this device-only file (excluded from backup and transfer). */
+        override val installId: String =
+            prefs.getString(KEY_INSTALL_ID, null) ?: UUID.randomUUID().toString().also {
+                prefs.edit().putString(KEY_INSTALL_ID, it).apply()
+            }
         private val _settings = MutableStateFlow(readSettings())
         private val _status = MutableStateFlow(readStatus())
         override val settings: StateFlow<DriveBackupSettings> = _settings.asStateFlow()
@@ -85,6 +92,7 @@ class SharedPrefsDriveBackupPreferences
 
         companion object {
             const val PREFS_NAME = "drive_backup_prefs"
+            private const val KEY_INSTALL_ID = "install_id"
             private const val KEY_ENABLED = "enabled"
             private const val KEY_FREQUENCY = "frequency"
             private const val KEY_UNMETERED_ONLY = "unmetered_only"

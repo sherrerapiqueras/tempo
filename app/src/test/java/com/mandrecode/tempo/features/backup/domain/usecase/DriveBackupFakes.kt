@@ -31,6 +31,7 @@ class FakePassphraseStore(
 
 class FakeDrivePreferences(
     settings: DriveBackupSettings = DriveBackupSettings(),
+    override val installId: String = "this-install",
 ) : DriveBackupPreferences {
     override val settings = MutableStateFlow(settings)
     override val status = MutableStateFlow(DriveBackupStatus())
@@ -73,7 +74,7 @@ class FakeCloudStore : CloudBackupStore {
         content: String,
     ): CloudBackupFile {
         failUploadWith?.let { throw it }
-        val createdAt = name.removePrefix("tempo-backup-").removeSuffix(".tempo").toLong()
+        val createdAt = name.removeSuffix(".tempo").substringAfterLast('-').toLong()
         val file =
             CloudBackupFile(
                 id = "f${nextId++}",
