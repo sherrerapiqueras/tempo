@@ -10,9 +10,9 @@ import com.mandrecode.tempo.core.domain.model.Priority
 import com.mandrecode.tempo.core.domain.model.RestoreResult
 import com.mandrecode.tempo.core.domain.model.ScheduleResult
 import com.mandrecode.tempo.core.domain.util.ValidationUtils
+import com.mandrecode.tempo.features.tasks.TEST_INBOX_CATEGORY
 import com.mandrecode.tempo.features.tasks.domain.model.AttachmentImportResult
 import com.mandrecode.tempo.features.tasks.domain.model.Category
-import com.mandrecode.tempo.features.tasks.domain.model.DEFAULT_INBOX_CATEGORY
 import com.mandrecode.tempo.features.tasks.domain.model.NO_CATEGORY_ID
 import com.mandrecode.tempo.features.tasks.domain.model.Task
 import com.mandrecode.tempo.features.tasks.domain.model.TaskAttachment
@@ -297,7 +297,7 @@ class TasksViewModelTest {
     fun `falls back to the default category when the selected category is removed`() =
         runTest {
             val work = Category(id = 10L, name = "Work")
-            val inbox = Category(id = -1L, name = "Inbox", isDefault = true)
+            val inbox = TEST_INBOX_CATEGORY
             coEvery { categoryRepository.getAllCategories() } returns flowOf(listOf(work, inbox))
             every { tasksScreenPreferencesRepository.getSelectedCategoryId() } returns 10L
 
@@ -309,8 +309,8 @@ class TasksViewModelTest {
             coEvery { categoryRepository.getAllCategories() } returns flowOf(listOf(inbox))
             val vm2 = createViewModel()
             advanceUntilIdle()
-            assertThat(vm2.uiState.value.selectedCategoryId).isEqualTo(-1L)
-            verify { tasksScreenPreferencesRepository.setSelectedCategoryId(-1L) }
+            assertThat(vm2.uiState.value.selectedCategoryId).isEqualTo(TEST_INBOX_CATEGORY.id)
+            verify { tasksScreenPreferencesRepository.setSelectedCategoryId(TEST_INBOX_CATEGORY.id) }
         }
 
     @Test
@@ -359,7 +359,7 @@ class TasksViewModelTest {
     fun `ShowTaskDialog opens the editor when a category exists`() =
         runTest {
             coEvery { categoryRepository.getAllCategories() } returns
-                flowOf(listOf(Category(id = -1L, name = "Inbox", isDefault = true)))
+                flowOf(listOf(TEST_INBOX_CATEGORY))
             val vm = createViewModel()
             advanceUntilIdle()
 
@@ -999,9 +999,9 @@ class TasksViewModelTest {
         runTest {
             every {
                 tasksScreenPreferencesRepository.getSelectedCategoryId()
-            } returns DEFAULT_INBOX_CATEGORY.id
+            } returns TEST_INBOX_CATEGORY.id
             every {
-                tasksScreenPreferencesRepository.getSortOption(DEFAULT_INBOX_CATEGORY.id)
+                tasksScreenPreferencesRepository.getSortOption(TEST_INBOX_CATEGORY.id)
             } returns SortOption.BY_DATE
             val vm =
                 createViewModel()
@@ -1086,7 +1086,7 @@ class TasksViewModelTest {
                 flowOf(listOf(Category(id = 2L, name = "Work")))
             every {
                 tasksScreenPreferencesRepository.getSelectedCategoryId()
-            } returns DEFAULT_INBOX_CATEGORY.id
+            } returns TEST_INBOX_CATEGORY.id
 
             val vm =
                 createViewModel()
@@ -1126,7 +1126,7 @@ class TasksViewModelTest {
                 flowOf(listOf(Category(id = 2L, name = "Work")))
             every {
                 tasksScreenPreferencesRepository.getSelectedCategoryId()
-            } returns DEFAULT_INBOX_CATEGORY.id
+            } returns TEST_INBOX_CATEGORY.id
             coEvery { toggleTaskCompletionUseCase.invoke(expectedTaskOnToggle) } returns
                 ToggleTaskCompletionUseCase.Result.PeriodicCompleted(
                     UpdateTaskUseCase.Result.Success(ScheduleResult.Skipped),
@@ -1326,7 +1326,7 @@ class TasksViewModelTest {
     fun `reopening task dialog starts a new editor session`() =
         runTest {
             coEvery { categoryRepository.getAllCategories() } returns
-                flowOf(listOf(Category(id = -1L, name = "Inbox", isDefault = true)))
+                flowOf(listOf(TEST_INBOX_CATEGORY))
             val vm = createViewModel()
             vm.onEvent(TasksContract.UiEvent.ShowTaskDialog())
             advanceUntilIdle()
@@ -1489,7 +1489,7 @@ class TasksViewModelTest {
                     description = "",
                     isCompleted = true,
                     completedAt = date1,
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                     sortOrder = 0,
                 )
             val taskToday2 =
@@ -1499,7 +1499,7 @@ class TasksViewModelTest {
                     description = "",
                     isCompleted = true,
                     completedAt = date2,
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                     sortOrder = 1,
                 )
             val taskYesterday =
@@ -1509,7 +1509,7 @@ class TasksViewModelTest {
                     description = "",
                     isCompleted = true,
                     completedAt = date3,
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                     sortOrder = 2,
                 )
             val taskNoDate =
@@ -1519,14 +1519,14 @@ class TasksViewModelTest {
                     description = "",
                     isCompleted = true,
                     completedAt = null,
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                     sortOrder = 3,
                 )
 
             coEvery { taskRepository.getAllTasks() } returns
                 flowOf(listOf(taskToday1, taskToday2, taskYesterday, taskNoDate))
             coEvery { categoryRepository.getAllCategories() } returns
-                flowOf(listOf(DEFAULT_INBOX_CATEGORY))
+                flowOf(listOf(TEST_INBOX_CATEGORY))
             every { tasksScreenPreferencesRepository.getSortOption(any()) } returns SortOption.BY_DATE
 
             viewModel =
@@ -1560,7 +1560,7 @@ class TasksViewModelTest {
                     description = "",
                     isCompleted = true,
                     priority = Priority.HIGH,
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                     sortOrder = 0,
                 )
             val taskMedium =
@@ -1570,7 +1570,7 @@ class TasksViewModelTest {
                     description = "",
                     isCompleted = true,
                     priority = Priority.MEDIUM,
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                     sortOrder = 1,
                 )
             val taskLow =
@@ -1580,7 +1580,7 @@ class TasksViewModelTest {
                     description = "",
                     isCompleted = true,
                     priority = Priority.LOW,
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                     sortOrder = 2,
                 )
             val taskNoPriority =
@@ -1590,14 +1590,14 @@ class TasksViewModelTest {
                     description = "",
                     isCompleted = true,
                     priority = null,
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                     sortOrder = 3,
                 )
 
             coEvery { taskRepository.getAllTasks() } returns
                 flowOf(listOf(taskHigh, taskMedium, taskLow, taskNoPriority))
             coEvery { categoryRepository.getAllCategories() } returns
-                flowOf(listOf(DEFAULT_INBOX_CATEGORY))
+                flowOf(listOf(TEST_INBOX_CATEGORY))
             every { tasksScreenPreferencesRepository.getSortOption(any()) } returns SortOption.BY_PRIORITY
 
             viewModel =
@@ -1627,7 +1627,7 @@ class TasksViewModelTest {
                     title = "Task A",
                     description = "",
                     isCompleted = true,
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                     sortOrder = 0,
                 )
             val task2 =
@@ -1636,13 +1636,13 @@ class TasksViewModelTest {
                     title = "Task B",
                     description = "",
                     isCompleted = true,
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                     sortOrder = 1,
                 )
 
             coEvery { taskRepository.getAllTasks() } returns flowOf(listOf(task1, task2))
             coEvery { categoryRepository.getAllCategories() } returns
-                flowOf(listOf(DEFAULT_INBOX_CATEGORY))
+                flowOf(listOf(TEST_INBOX_CATEGORY))
             every { tasksScreenPreferencesRepository.getSortOption(any()) } returns SortOption.MANUAL
 
             viewModel =
@@ -1666,7 +1666,7 @@ class TasksViewModelTest {
                     title = "Banana",
                     description = "",
                     isCompleted = true,
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                     sortOrder = 0,
                 )
             val task2 =
@@ -1675,13 +1675,13 @@ class TasksViewModelTest {
                     title = "Apple",
                     description = "",
                     isCompleted = true,
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                     sortOrder = 1,
                 )
 
             coEvery { taskRepository.getAllTasks() } returns flowOf(listOf(task1, task2))
             coEvery { categoryRepository.getAllCategories() } returns
-                flowOf(listOf(DEFAULT_INBOX_CATEGORY))
+                flowOf(listOf(TEST_INBOX_CATEGORY))
             every { tasksScreenPreferencesRepository.getSortOption(any()) } returns SortOption.BY_TITLE
 
             viewModel =
@@ -1836,7 +1836,7 @@ class TasksViewModelTest {
                     title = "Task A",
                     description = "",
                     reminderDate = todayDateTime,
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                 )
             val taskTodayB =
                 Task(
@@ -1851,7 +1851,7 @@ class TasksViewModelTest {
                             14,
                             0,
                         ),
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                 )
             val taskTomorrow =
                 Task(
@@ -1859,7 +1859,7 @@ class TasksViewModelTest {
                     title = "Task C",
                     description = "",
                     reminderDate = tomorrowDateTime,
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                 )
             val taskNextWeek =
                 Task(
@@ -1867,7 +1867,7 @@ class TasksViewModelTest {
                     title = "Task E",
                     description = "",
                     reminderDate = nextWeekDateTime,
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                 )
             val taskNoDate =
                 Task(
@@ -1875,13 +1875,13 @@ class TasksViewModelTest {
                     title = "No date task",
                     description = "",
                     reminderDate = null,
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                 )
 
             coEvery { taskRepository.getAllTasks() } returns
                 flowOf(listOf(taskTodayA, taskTodayB, taskTomorrow, taskNextWeek, taskNoDate))
             coEvery { categoryRepository.getAllCategories() } returns
-                flowOf(listOf(DEFAULT_INBOX_CATEGORY))
+                flowOf(listOf(TEST_INBOX_CATEGORY))
             every { tasksScreenPreferencesRepository.getSortOption(any()) } returns SortOption.BY_DATE
 
             viewModel =
@@ -1939,7 +1939,7 @@ class TasksViewModelTest {
                             10,
                             0,
                         ),
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                 )
             val taskOverdueB =
                 Task(
@@ -1954,7 +1954,7 @@ class TasksViewModelTest {
                             8,
                             0,
                         ),
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                 )
             val taskToday =
                 Task(
@@ -1962,7 +1962,7 @@ class TasksViewModelTest {
                     title = "Today task",
                     description = "",
                     reminderDate = todayDateTime,
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                 )
             val taskNoDate =
                 Task(
@@ -1970,13 +1970,13 @@ class TasksViewModelTest {
                     title = "No date task",
                     description = "",
                     reminderDate = null,
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                 )
 
             coEvery { taskRepository.getAllTasks() } returns
                 flowOf(listOf(taskOverdueA, taskOverdueB, taskToday, taskNoDate))
             coEvery { categoryRepository.getAllCategories() } returns
-                flowOf(listOf(DEFAULT_INBOX_CATEGORY))
+                flowOf(listOf(TEST_INBOX_CATEGORY))
             every { tasksScreenPreferencesRepository.getSortOption(any()) } returns SortOption.BY_DATE
 
             viewModel =
@@ -2060,7 +2060,7 @@ class TasksViewModelTest {
 
     private fun dueTasks(tasks: MutableStateFlow<List<Task>>) {
         coEvery { taskRepository.getAllTasks() } returns tasks
-        coEvery { categoryRepository.getAllCategories() } returns flowOf(listOf(DEFAULT_INBOX_CATEGORY))
+        coEvery { categoryRepository.getAllCategories() } returns flowOf(listOf(TEST_INBOX_CATEGORY))
         every { tasksScreenPreferencesRepository.getSortOption(any()) } returns SortOption.BY_DATE
     }
 
@@ -2070,7 +2070,7 @@ class TasksViewModelTest {
             title = "Due",
             description = "",
             reminderDate = LocalDateTime(day.year, day.monthNumber, day.dayOfMonth, 9, 0),
-            categoryId = DEFAULT_INBOX_CATEGORY.id,
+            categoryId = TEST_INBOX_CATEGORY.id,
         )
 
     @Test
@@ -2082,7 +2082,7 @@ class TasksViewModelTest {
                     title = "High priority",
                     description = "",
                     priority = Priority.HIGH,
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                 )
             val taskMedium =
                 Task(
@@ -2090,7 +2090,7 @@ class TasksViewModelTest {
                     title = "Medium priority",
                     description = "",
                     priority = Priority.MEDIUM,
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                 )
             val taskNoPriority =
                 Task(
@@ -2098,13 +2098,13 @@ class TasksViewModelTest {
                     title = "No priority",
                     description = "",
                     priority = null,
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                 )
 
             coEvery { taskRepository.getAllTasks() } returns
                 flowOf(listOf(taskHigh, taskMedium, taskNoPriority))
             coEvery { categoryRepository.getAllCategories() } returns
-                flowOf(listOf(DEFAULT_INBOX_CATEGORY))
+                flowOf(listOf(TEST_INBOX_CATEGORY))
             every { tasksScreenPreferencesRepository.getSortOption(any()) } returns SortOption.BY_PRIORITY
 
             viewModel =
@@ -2131,7 +2131,7 @@ class TasksViewModelTest {
                     id = 1,
                     title = "Task 1",
                     description = "",
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                     sortOrder = 0,
                 )
             val task2 =
@@ -2139,14 +2139,14 @@ class TasksViewModelTest {
                     id = 2,
                     title = "Task 2",
                     description = "",
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                     sortOrder = 1,
                 )
 
             coEvery { taskRepository.getAllTasks() } returns
                 flowOf(listOf(task1, task2))
             coEvery { categoryRepository.getAllCategories() } returns
-                flowOf(listOf(DEFAULT_INBOX_CATEGORY))
+                flowOf(listOf(TEST_INBOX_CATEGORY))
             every { tasksScreenPreferencesRepository.getSortOption(any()) } returns SortOption.MANUAL
 
             viewModel =
@@ -2171,7 +2171,7 @@ class TasksViewModelTest {
                     description = "",
                     priority = Priority.HIGH,
                     reminderDate = sameMoment,
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                     sortOrder = 0,
                 )
             val tiedSecond = tiedFirst.copy(id = 2, title = "Tied second", sortOrder = 1)
@@ -2186,7 +2186,7 @@ class TasksViewModelTest {
             coEvery { taskRepository.getAllTasks() } returns
                 flowOf(listOf(tiedFirst, tiedSecond, distinguishable))
             coEvery { categoryRepository.getAllCategories() } returns
-                flowOf(listOf(DEFAULT_INBOX_CATEGORY))
+                flowOf(listOf(TEST_INBOX_CATEGORY))
             every { tasksScreenPreferencesRepository.getSortOption(any()) } returns SortOption.BY_PRIORITY
 
             viewModel = createViewModel()
@@ -2210,7 +2210,7 @@ class TasksViewModelTest {
                     title = "Task 1",
                     description = "",
                     priority = Priority.HIGH,
-                    categoryId = DEFAULT_INBOX_CATEGORY.id,
+                    categoryId = TEST_INBOX_CATEGORY.id,
                     sortOrder = 0,
                 )
             val task2 = task1.copy(id = 2, title = "Task 2", priority = null, sortOrder = 1)
@@ -2220,7 +2220,7 @@ class TasksViewModelTest {
             coEvery { taskRepository.getAllTasks() } returns
                 flowOf(listOf(task1, task2, completed))
             coEvery { categoryRepository.getAllCategories() } returns
-                flowOf(listOf(DEFAULT_INBOX_CATEGORY))
+                flowOf(listOf(TEST_INBOX_CATEGORY))
             every { tasksScreenPreferencesRepository.getSortOption(any()) } returns SortOption.MANUAL
 
             viewModel = createViewModel()

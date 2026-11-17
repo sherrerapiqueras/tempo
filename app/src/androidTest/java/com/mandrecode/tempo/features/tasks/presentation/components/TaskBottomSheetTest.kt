@@ -41,8 +41,8 @@ import com.mandrecode.tempo.core.ui.components.TASK_COMPLETION_CHECKBOX_TEST_TAG
 import com.mandrecode.tempo.core.ui.editor.EDITOR_AUTO_SAVE_DEBOUNCE_MS
 import com.mandrecode.tempo.core.ui.editor.EDITOR_PROPERTY_ROW_GAP
 import com.mandrecode.tempo.core.ui.theme.TempoTheme
+import com.mandrecode.tempo.features.tasks.TEST_INBOX_CATEGORY
 import com.mandrecode.tempo.features.tasks.domain.model.Category
-import com.mandrecode.tempo.features.tasks.domain.model.DEFAULT_INBOX_CATEGORY
 import com.mandrecode.tempo.features.tasks.domain.model.Task
 import com.mandrecode.tempo.features.tasks.presentation.TasksContract
 import kotlinx.datetime.LocalDateTime
@@ -89,7 +89,7 @@ class TaskBottomSheetTest {
             TempoTheme {
                 TaskBottomSheet(
                     task = null,
-                    categories = listOf(DEFAULT_INBOX_CATEGORY),
+                    categories = listOf(TEST_INBOX_CATEGORY),
                     selectedCategoryIdFromFilter = null,
                     formState = defaultFormState(),
                     onSetPriority = {},
@@ -117,7 +117,7 @@ class TaskBottomSheetTest {
             TempoTheme {
                 TaskBottomSheet(
                     task = null,
-                    categories = listOf(DEFAULT_INBOX_CATEGORY),
+                    categories = listOf(TEST_INBOX_CATEGORY),
                     selectedCategoryIdFromFilter = null,
                     formState = defaultFormState(),
                     onSetPriority = {},
@@ -150,7 +150,7 @@ class TaskBottomSheetTest {
             TempoTheme {
                 TaskBottomSheet(
                     task = null,
-                    categories = listOf(DEFAULT_INBOX_CATEGORY),
+                    categories = listOf(TEST_INBOX_CATEGORY),
                     selectedCategoryIdFromFilter = null,
                     formState = defaultFormState(),
                     onSetPriority = {},
@@ -201,7 +201,7 @@ class TaskBottomSheetTest {
             TempoTheme {
                 TaskBottomSheet(
                     task = null,
-                    categories = listOf(DEFAULT_INBOX_CATEGORY),
+                    categories = listOf(TEST_INBOX_CATEGORY),
                     selectedCategoryIdFromFilter = null,
                     formState = defaultFormState(),
                     onSetPriority = {},
@@ -256,7 +256,7 @@ class TaskBottomSheetTest {
             TempoTheme {
                 TaskBottomSheet(
                     task = null,
-                    categories = listOf(DEFAULT_INBOX_CATEGORY),
+                    categories = listOf(TEST_INBOX_CATEGORY),
                     selectedCategoryIdFromFilter = null,
                     formState = defaultFormState(),
                     onSetPriority = {},
@@ -282,7 +282,7 @@ class TaskBottomSheetTest {
     fun displaysCategorySelector() {
         val categories =
             listOf(
-                DEFAULT_INBOX_CATEGORY,
+                TEST_INBOX_CATEGORY,
                 Category(id = 2, name = "Work"),
             )
 
@@ -318,7 +318,7 @@ class TaskBottomSheetTest {
             TempoTheme {
                 TaskBottomSheet(
                     task = null,
-                    categories = listOf(DEFAULT_INBOX_CATEGORY),
+                    categories = listOf(TEST_INBOX_CATEGORY),
                     selectedCategoryIdFromFilter = null,
                     formState = defaultFormState(),
                     onSetPriority = {},
@@ -346,7 +346,7 @@ class TaskBottomSheetTest {
             TempoTheme {
                 TaskBottomSheet(
                     task = sampleTask().copy(description = "Read https://example.com/docs before starting"),
-                    categories = listOf(DEFAULT_INBOX_CATEGORY),
+                    categories = listOf(TEST_INBOX_CATEGORY),
                     selectedCategoryIdFromFilter = null,
                     formState = defaultFormState(),
                     onSetPriority = {},
@@ -387,7 +387,7 @@ class TaskBottomSheetTest {
             TempoTheme {
                 TaskBottomSheet(
                     task = sampleTask(),
-                    categories = listOf(DEFAULT_INBOX_CATEGORY),
+                    categories = listOf(TEST_INBOX_CATEGORY),
                     selectedCategoryIdFromFilter = null,
                     formState = defaultFormState(),
                     onSetPriority = {},
@@ -431,7 +431,7 @@ class TaskBottomSheetTest {
                 TaskBottomSheet(
                     task = task,
                     onToggleCompletion = onToggleCompletion,
-                    categories = listOf(DEFAULT_INBOX_CATEGORY),
+                    categories = listOf(TEST_INBOX_CATEGORY),
                     selectedCategoryIdFromFilter = null,
                     formState = formState,
                     onSetPriority = {},
@@ -597,7 +597,7 @@ class TaskBottomSheetTest {
             TempoTheme {
                 TaskBottomSheet(
                     task = sampleTask(),
-                    categories = listOf(DEFAULT_INBOX_CATEGORY),
+                    categories = listOf(TEST_INBOX_CATEGORY),
                     selectedCategoryIdFromFilter = null,
                     formState = defaultFormState(),
                     onSetPriority = {},
@@ -654,7 +654,7 @@ class TaskBottomSheetTest {
             TempoTheme {
                 TaskBottomSheet(
                     task = null,
-                    categories = listOf(DEFAULT_INBOX_CATEGORY),
+                    categories = listOf(TEST_INBOX_CATEGORY),
                     selectedCategoryIdFromFilter = null,
                     formState = defaultFormState(),
                     onSetPriority = {},
@@ -683,7 +683,7 @@ class TaskBottomSheetTest {
             TempoTheme {
                 TaskBottomSheet(
                     task = sampleTask(),
-                    categories = listOf(DEFAULT_INBOX_CATEGORY),
+                    categories = listOf(TEST_INBOX_CATEGORY),
                     selectedCategoryIdFromFilter = null,
                     formState = defaultFormState(),
                     onSetPriority = {},
@@ -714,7 +714,7 @@ class TaskBottomSheetTest {
             TempoTheme {
                 TaskBottomSheet(
                     task = task,
-                    categories = listOf(DEFAULT_INBOX_CATEGORY),
+                    categories = listOf(TEST_INBOX_CATEGORY),
                     selectedCategoryIdFromFilter = null,
                     formState = defaultFormState(),
                     onSetPriority = {},
@@ -745,7 +745,7 @@ class TaskBottomSheetTest {
             TempoTheme {
                 TaskBottomSheet(
                     task = sampleTask(isCompleted = true),
-                    categories = listOf(DEFAULT_INBOX_CATEGORY),
+                    categories = listOf(TEST_INBOX_CATEGORY),
                     selectedCategoryIdFromFilter = null,
                     formState = defaultFormState(),
                     onSetPriority = {},
@@ -778,7 +778,7 @@ class TaskBottomSheetTest {
                 var task by remember { mutableStateOf(sampleTask(isCompleted = false)) }
                 TaskBottomSheet(
                     task = task,
-                    categories = listOf(DEFAULT_INBOX_CATEGORY),
+                    categories = listOf(TEST_INBOX_CATEGORY),
                     selectedCategoryIdFromFilter = null,
                     formState = defaultFormState(),
                     onSetPriority = {},
@@ -822,7 +822,7 @@ class TaskBottomSheetTest {
             TempoTheme {
                 TaskBottomSheet(
                     task = sampleTask(isCompleted = true).copy(periodicity = Periodicity.WEEKLY),
-                    categories = listOf(DEFAULT_INBOX_CATEGORY),
+                    categories = listOf(TEST_INBOX_CATEGORY),
                     selectedCategoryIdFromFilter = null,
                     formState =
                         defaultFormState().copy(
@@ -865,7 +865,7 @@ class TaskBottomSheetTest {
                             parentTaskId = 7L,
                             priority = Priority.HIGH,
                         ),
-                    categories = listOf(DEFAULT_INBOX_CATEGORY),
+                    categories = listOf(TEST_INBOX_CATEGORY),
                     selectedCategoryIdFromFilter = null,
                     formState = defaultFormState().copy(priority = Priority.HIGH),
                     onSetPriority = {},
@@ -901,7 +901,7 @@ class TaskBottomSheetTest {
                         sampleTask(isCompleted = true).copy(
                             priority = Priority.MEDIUM,
                         ),
-                    categories = listOf(DEFAULT_INBOX_CATEGORY),
+                    categories = listOf(TEST_INBOX_CATEGORY),
                     selectedCategoryIdFromFilter = null,
                     formState = defaultFormState().copy(priority = Priority.MEDIUM),
                     onSetPriority = {},
@@ -950,7 +950,7 @@ class TaskBottomSheetTest {
                 }
                 TaskBottomSheet(
                     task = task,
-                    categories = listOf(DEFAULT_INBOX_CATEGORY),
+                    categories = listOf(TEST_INBOX_CATEGORY),
                     selectedCategoryIdFromFilter = null,
                     formState = formState,
                     onSetPriority = {},

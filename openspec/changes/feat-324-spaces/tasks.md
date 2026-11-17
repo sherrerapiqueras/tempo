@@ -7,13 +7,14 @@
 - [ ] 1.5 Add domain `Space` model, repository interface and mappers; bind the repository in `core/di/RepositoryModule.kt`
 - [ ] 1.6 Migration tests, including a real pre-migration database rather than only a synthetic one
 
-## 2. Remove the Inbox sentinel
+## 2. Per-space default categories
 
-- [ ] 2.1 Replace `DEFAULT_INBOX_CATEGORY_ENTITY` resolution with "the category where `isDefault` is true for this space" in `CategoryEntity.kt` and `TaskEntity.kt`
-- [ ] 2.2 Update `Task.kt` to stop depending on the reserved id
-- [ ] 2.3 Update `BackupRepositoryImpl` default-category handling
-- [ ] 2.4 Seed a default category whenever a space is created; prevent deleting a space's default category
-- [ ] 2.5 Extend the `default-category-persistence` regression tests for the per-space case, including that no reserved identifier is used
+The reserved Inbox id was removed in milestone 1.1 by #326: the default is the row with `isDefault`, and the seeded Inbox is the row with the well-known `uid`. What remains is tracked by #545.
+
+- [ ] 2.1 Scope `isDefault` per space, so setting a default clears only that space's previous default
+- [ ] 2.2 Resolve default categories per space in `BackupRepositoryImpl`
+- [ ] 2.3 Seed a default category whenever a space is created, and prevent deleting a space's default category
+- [ ] 2.4 Extend the `default-category-persistence` regression tests for the per-space case
 
 ## 3. Active space and scoping
 
