@@ -47,7 +47,7 @@ internal object JournalSchema {
         $event ON `$table`
         WHEN $row.uid != ''
         BEGIN
-            DELETE FROM pending_changes WHERE uid = $row.uid;
+            DELETE FROM pending_changes WHERE uid = $row.uid AND entityType = '$table';
             INSERT INTO pending_changes (uid, entityType, operation, changedAt)
             VALUES ($row.uid, '$table', '$operation', ${EntityIdentitySchema.NOW_MILLIS});
         END
@@ -60,6 +60,9 @@ internal object JournalSchema {
                 "`seq` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `uid` TEXT NOT NULL, " +
                 "`entityType` TEXT NOT NULL, `operation` TEXT NOT NULL, `changedAt` INTEGER NOT NULL)",
         )
-        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_pending_changes_uid` ON `pending_changes` (`uid`)")
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_pending_changes_uid_entityType` " +
+                "ON `pending_changes` (`uid`, `entityType`)",
+        )
     }
 }

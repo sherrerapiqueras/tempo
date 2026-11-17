@@ -152,15 +152,23 @@ class MergePlanner
             // Same-named incoming sections of one category are one section, like local ones.
             val firstByName = mutableMapOf<Pair<Long, String>, Long>()
             val localByCategory = local.sections.groupBy { it.categoryId }
-            val localIdByUid = local.sections.idByUid({ it.uid }) { it.id }
+            val localByUid = local.sections.filter { it.uid != UNSET_UID }.associateBy { it.uid }
             val nextSortOrder =
                 localByCategory.mapValues { (_, sections) -> sections.maxOf { it.sortOrder } + 1 }.toMutableMap()
-            incoming.sections.sortedBy { it.sortOrder }.forEach { section ->
-                val sameRecord = section.uid.takeIf { it != UNSET_UID }?.let(localIdByUid::get)
-                if (sameRecord != null) {
-                    idMap[section.id] = sameRecord
-                    return@forEach
-                }
+            incoming.sections.sortedBy { it.sortOrder }.forEach { incomingSection ->
+                // Identity is only reused within the category this section resolves to: a section
+                // claiming the uid of another category's section (an edited file) would hand that
+                // other category's section to this category's tasks. It imports as a new section.
+                val sameRecord = localByUid[incomingSection.uid]
+                val section =
+                    when {
+                        sameRecord == null -> incomingSection
+                        sameRecord.categoryId == categories.idMap[incomingSection.categoryId] -> {
+                            idMap[incomingSection.id] = sameRecord.id
+                            return@forEach
+                        }
+                        else -> incomingSection.copy(uid = UNSET_UID)
+                    }
                 val canonical = firstByName.getOrPut(section.categoryId to section.name) { section.id }
                 if (canonical != section.id) {
                     aliases[section.id] = canonical

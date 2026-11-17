@@ -10,8 +10,11 @@ interface TombstoneDao {
     @Query("SELECT * FROM tombstones ORDER BY deletedAt ASC")
     suspend fun getAll(): List<TombstoneEntity>
 
-    @Query("SELECT * FROM tombstones WHERE uid = :uid")
-    suspend fun get(uid: String): TombstoneEntity?
+    @Query("SELECT * FROM tombstones WHERE uid = :uid AND entityType = :entityType")
+    suspend fun get(
+        uid: String,
+        entityType: String,
+    ): TombstoneEntity?
 
     @Query("DELETE FROM tombstones WHERE deletedAt < :cutoffMillis")
     suspend fun purgeOlderThan(cutoffMillis: Long): Int

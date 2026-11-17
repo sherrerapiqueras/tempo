@@ -387,6 +387,62 @@ class MergePlannerTest {
         assertThat(plan.sectionAliases).containsExactly(6L, 5L)
     }
 
+    @Test
+    fun `a section claiming another category's section uid imports as a new section`() {
+        val local =
+            BackupData(
+                categories =
+                    listOf(
+                        category(id = 5, name = "Work").copy(uid = CATEGORY_UID),
+                        category(id = 6, name = "Home").copy(uid = NEW_UID),
+                    ),
+                tasks = emptyList(),
+                habits = emptyList(),
+                habitChains = emptyList(),
+                chainMemberships = emptyList(),
+                sections = listOf(TaskSection(id = 50, categoryId = 6, name = "Soon", uid = CHILD_UID)),
+            )
+        val incoming =
+            BackupData(
+                categories = listOf(category(id = 1, name = "Work").copy(uid = CATEGORY_UID)),
+                tasks = emptyList(),
+                habits = emptyList(),
+                habitChains = emptyList(),
+                chainMemberships = emptyList(),
+                // An edited file: a Work section carrying the uid of the device's Home section.
+                sections = listOf(TaskSection(id = 9, categoryId = 1, name = "Later", uid = CHILD_UID)),
+            )
+
+        val plan = planner.plan(incoming, local)
+
+        assertThat(plan.sectionIdMap).doesNotContainKey(9L)
+        assertThat(plan.sectionsToInsert.single().uid).isEmpty()
+        assertThat(plan.sectionsToInsert.single().name).isEqualTo("Later")
+    }
+
+    @Test
+    fun `a section known by identity in the same category maps onto it`() {
+        val local =
+            BackupData(
+                categories = listOf(category(id = 5, name = "Work").copy(uid = CATEGORY_UID)),
+                tasks = emptyList(),
+                habits = emptyList(),
+                habitChains = emptyList(),
+                chainMemberships = emptyList(),
+                sections = listOf(TaskSection(id = 50, categoryId = 5, name = "Renamed", uid = CHILD_UID)),
+            )
+        val incoming =
+            local.copy(
+                categories = listOf(category(id = 1, name = "Work").copy(uid = CATEGORY_UID)),
+                sections = listOf(TaskSection(id = 9, categoryId = 1, name = "Soon", uid = CHILD_UID)),
+            )
+
+        val plan = planner.plan(incoming, local)
+
+        assertThat(plan.sectionIdMap).containsEntry(9L, 50L)
+        assertThat(plan.sectionsToInsert).isEmpty()
+    }
+
     private fun backupData(
         categories: List<Category> = emptyList(),
         tasks: List<Task> = emptyList(),

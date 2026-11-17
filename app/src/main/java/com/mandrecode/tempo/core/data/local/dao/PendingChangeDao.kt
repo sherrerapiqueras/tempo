@@ -13,7 +13,8 @@ interface PendingChangeDao {
 
     /**
      * Marks a change as delivered. Removes it only if the record has not changed again since it was
-     * read — a newer change has a new seq — so an edit made during an upload stays pending.
+     * read — a newer change has a new seq, and a seq is never reused — so an edit made during an
+     * upload stays pending.
      * Returns whether it was removed.
      */
     @Query("DELETE FROM pending_changes WHERE uid = :uid AND seq = :seq")

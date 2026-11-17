@@ -11,7 +11,8 @@ import androidx.room.PrimaryKey
  */
 @Entity(
     tableName = "pending_changes",
-    indices = [Index(value = ["uid"], unique = true)],
+    // One row per record. A uid is only unique within its table, so the kind is part of the key.
+    indices = [Index(value = ["uid", "entityType"], unique = true)],
 )
 data class PendingChangeEntity(
     /** Never reused (AUTOINCREMENT): orders changes and lets an acknowledgement detect a newer one. */
