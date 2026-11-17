@@ -96,14 +96,8 @@ class BackupRepositoryImpl
         // Also requires the base64 fields to decode, not just the JSON shape/version — a
         // malformed envelope would otherwise prompt for a passphrase before failing as
         // CorruptFile anyway, an unnecessary step for a file that can never succeed.
-        override suspend fun hasUserData(): Boolean {
-            val data = database.withTransaction { readAll() }
-            return data.tasks.isNotEmpty() ||
-                data.habits.isNotEmpty() ||
-                data.habitChains.isNotEmpty() ||
-                // Only the seeded Inbox is not the user's own: the default flag can move to any category.
-                data.categories.any { it.uid != DEFAULT_INBOX_UID }
-        }
+        // Only the seeded Inbox is not the user's own: the default flag can move to any category.
+        override suspend fun hasUserData(): Boolean = database.categoryDao().hasUserData(DEFAULT_INBOX_UID)
 
         override fun isEncryptedBackup(content: String): Boolean =
             decodeEnvelopeOrNull(content, jsonFormat)?.let { toEncryptedEnvelopeOrNull(it) } != null
