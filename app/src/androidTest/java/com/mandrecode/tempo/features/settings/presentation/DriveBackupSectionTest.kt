@@ -71,6 +71,15 @@ class DriveBackupSectionTest {
     }
 
     @Test
+    fun aFullDriveOffersToManageStorage() {
+        show(on.copy(driveBackup = on.driveBackup.copy(failure = DriveBackupFailure.STORAGE_FULL)))
+
+        composeTestRule.onNodeWithText(text(R.string.drive_backup_manage_storage)).performClick()
+
+        assertThat(events).containsExactly(Event.ManageStorageClicked)
+    }
+
+    @Test
     fun setupStatesWhatIsNeededToRestoreBeforeConfirming() {
         show(on.copy(driveBackupDialog = SettingsContract.DriveBackupDialog.SetPassphrase(isChange = false)))
 

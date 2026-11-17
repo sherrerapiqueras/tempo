@@ -1,5 +1,7 @@
 package com.mandrecode.tempo.features.settings.presentation
 
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
@@ -77,6 +79,11 @@ fun SettingsScreen(
     LaunchedEffect(viewModel) {
         viewModel.uiEffect.collect { effect ->
             when (effect) {
+                is SettingsContract.UiEffect.OpenGoogleStorage ->
+                    runCatching {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(GOOGLE_STORAGE_URL)))
+                    }
+
                 is SettingsContract.UiEffect.LaunchDriveConsent ->
                     driveConsentLauncher.launch(IntentSenderRequest.Builder(effect.intent).build())
 
@@ -231,3 +238,6 @@ private fun SettingsTopBar(
         )
     }
 }
+
+/** Where a Google account's storage is managed and freed. */
+private const val GOOGLE_STORAGE_URL = "https://one.google.com/storage"

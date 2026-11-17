@@ -7,6 +7,7 @@ import com.mandrecode.tempo.features.backup.domain.usecase.ChangeBackupPassphras
 import com.mandrecode.tempo.features.backup.domain.usecase.DisableDriveBackupUseCase
 import com.mandrecode.tempo.features.backup.domain.usecase.EnableDriveBackupUseCase
 import com.mandrecode.tempo.features.backup.domain.usecase.PassphraseCheck
+import com.mandrecode.tempo.features.backup.domain.usecase.RefreshDriveBackupStatusUseCase
 import com.mandrecode.tempo.features.backup.domain.usecase.RunDriveBackupNowUseCase
 import com.mandrecode.tempo.features.backup.domain.usecase.UpdateDriveBackupScheduleUseCase
 import com.mandrecode.tempo.infrastructure.backup.drive.GoogleDriveAuthorization
@@ -32,6 +33,7 @@ class SettingsDriveBackupDelegate
         private val disable: DisableDriveBackupUseCase,
         private val updateSchedule: UpdateDriveBackupScheduleUseCase,
         private val backUpNow: RunDriveBackupNowUseCase,
+        private val refreshStatus: RefreshDriveBackupStatusUseCase,
     ) {
         /** What the consent being shown was asked for. */
         private enum class ConsentPurpose { TURN_ON, RECONNECT }
@@ -54,6 +56,7 @@ class SettingsDriveBackupDelegate
                     )
                 }.collect { drive -> host.updateState { it.copy(driveBackup = drive) } }
             }
+            host.scope.launch { refreshStatus() }
         }
 
         fun onEvent(
@@ -66,12 +69,8 @@ class SettingsDriveBackupDelegate
                 is Event.ConsentFinished ->
                     if (authorization.isGranted(event.data)) onConsentGranted(host) else pendingConsent = null
                 is Event.PassphraseConfirmed -> confirmPassphrase(event, host)
-                Event.FrequencyClicked -> showDialog(Dialog.ChooseFrequency, host)
-                is Event.FrequencySelected -> {
-                    updateSchedule(frequency = event.frequency)
-                    showDialog(null, host)
-                }
-                is Event.WifiOnlyToggled -> updateSchedule(unmeteredOnly = event.enabled)
+                Event.FrequencyClicked, is Event.FrequencySelected, is Event.WifiOnlyToggled ->
+                    onScheduleEvent(event, host)
                 Event.BackUpNowClicked -> {
                     backUpNow()
                     host.sendEffect(SettingsContract.UiEffect.ShowMessage(R.string.drive_backup_now_started))
@@ -83,6 +82,22 @@ class SettingsDriveBackupDelegate
                     showDialog(null, host)
                 }
                 Event.DialogDismissed -> showDialog(null, host)
+                Event.ManageStorageClicked -> host.sendEffect(SettingsContract.UiEffect.OpenGoogleStorage)
+            }
+        }
+
+        private fun onScheduleEvent(
+            event: Event,
+            host: SettingsBackupDelegate.Host,
+        ) {
+            when (event) {
+                Event.FrequencyClicked -> showDialog(Dialog.ChooseFrequency, host)
+                is Event.FrequencySelected -> {
+                    updateSchedule(frequency = event.frequency)
+                    showDialog(null, host)
+                }
+                is Event.WifiOnlyToggled -> updateSchedule(unmeteredOnly = event.enabled)
+                else -> Unit
             }
         }
 

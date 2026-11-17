@@ -43,6 +43,28 @@ class DriveRestCloudStoreTest {
         }
 
     @Test
+    fun `list follows every page`() =
+        runTest {
+            val pages =
+                ArrayDeque(
+                    listOf(
+                        HttpResponse(200, """{"nextPageToken":"p2","files":[{"id":"a"}]}"""),
+                        HttpResponse(200, """{"files":[{"id":"b"}]}"""),
+                    ),
+                )
+            val paged =
+                DriveRestCloudStore { request ->
+                    requests += request
+                    pages.removeFirst()
+                }
+
+            val files = paged.list("tok")
+
+            assertThat(files.map { it.id }).containsExactly("a", "b").inOrder()
+            assertThat(requests.last().url).contains("pageToken=p2")
+        }
+
+    @Test
     fun `upload sends multipart metadata into appDataFolder followed by the content`() =
         runTest {
             response = HttpResponse(200, """{"id":"new","name":"tempo-backup-9.tempo","size":"7"}""")

@@ -111,12 +111,59 @@ class DriveBackupUseCasesTest {
         }
 
     @Test
-    fun `nothing runs while backup is off`() =
+    fun `nothing runs while backup is off, and nothing is recorded as a backup`() =
         runTest {
             store.stored = "secret"
 
             assertThat(run()).isEqualTo(RunDriveBackupUseCase.Result.Skipped)
             assertThat(cloud.files).isEmpty()
+            assertThat(preferences.status.value.lastSuccessAt).isNull()
+        }
+
+    private val refresh = RefreshDriveBackupStatusUseCase(preferences, auth, cloud, clock)
+
+    @Test
+    fun `refreshing clears a last backup that is no longer in Drive`() =
+        runTest {
+            enabled()
+            preferences.recordSuccess(500)
+
+            refresh()
+
+            assertThat(preferences.status.value.lastSuccessAt).isNull()
+        }
+
+    @Test
+    fun `refreshing takes the newest backup Drive actually holds`() =
+        runTest {
+            enabled()
+            preferences.recordSuccess(500)
+            cloud.upload("t", "tempo-backup-300.tempo", "x")
+            cloud.upload("t", "tempo-backup-400.tempo", "y")
+
+            refresh()
+
+            assertThat(preferences.status.value.lastSuccessAt).isEqualTo(400)
+        }
+
+    @Test
+    fun `refreshing reports lost access, and keeps the status when offline or off`() =
+        runTest {
+            enabled()
+            preferences.recordSuccess(500)
+            cloud.failListWith = IOException("offline")
+            refresh()
+            assertThat(preferences.status.value.lastSuccessAt).isEqualTo(500)
+
+            auth.result = CloudAuthorizationResult.NeedsUserConsent
+            refresh()
+            assertThat(preferences.status.failure).isEqualTo(DriveBackupFailure.AUTHORIZATION_NEEDED)
+
+            preferences.updateSettings(DriveBackupSettings(enabled = false))
+            auth.result = CloudAuthorizationResult.Authorized("t")
+            cloud.failListWith = null
+            refresh()
+            assertThat(preferences.status.value.lastSuccessAt).isEqualTo(500)
         }
 
     @Test

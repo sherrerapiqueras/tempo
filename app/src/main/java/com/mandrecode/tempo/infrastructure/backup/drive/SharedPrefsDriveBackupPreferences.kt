@@ -44,6 +44,14 @@ class SharedPrefsDriveBackupPreferences
         }
 
         @Synchronized
+        override fun replaceLastSuccess(atMillis: Long?) {
+            val edit = prefs.edit()
+            if (atMillis == null) edit.remove(KEY_LAST_SUCCESS) else edit.putLong(KEY_LAST_SUCCESS, atMillis)
+            edit.apply()
+            _status.value = _status.value.copy(lastSuccessAt = atMillis)
+        }
+
+        @Synchronized
         override fun recordFailure(
             failure: DriveBackupFailure,
             atMillis: Long,

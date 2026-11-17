@@ -227,6 +227,9 @@ object SettingsContract {
             data object TurnOffConfirmed : DriveBackup
 
             data object DialogDismissed : DriveBackup
+
+            /** Drive is full: open Google's storage management. */
+            data object ManageStorageClicked : DriveBackup
         }
     }
 
@@ -244,6 +247,9 @@ object SettingsContract {
         data class LaunchDriveConsent(
             val intent: PendingIntent,
         ) : UiEffect
+
+        /** Google storage management, where a full Drive can be freed (#306). */
+        data object OpenGoogleStorage : UiEffect
 
         data class ShowMessage(
             @param:StringRes val message: Int,
