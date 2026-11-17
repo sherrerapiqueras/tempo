@@ -40,7 +40,15 @@ class IdentityMetadataMappingTest {
     @Test
     fun `task round-trips identity and next occurrence is a new record`() {
         val entity =
-            TaskEntity(id = 3, title = "T", description = "", uid = UID, createdAt = CREATED, updatedAt = UPDATED)
+            TaskEntity(
+                id = 3,
+                title = "T",
+                description = "",
+                categoryId = 0,
+                uid = UID,
+                createdAt = CREATED,
+                updatedAt = UPDATED,
+            )
 
         assertThat(entity.toDomain().toEntity()).isEqualTo(entity)
         entity.toDomain().asNextOccurrence(created).let {

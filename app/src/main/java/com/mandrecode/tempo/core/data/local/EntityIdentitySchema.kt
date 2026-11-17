@@ -3,7 +3,6 @@ package com.mandrecode.tempo.core.data.local
 import androidx.annotation.VisibleForTesting
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.mandrecode.tempo.core.data.entity.DEFAULT_INBOX_CATEGORY_ENTITY
 import com.mandrecode.tempo.core.domain.model.DEFAULT_INBOX_UID
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
@@ -33,6 +32,12 @@ import kotlinx.datetime.toInstant
  * before any app write.
  */
 internal object EntityIdentitySchema {
+    /**
+     * The local id the Inbox was seeded under before #326. Only historical data uses it: this
+     * migration, and version-1 backup files, which identify their Inbox by it.
+     */
+    const val LEGACY_INBOX_ID = -1L
+
     /** Tables whose rows carry a stable identity. All use an `id INTEGER` primary key. */
     val TABLES =
         listOf(
@@ -179,7 +184,7 @@ internal object EntityIdentitySchema {
         // The seeded Inbox row, not "whichever category is default": the default can move, a uid cannot.
         db.execSQL(
             "UPDATE categories SET uid = ? WHERE id = ?",
-            arrayOf<Any>(DEFAULT_INBOX_UID, DEFAULT_INBOX_CATEGORY_ENTITY.id),
+            arrayOf<Any>(DEFAULT_INBOX_UID, LEGACY_INBOX_ID),
         )
         TABLES.forEach { table ->
             db.execSQL("UPDATE `$table` SET uid = $RANDOM_UUID_V4 WHERE uid = ''")

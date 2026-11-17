@@ -536,12 +536,11 @@ abstract class TempoDatabase : RoomDatabase() {
                 override fun onOpen(db: SupportSQLiteDatabase) {
                     db.execSQL(
                         """
-                        INSERT OR IGNORE INTO categories (id, name, icon, isDefault, sortOrder, uid)
-                        SELECT ?, ?, ?, 1, ?, ?
+                        INSERT OR IGNORE INTO categories (name, icon, isDefault, sortOrder, uid)
+                        SELECT ?, ?, 1, ?, ?
                         WHERE NOT EXISTS (SELECT 1 FROM categories WHERE isDefault = 1)
                         """.trimIndent(),
                         arrayOf<Any?>(
-                            DEFAULT_INBOX_CATEGORY_ENTITY.id,
                             context.getString(R.string.category_inbox),
                             DEFAULT_INBOX_CATEGORY_ENTITY.icon,
                             DEFAULT_INBOX_CATEGORY_ENTITY.sortOrder,

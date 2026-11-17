@@ -18,6 +18,7 @@ import com.mandrecode.tempo.core.data.local.dao.HabitDao
 import com.mandrecode.tempo.core.data.local.dao.SavedSessionDao
 import com.mandrecode.tempo.core.data.local.dao.TaskDao
 import com.mandrecode.tempo.core.data.local.dao.TaskSectionDao
+import com.mandrecode.tempo.core.domain.model.DEFAULT_INBOX_UID
 import com.mandrecode.tempo.core.domain.model.DayOfWeek
 import com.mandrecode.tempo.core.domain.model.Periodicity
 import com.mandrecode.tempo.core.domain.model.Priority
@@ -236,7 +237,10 @@ class BackupRepositoryImplTest {
             coVerify { memberDao.deleteAllMembers() }
             coVerify { taskDao.deleteAllTasks() }
             coVerify { categoryDao.deleteAllCategories() }
-            assertThat(insertedCategories).containsExactlyElementsIn(localCategories())
+            // Version-1 files carry no uids; the legacy Inbox id maps back to the well-known uid.
+            assertThat(insertedCategories).containsExactlyElementsIn(
+                localCategories().map { if (it.id == -1L) it.copy(uid = DEFAULT_INBOX_UID) else it },
+            )
             assertThat(insertedTasks).containsExactlyElementsIn(localTasks())
             assertThat(insertedHabits).containsExactlyElementsIn(localHabits())
             assertThat(insertedChains).containsExactlyElementsIn(localChains())
@@ -349,7 +353,8 @@ class BackupRepositoryImplTest {
                     testPassphrase,
                 ) as ImportOutcome.Success
 
-            val inbox = inserted.first { it.id == -1L }
+            val inbox = inserted.single { it.uid == DEFAULT_INBOX_UID }
+            assertThat(inbox.id).isEqualTo(0L) // the database assigns it; no reserved id
             assertThat(inbox.isDefault).isTrue()
             assertThat(inbox.icon).isEqualTo("inbox")
             // The re-seeded Inbox row counts as an imported category.
@@ -357,7 +362,7 @@ class BackupRepositoryImplTest {
         }
 
     @Test
-    fun `replace payload with a foreign default still re-creates the inbox row without stealing default`() =
+    fun `replace payload with its own default adds no inbox and keeps that default`() =
         runTest {
             val inserted = mutableListOf<CategoryEntity>()
             coEvery { categoryDao.insertCategory(capture(inserted)) } returns 0
@@ -368,8 +373,9 @@ class BackupRepositoryImplTest {
 
             repository.importFromJson(encryptedJsonOf(json), ImportMode.REPLACE, testPassphrase)
 
-            val inbox = inserted.first { it.id == -1L }
-            assertThat(inbox.isDefault).isFalse()
+            // Nothing references the Inbox by a reserved id any more (#326): no extra row is needed.
+            assertThat(inserted.map { it.name }).containsExactly("Work")
+            assertThat(inserted.single().isDefault).isTrue()
             coVerify(exactly = 0) { categoryDao.setDefault(any()) }
         }
 

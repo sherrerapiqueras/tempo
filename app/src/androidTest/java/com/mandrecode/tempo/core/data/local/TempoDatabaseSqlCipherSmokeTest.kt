@@ -9,6 +9,7 @@ import com.mandrecode.tempo.core.data.entity.CategoryEntity
 import com.mandrecode.tempo.core.data.entity.TaskEntity
 import com.mandrecode.tempo.core.data.local.security.DbKdfIterMarker
 import com.mandrecode.tempo.core.data.local.security.SqlCipherKdfIter
+import com.mandrecode.tempo.core.domain.model.DEFAULT_INBOX_UID
 import kotlinx.coroutines.test.runTest
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import org.junit.After
@@ -70,14 +71,14 @@ class TempoDatabaseSqlCipherSmokeTest {
         runTest {
             val passphrase = ByteArray(32).also { SecureRandom().nextBytes(it) }
             val first = open(passphrase, allowDestructiveDowngrade = false)
-            first.taskDao().insertTask(TaskEntity(title = "Lost in the reset", description = ""))
+            first.taskDao().insertTask(TaskEntity(categoryId = 0, title = "Lost in the reset", description = ""))
             first.openHelper.writableDatabase.version = NEWER_VERSION
             first.close()
 
             val reopened = open(passphrase, allowDestructiveDowngrade = true)
 
             val categories = reopened.categoryDao().getAllCategoriesSync()
-            assertThat(categories.map { it.id }).containsExactly(-1L)
+            assertThat(categories.map { it.uid }).containsExactly(DEFAULT_INBOX_UID)
             assertThat(categories.single().isDefault).isTrue()
             assertThat(reopened.taskDao().getAllTasksSync()).isEmpty()
         }
@@ -87,7 +88,7 @@ class TempoDatabaseSqlCipherSmokeTest {
         runTest {
             val passphrase = ByteArray(32).also { SecureRandom().nextBytes(it) }
             val first = open(passphrase, allowDestructiveDowngrade = false)
-            first.taskDao().insertTask(TaskEntity(title = "Must survive", description = ""))
+            first.taskDao().insertTask(TaskEntity(categoryId = 0, title = "Must survive", description = ""))
             first.openHelper.writableDatabase.version = NEWER_VERSION
             first.close()
 

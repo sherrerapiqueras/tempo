@@ -9,7 +9,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.collect.Range
 import com.google.common.truth.Truth.assertThat
 import com.mandrecode.tempo.core.data.entity.CategoryEntity
-import com.mandrecode.tempo.core.data.entity.DEFAULT_INBOX_CATEGORY_ENTITY
 import com.mandrecode.tempo.core.data.entity.TaskEntity
 import com.mandrecode.tempo.core.domain.model.DEFAULT_INBOX_UID
 import kotlinx.coroutines.test.runTest
@@ -56,7 +55,7 @@ class EntityIdentityTriggersTest {
     @Test
     fun seededInboxHasWellKnownUidAndTimestamps() =
         runTest {
-            val inbox = database.categoryDao().getCategoryById(DEFAULT_INBOX_CATEGORY_ENTITY.id)!!
+            val inbox = database.categoryDao().getAllCategoriesSync().single { it.isDefault }
 
             assertThat(inbox.uid).isEqualTo(DEFAULT_INBOX_UID)
             assertThat(inbox.createdAt).isGreaterThan(0L)
@@ -180,7 +179,7 @@ class EntityIdentityTriggersTest {
             val taskDao = database.taskDao()
             val id =
                 taskDao.insertTask(
-                    TaskEntity(title = "T", description = "", createdAt = 1_000L, updatedAt = 1_000L),
+                    TaskEntity(categoryId = 0, title = "T", description = "", createdAt = 1_000L, updatedAt = 1_000L),
                 )
             val before = System.currentTimeMillis()
 
