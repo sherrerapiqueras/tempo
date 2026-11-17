@@ -80,7 +80,7 @@ internal object EntityIdentitySchema {
             immutableTriggerName(table),
             TombstoneSchema.tombstoneTriggerName(table),
             TombstoneSchema.resurrectTriggerName(table),
-        )
+        ) + JournalSchema.triggerNames(table)
 
     /**
      * Brings this database's triggers in line with the ones this build defines (#30): creates the
@@ -95,7 +95,8 @@ internal object EntityIdentitySchema {
             db,
             TABLES.flatMap {
                 identityTriggers(it) +
-                    TombstoneSchema.triggers(it)
+                    TombstoneSchema.triggers(it) +
+                    JournalSchema.triggers(it)
             },
         )
 

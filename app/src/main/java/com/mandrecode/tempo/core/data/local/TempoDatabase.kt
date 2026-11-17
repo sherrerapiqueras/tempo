@@ -18,6 +18,7 @@ import com.mandrecode.tempo.core.data.entity.DailyFocusActivityEntity
 import com.mandrecode.tempo.core.data.entity.HabitChainEntity
 import com.mandrecode.tempo.core.data.entity.HabitChainMemberEntity
 import com.mandrecode.tempo.core.data.entity.HabitEntity
+import com.mandrecode.tempo.core.data.entity.PendingChangeEntity
 import com.mandrecode.tempo.core.data.entity.SavedSessionEntity
 import com.mandrecode.tempo.core.data.entity.TaskAttachmentEntity
 import com.mandrecode.tempo.core.data.entity.TaskEntity
@@ -28,6 +29,7 @@ import com.mandrecode.tempo.core.data.local.dao.DailyFocusActivityDao
 import com.mandrecode.tempo.core.data.local.dao.HabitChainDao
 import com.mandrecode.tempo.core.data.local.dao.HabitChainMemberDao
 import com.mandrecode.tempo.core.data.local.dao.HabitDao
+import com.mandrecode.tempo.core.data.local.dao.PendingChangeDao
 import com.mandrecode.tempo.core.data.local.dao.SavedSessionDao
 import com.mandrecode.tempo.core.data.local.dao.TaskAttachmentDao
 import com.mandrecode.tempo.core.data.local.dao.TaskDao
@@ -55,8 +57,9 @@ import kotlin.time.Clock
         TaskSectionEntity::class,
         SavedSessionEntity::class,
         TombstoneEntity::class,
+        PendingChangeEntity::class,
     ],
-    version = 16,
+    version = 17,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -78,6 +81,8 @@ abstract class TempoDatabase : RoomDatabase() {
     abstract fun taskSectionDao(): TaskSectionDao
 
     abstract fun tombstoneDao(): TombstoneDao
+
+    abstract fun pendingChangeDao(): PendingChangeDao
 
     abstract fun savedSessionDao(): SavedSessionDao
 
@@ -381,6 +386,14 @@ abstract class TempoDatabase : RoomDatabase() {
                 }
             }
 
+        /** Pending-changes journal (#546); see [JournalSchema]. */
+        val MIGRATION_16_17 =
+            object : Migration(16, 17) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    JournalSchema.migrate16To17(db)
+                }
+            }
+
         val MIGRATIONS =
             arrayOf(
                 MIGRATION_1_2,
@@ -398,6 +411,7 @@ abstract class TempoDatabase : RoomDatabase() {
                 MIGRATION_13_14,
                 MIGRATION_14_15,
                 MIGRATION_15_16,
+                MIGRATION_16_17,
             )
 
         suspend fun getDatabase(
