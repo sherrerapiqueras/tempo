@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 16,
-    "identityHash": "928b35066e015460005fdd4fdab87861",
+    "identityHash": "8f99d29af0b93e3b99751498928e124c",
     "entities": [
       {
         "tableName": "tasks",
@@ -810,7 +810,7 @@
       },
       {
         "tableName": "tombstones",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uid` TEXT NOT NULL, `entityType` TEXT NOT NULL, `deletedAt` INTEGER NOT NULL, PRIMARY KEY(`uid`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uid` TEXT NOT NULL, `entityType` TEXT NOT NULL, `deletedAt` INTEGER NOT NULL, PRIMARY KEY(`uid`, `entityType`))",
         "fields": [
           {
             "fieldPath": "uid",
@@ -834,7 +834,8 @@
         "primaryKey": {
           "autoGenerate": false,
           "columnNames": [
-            "uid"
+            "uid",
+            "entityType"
           ]
         },
         "indices": [
@@ -852,7 +853,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '928b35066e015460005fdd4fdab87861')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8f99d29af0b93e3b99751498928e124c')"
     ]
   }
 }
