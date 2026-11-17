@@ -9,6 +9,9 @@ fun TaskSectionEntity.toDomain(): TaskSection =
         categoryId = categoryId,
         name = name,
         sortOrder = sortOrder,
+        uid = uid,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
     )
 
 fun TaskSection.toEntity(): TaskSectionEntity =
@@ -17,4 +20,7 @@ fun TaskSection.toEntity(): TaskSectionEntity =
         categoryId = categoryId,
         name = name,
         sortOrder = sortOrder,
+        uid = uid,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
     )

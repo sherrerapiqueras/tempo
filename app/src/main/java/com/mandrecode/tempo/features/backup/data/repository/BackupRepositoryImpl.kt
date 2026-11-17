@@ -250,13 +250,13 @@ class BackupRepositoryImpl
                 val categoryIds = plan.categoryIdMap.toMutableMap()
                 plan.categoriesToInsert.forEach { category ->
                     categoryIds[category.id] =
-                        database.categoryDao().insertCategory(category.copy(id = 0).toEntity())
+                        database.categoryDao().insertCategory(category.asNew().toEntity())
                 }
                 val sectionIds = plan.sectionIdMap.toMutableMap()
                 plan.sectionsToInsert.forEach { section ->
                     sectionIds[section.id] =
                         database.taskSectionDao().insertSection(
-                            section.copy(id = 0, categoryId = categoryIds.getValue(section.categoryId)).toEntity(),
+                            section.asNew().copy(categoryId = categoryIds.getValue(section.categoryId)).toEntity(),
                         )
                 }
                 plan.sectionAliases.forEach { (alias, canonical) ->
@@ -266,12 +266,12 @@ class BackupRepositoryImpl
                 database.savedSessionDao().insertMerged(data.focusSessions)
                 val habitIds = plan.habitIdMap.toMutableMap()
                 plan.habitsToInsert.forEach { habit ->
-                    habitIds[habit.id] = database.habitDao().insertHabit(habit.copy(id = 0).toEntity())
+                    habitIds[habit.id] = database.habitDao().insertHabit(habit.asNew().toEntity())
                 }
                 val chainIds = plan.chainIdMap.toMutableMap()
                 plan.chainsToInsert.forEach { chain ->
                     chainIds[chain.id] =
-                        database.habitChainDao().insertHabitChain(chain.copy(id = 0).toEntity())
+                        database.habitChainDao().insertHabitChain(chain.asNew().toEntity())
                 }
                 database.habitChainMemberDao().insertMembers(
                     plan.membershipsToInsert.map { membership ->
@@ -296,8 +296,8 @@ class BackupRepositoryImpl
                 taskIds[task.id] =
                     database.taskDao().insertTask(
                         task
+                            .asNew()
                             .copy(
-                                id = 0,
                                 categoryId = categoryIds.getValue(task.categoryId),
                                 parentTaskId = task.parentTaskId?.let(taskIds::getValue),
                                 nextInstanceId = null,
@@ -329,7 +329,7 @@ private suspend fun SavedSessionDao.insertMerged(incoming: List<SavedSession>) {
     val known = getAllSync().map { it.toDomain() }.toMutableList()
     incoming.forEach { session ->
         if (known.any { it.hasSameNameAs(session) }) return@forEach
-        insert(session.copy(id = 0).toEntity())
+        insert(session.asNew().toEntity())
         known += session
     }
     trimTo(SavedSession.RECENT_LIMIT)

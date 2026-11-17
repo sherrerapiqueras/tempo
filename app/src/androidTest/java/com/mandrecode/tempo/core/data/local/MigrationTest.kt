@@ -4,6 +4,10 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.google.common.truth.Truth.assertThat
+import com.mandrecode.tempo.core.domain.model.DEFAULT_INBOX_UID
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -12,6 +16,7 @@ import org.junit.runner.RunWith
 class MigrationTest {
     companion object {
         private const val DB_NAME = "tempo_migration_test"
+        private const val UUID_PATTERN = "[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
     }
 
     @get:Rule
@@ -474,5 +479,110 @@ class MigrationTest {
                     assertThat(cursor.getString(0)).isEqualTo("Read chapter 3")
                 }
             }
+    }
+
+    @Test
+    fun migrateAll_fromVersion1To15() {
+        helper.createDatabase(DB_NAME, 1).use { it.close() }
+        helper.runMigrationsAndValidate(DB_NAME, 15, true, *TempoDatabase.MIGRATIONS).use { db ->
+            EntityIdentitySchema.TABLES.forEach { table ->
+                db.query("SELECT COUNT(*) FROM sqlite_master WHERE type = 'trigger' AND tbl_name = '$table'").use {
+                    it.moveToFirst()
+                    assertThat(it.getInt(0)).isEqualTo(EntityIdentitySchema.triggerNames(table).size)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun migrate14To15_givesEveryRowAStableIdentityAndKeepsData() {
+        helper.createDatabase(DB_NAME, 14).use { db ->
+            db.execSQL(
+                "INSERT INTO categories (id, name, icon, isDefault, sortOrder, sectionsEnabled) " +
+                    "VALUES (-1, 'My Inbox', 'inbox', 1, -1, 0), (5, 'Work', NULL, 0, 0, 1)",
+            )
+            db.execSQL("INSERT INTO task_sections (id, categoryId, name, sortOrder) VALUES (3, 5, 'Soon', 0)")
+            db.execSQL(
+                "INSERT INTO tasks (id, title, description, isCompleted, categoryId, periodicityInterval, " +
+                    "sortOrder, sectionId, parentTaskId) VALUES " +
+                    "(1, 'Parent', 'd', 0, 5, 1, 0, 3, NULL), (2, 'Child', '', 1, 5, 1, 1, NULL, 1)",
+            )
+            db.execSQL(
+                "INSERT INTO task_attachments (id, taskId, displayName, mimeType, sizeBytes, storedName) " +
+                    "VALUES (1, 1, 'a.pdf', 'application/pdf', 10, 's1')",
+            )
+            db.execSQL(
+                "INSERT INTO habits (id, title, description, isCompleted, habitType, createdDate, completionHistory) " +
+                    "VALUES (7, 'Read', '', 0, 'BUILD', '2026-01-02T03:04:05', '2026-01-02')",
+            )
+            db.execSQL(
+                "INSERT INTO habit_chains (id, title, description, createdDate, completionHistory) " +
+                    "VALUES (4, 'Morning', '', '2026-02-03T04:05:06', '')",
+            )
+            db.execSQL("INSERT INTO habit_chain_members (chainId, habitId, sortOrder) VALUES (4, 7, 0)")
+            db.execSQL(
+                "INSERT INTO focus_sessions (id, title, focusMinutes, breakMinutes, rounds, lastUsedAt) " +
+                    "VALUES (1, 'Deep work', 50, 10, 2, 1700000000000), (2, 'Never used', 25, 5, 1, 0)",
+            )
+        }
+
+        val before = System.currentTimeMillis()
+        helper.runMigrationsAndValidate(DB_NAME, 15, true, TempoDatabase.MIGRATION_14_15).use { db ->
+            val uids = mutableSetOf<String>()
+            EntityIdentitySchema.TABLES.forEach { table ->
+                db.query("SELECT uid, createdAt, updatedAt FROM `$table`").use { c ->
+                    while (c.moveToNext()) {
+                        val uid = c.getString(0)
+                        assertThat(uid).matches(UUID_PATTERN)
+                        assertThat(uids.add("$table/$uid")).isTrue()
+                        assertThat(c.getLong(1)).isGreaterThan(0L)
+                        assertThat(c.getLong(2)).isEqualTo(c.getLong(1))
+                    }
+                }
+            }
+            assertThat(uids).hasSize(10)
+
+            db.query("SELECT uid, name FROM categories WHERE id = -1").use {
+                it.moveToFirst()
+                assertThat(it.getString(0)).isEqualTo(DEFAULT_INBOX_UID)
+                assertThat(it.getString(1)).isEqualTo("My Inbox")
+            }
+            val zone = TimeZone.currentSystemDefault()
+            db.query("SELECT createdAt FROM habits WHERE id = 7").use {
+                it.moveToFirst()
+                assertThat(it.getLong(0))
+                    .isEqualTo(LocalDateTime.parse("2026-01-02T03:04:05").toInstant(zone).toEpochMilliseconds())
+            }
+            db.query("SELECT createdAt FROM habit_chains WHERE id = 4").use {
+                it.moveToFirst()
+                assertThat(it.getLong(0))
+                    .isEqualTo(LocalDateTime.parse("2026-02-03T04:05:06").toInstant(zone).toEpochMilliseconds())
+            }
+            db.query("SELECT createdAt FROM focus_sessions ORDER BY id").use {
+                it.moveToFirst()
+                assertThat(it.getLong(0)).isEqualTo(1700000000000L)
+                it.moveToNext()
+                assertThat(it.getLong(0)).isAtLeast(before)
+            }
+            // Pre-existing data untouched.
+            db.query("SELECT title, isCompleted, categoryId, sectionId, parentTaskId FROM tasks ORDER BY id").use {
+                it.moveToFirst()
+                assertThat(it.getString(0)).isEqualTo("Parent")
+                assertThat(it.getLong(2)).isEqualTo(5L)
+                assertThat(it.getLong(3)).isEqualTo(3L)
+                it.moveToNext()
+                assertThat(it.getString(0)).isEqualTo("Child")
+                assertThat(it.getInt(1)).isEqualTo(1)
+                assertThat(it.getLong(4)).isEqualTo(1L)
+            }
+            db.query("SELECT completionHistory FROM habits WHERE id = 7").use {
+                it.moveToFirst()
+                assertThat(it.getString(0)).isEqualTo("2026-01-02")
+            }
+            db.query("SELECT COUNT(*) FROM habit_chain_members").use {
+                it.moveToFirst()
+                assertThat(it.getInt(0)).isEqualTo(1)
+            }
+        }
     }
 }

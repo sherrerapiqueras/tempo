@@ -87,11 +87,14 @@ class DefaultCategorySeedingTest {
                     sectionsEnabled = true,
                 )
             first.categoryDao().updateCategory(edited)
+            // As stored: the update itself advances updatedAt (#30); reopening must change nothing.
+            val stored = first.categoryDao().getCategoryById(INBOX_ID)!!
             first.close()
 
             val reopened = build()
 
-            assertThat(reopened.categoryDao().getAllCategoriesSync()).containsExactly(edited)
+            assertThat(stored.name).isEqualTo(edited.name)
+            assertThat(reopened.categoryDao().getAllCategoriesSync()).containsExactly(stored)
         }
 
     @Test
@@ -100,11 +103,13 @@ class DefaultCategorySeedingTest {
             val first = build()
             val notDefault = first.categoryDao().getCategoryById(INBOX_ID)!!.copy(isDefault = false)
             first.categoryDao().updateCategory(notDefault)
+            val stored = first.categoryDao().getCategoryById(INBOX_ID)!!
             first.close()
 
             val reopened = build()
 
-            assertThat(reopened.categoryDao().getAllCategoriesSync()).containsExactly(notDefault)
+            assertThat(stored.isDefault).isFalse()
+            assertThat(reopened.categoryDao().getAllCategoriesSync()).containsExactly(stored)
         }
 
     @Test
