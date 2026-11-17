@@ -4,9 +4,17 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
@@ -28,6 +36,10 @@ import androidx.compose.material3.TwoRowsTopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -118,7 +130,14 @@ fun SettingsScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+/** The pages Settings shows inside its own overlay. */
+internal enum class SettingsPage { MAIN, DRIVE_BACKUP }
+
+/**
+ * Settings and its inner pages. An inner page slides in over the main one inside the Settings
+ * overlay rather than as a route of its own: it shares the main page's ViewModel, so a flow
+ * started from either (turning Drive backup on, say) shows its dialogs the same way.
+ */
 @Composable
 internal fun SettingsScaffold(
     uiState: SettingsContract.UiState,
@@ -128,6 +147,69 @@ internal fun SettingsScaffold(
     modifier: Modifier = Modifier,
     showBackButton: Boolean = true,
     showTitle: Boolean = true,
+    initialPage: SettingsPage = SettingsPage.MAIN,
+) {
+    var page by rememberSaveable { mutableStateOf(initialPage) }
+    // Keeps each page's saved state (its scroll position above all) while another page is shown,
+    // so coming back from an inner page lands where the user left the main one.
+    val pageStates = rememberSaveableStateHolder()
+    BackHandler(enabled = page != SettingsPage.MAIN) { page = SettingsPage.MAIN }
+
+    AnimatedContent(
+        targetState = page,
+        transitionSpec = {
+            val direction = if (targetState.ordinal > initialState.ordinal) 1 else -1
+            (slideInHorizontally { width -> direction * width } + fadeIn()) togetherWith
+                (slideOutHorizontally { width -> -direction * width / UNDERLAY_SLIDE_DIVISOR } + fadeOut())
+        },
+        label = "settingsPage",
+        modifier = modifier,
+    ) { shown ->
+        pageStates.SaveableStateProvider(shown) {
+            when (shown) {
+                SettingsPage.MAIN ->
+                    SettingsPageScaffold(
+                        title = stringResource(R.string.settings),
+                        showBackButton = showBackButton,
+                        showTitle = showTitle,
+                        onBackClick = onBackClick,
+                    ) { padding ->
+                        SettingsContent(
+                            uiState = uiState,
+                            onEvent = onEvent,
+                            onOnboardingClick = onOnboardingClick,
+                            onOpenDriveBackup = { page = SettingsPage.DRIVE_BACKUP },
+                            modifier = Modifier.padding(padding),
+                        )
+                    }
+                SettingsPage.DRIVE_BACKUP ->
+                    SettingsPageScaffold(
+                        title = stringResource(R.string.drive_backup_title),
+                        // An inner page always needs a way back, whatever the main page shows.
+                        showBackButton = true,
+                        showTitle = true,
+                        onBackClick = { page = SettingsPage.MAIN },
+                    ) { padding ->
+                        DriveBackupScreenContent(
+                            uiState = uiState,
+                            onEvent = onEvent,
+                            modifier = Modifier.padding(padding),
+                        )
+                    }
+            }
+        }
+    }
+    DriveBackupDialogHost(uiState = uiState, onEvent = onEvent)
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun SettingsPageScaffold(
+    title: String,
+    showBackButton: Boolean,
+    showTitle: Boolean,
+    onBackClick: () -> Unit,
+    content: @Composable (PaddingValues) -> Unit,
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     // The ambient backdrop is painted on the Scaffold itself (Settings slides in over a tab and
@@ -139,7 +221,7 @@ internal fun SettingsScaffold(
         containerColor = settingsContainerColor,
         contentWindowInsets = WindowInsets(0),
         modifier =
-            modifier
+            Modifier
                 .adaptiveScreenContentLayout(railClearance = floatingRailContentClearance())
                 .ambientBackground()
                 .let {
@@ -147,6 +229,7 @@ internal fun SettingsScaffold(
                 },
         topBar = {
             SettingsTopBar(
+                title = title,
                 showTitle = showTitle,
                 showBackButton = showBackButton,
                 isRailLayout = isRailLayout,
@@ -155,14 +238,8 @@ internal fun SettingsScaffold(
                 scrollBehavior = scrollBehavior,
             )
         },
-    ) { padding ->
-        SettingsContent(
-            uiState = uiState,
-            onEvent = onEvent,
-            onOnboardingClick = onOnboardingClick,
-            modifier = Modifier.padding(padding),
-        )
-    }
+        content = content,
+    )
 }
 
 /**
@@ -176,6 +253,7 @@ internal fun SettingsScaffold(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun SettingsTopBar(
+    title: String,
     showTitle: Boolean,
     showBackButton: Boolean,
     isRailLayout: Boolean,
@@ -210,7 +288,7 @@ private fun SettingsTopBar(
         TopAppBar(
             title = {
                 Text(
-                    text = stringResource(R.string.settings),
+                    text = title,
                     style = MaterialTheme.typography.settingsTopBarTitleCollapsed,
                 )
             },
@@ -221,7 +299,7 @@ private fun SettingsTopBar(
         TwoRowsTopAppBar(
             title = { expanded ->
                 Text(
-                    text = stringResource(R.string.settings),
+                    text = title,
                     style =
                         if (expanded) {
                             MaterialTheme.typography.settingsTopBarTitleExpanded
@@ -263,3 +341,6 @@ private fun rememberDriveConsentLaunchers(onEvent: (SettingsContract.UiEvent) ->
 
 /** Where a Google account's storage is managed and freed. */
 private const val GOOGLE_STORAGE_URL = "https://one.google.com/storage"
+
+/** The page being covered moves a third as far as the one sliding in, like a pushed screen. */
+private const val UNDERLAY_SLIDE_DIVISOR = 3

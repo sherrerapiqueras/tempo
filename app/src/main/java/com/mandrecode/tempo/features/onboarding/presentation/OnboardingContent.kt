@@ -150,6 +150,11 @@ private fun OnboardingPage(
     }
 }
 
+/**
+ * The last page: the app's name, and below it, for someone coming from another phone, a way to
+ * bring their data back (#307). It sits on a glass card like the ideas on the pages before it,
+ * at the foot of the page, so it reads as an option rather than competing with "Start using Tempo".
+ */
 @Composable
 internal fun OnboardingWelcomePage(
     layout: OnboardingLayout,
@@ -157,10 +162,10 @@ internal fun OnboardingWelcomePage(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize().padding(vertical = layout.pageVerticalPadding),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
     ) {
+        Spacer(modifier = Modifier.weight(1f))
         AndroidView(
             factory = { context ->
                 ImageView(context).apply {
@@ -185,12 +190,17 @@ internal fun OnboardingWelcomePage(
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = layout.sectionSpacing),
         )
-        // A new phone is exactly when a backup matters (#307).
-        AnimatedOnboardingButton(
-            label = stringResource(R.string.drive_restore_title),
+        Spacer(modifier = Modifier.weight(1f))
+        ConceptCard(
+            concept =
+                EducationConcept(
+                    iconRes = R.drawable.ic_cloud_download,
+                    title = stringResource(R.string.onboarding_restore_title),
+                    description = stringResource(R.string.onboarding_restore_description),
+                ),
+            compact = layout.isShort,
             onClick = onRestoreClick,
-            style = OnboardingButtonStyle.Text,
-            modifier = Modifier.padding(top = layout.sectionSpacing).testTag(OnboardingTestTags.RESTORE),
+            modifier = Modifier.widthIn(max = OnboardingMaxWidth).testTag(OnboardingTestTags.RESTORE),
         )
     }
 }

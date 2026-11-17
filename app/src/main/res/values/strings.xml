@@ -782,7 +782,15 @@
 
     <!-- Google Drive backup (#306) -->
     <string name="drive_backup_title">Google Drive backup</string>
-    <string name="drive_backup_turn_on_title">Back up to Google Drive</string>
+    <string name="drive_backup_main_switch">Use Google Drive backup</string>
+    <string name="drive_backup_screen_intro">Tempo backs up your tasks and routines to Google Drive automatically, encrypted with a passphrase only you know. Google can\'t read your backups.</string>
+    <string name="drive_backup_entry_last_backup">Last backup %1$s</string>
+    <string name="drive_backup_entry_pending">On, waiting for the first backup</string>
+    <string name="drive_backup_entry_attention">Backup needs your attention</string>
+    <string name="drive_backup_section_backups">Backups</string>
+    <string name="drive_backup_section_schedule">Schedule</string>
+    <string name="drive_backup_section_passphrase">Passphrase</string>
+    <string name="drive_backup_section_restore">Restore</string>
     <string name="drive_backup_turn_on_description">Automatically, encrypted with a passphrase only you know</string>
     <string name="drive_backup_last_backup">Last backup</string>
     <string name="drive_backup_never">Never</string>
@@ -795,8 +803,6 @@
     <string name="drive_backup_wifi_only">Only on Wi-Fi</string>
     <string name="drive_backup_change_passphrase">Change backup passphrase</string>
     <string name="drive_backup_change_passphrase_description">Applies to backups made from now on</string>
-    <string name="drive_backup_turn_off">Turn off</string>
-    <string name="drive_backup_turn_off_description">Backups already in Google Drive stay there</string>
     <string name="drive_backup_turn_off_title">Turn off Google Drive backup?</string>
     <string name="drive_backup_turn_off_message">No more backups will be made, and the backup passphrase is forgotten on this device. Backups already in Google Drive stay there.</string>
     <string name="drive_backup_turn_off_confirm">Turn off</string>
@@ -824,6 +830,8 @@
     <string name="drive_backup_notification_channel_description">Problems with automatic Google Drive backups</string>
 
     <!-- Restore from Google Drive (#307) -->
+    <string name="onboarding_restore_title">Coming from another phone?</string>
+    <string name="onboarding_restore_description">Restore your tasks and routines from a Google Drive backup</string>
     <string name="drive_restore_title">Restore from Google Drive</string>
     <string name="drive_restore_description">Bring back your data from a Drive backup</string>
     <string name="drive_restore_searching">Looking for your backups…</string>

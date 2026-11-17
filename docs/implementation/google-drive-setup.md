@@ -32,10 +32,10 @@ connect to Google Drive" (Play services returns `DEVELOPER_ERROR`).
 
 ## Checking it works
 
-On a device signed in to a test-user account, open Settings → Google Drive backup → *Back up to
-Google Drive*. The consent screen should list "See, create, and delete its own configuration data
-in your Google Drive". After you set the passphrase, the status line should show a backup within a
-minute on Wi-Fi.
+On a device signed in to a test-user account, open Settings → Backup & Restore and turn on the
+*Google Drive backup* switch. The consent screen should list "See, create, and delete its own
+configuration data in your Google Drive". After you set the passphrase, tap the row to open the
+Google Drive backup page: its status should show a backup within a minute on Wi-Fi.
 
 To inspect what's stored, the files are in the hidden app data folder, which the Drive UI doesn't
 show. Drive → Settings → Manage apps → Tempo shows its size and lets you delete it.

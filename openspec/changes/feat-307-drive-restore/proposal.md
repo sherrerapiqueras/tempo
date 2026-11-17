@@ -8,7 +8,7 @@ Tracked by [#307](https://github.com/sherrerapiqueras/tempo/issues/307), part of
 
 ## What Changes
 
-- **Onboarding's Welcome page offers "Restore from Google Drive"**, and Settings has the same entry, for anyone who skipped it.
+- **Onboarding's Welcome page offers a restore** on a glass card ("Coming from another phone?"), and the Google Drive backup page in Settings has a Restore section, for anyone who skipped it.
 - **One restore flow behind both:**
   1. connect Drive (consent if needed);
   2. find this account's backups and offer the newest, with its date and size;
