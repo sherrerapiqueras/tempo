@@ -124,15 +124,19 @@ class BackupRepositoryImpl
                         maxSupported = BACKUP_SCHEMA_VERSION,
                     )
 
-                else -> validateAndApply(plaintextJson, mode)
+                else -> validateAndApply(plaintextJson, mode, fileVersion)
             }
         }
 
         private suspend fun validateAndApply(
             json: String,
             mode: ImportMode,
+            fileVersion: Int,
         ): ImportOutcome {
-            val data = decodeData(json, jsonFormat) ?: return ImportOutcome.CorruptFile
+            val decoded = decodeData(json, jsonFormat) ?: return ImportOutcome.CorruptFile
+            // Only a version-1 file identifies its Inbox by the legacy id. Mapped before validation,
+            // so the result is sanitized like any other uid; a v2 record is never rewritten.
+            val data = if (fileVersion == 1) decoded.withLegacyInboxIdentity() else decoded
             return when (val result = validator.validate(data)) {
                 is BackupPayloadValidator.Result.Invalid ->
                     ImportOutcome.ValidationFailed(result.issues)
@@ -187,9 +191,8 @@ class BackupRepositoryImpl
                 database.taskSectionDao().deleteAll()
                 database.savedSessionDao().deleteAll()
 
-                val categories = data.categories.map { it.withLegacyInboxIdentity() }
-                categories.forEach { database.categoryDao().insertCategory(it.toEntity()) }
-                val seededInboxCount = ensureDefaultCategory(categories)
+                data.categories.forEach { database.categoryDao().insertCategory(it.toEntity()) }
+                val seededInboxCount = ensureDefaultCategory(data.categories)
                 data.sections.forEach { database.taskSectionDao().insertSection(it.toEntity()) }
                 data.tasks.forEach { database.taskDao().insertTask(it.toEntity()) }
                 // Already sanitized by the validator: unique ids and named. Trimmed afterwards, in
@@ -375,6 +378,10 @@ private fun HabitChainEntity.toDomainChain(): HabitChain =
         createdDate = createdDate,
         completionHistory = completionHistory,
         repeatDays = repeatDays,
+        // Identity too (#283): without it an export loses the chain's uid and a merge cannot match it.
+        uid = uid,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
     )
 
 /** Outcome of resolving a picked file's content down to plaintext backup JSON. */
@@ -466,10 +473,17 @@ private fun decodeData(
 
 /**
  * Version-1 files carry no uids and identify the seeded Inbox by the id it had before #326, so the
- * restored Inbox keeps the well-known uid (#30) and stays the same record.
+ * imported Inbox keeps the well-known uid (#30) and stays the same record. Applies to version-1
+ * files only; see validateAndApply.
  */
-private fun Category.withLegacyInboxIdentity(): Category =
-    if (id == EntityIdentitySchema.LEGACY_INBOX_ID && uid == UNSET_UID) copy(uid = DEFAULT_INBOX_UID) else this
+private fun BackupData.withLegacyInboxIdentity(): BackupData =
+    copy(
+        categories =
+            categories.map {
+                val isLegacyInbox = it.id == EntityIdentitySchema.LEGACY_INBOX_ID && it.uid == UNSET_UID
+                if (isLegacyInbox) it.copy(uid = DEFAULT_INBOX_UID) else it
+            },
+    )
 
 private fun SavedSession.isSameRecordAs(other: SavedSession) = uid != UNSET_UID && uid == other.uid
 
