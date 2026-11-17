@@ -37,6 +37,7 @@ import com.mandrecode.tempo.features.backup.domain.model.ValidationIssueKind
 internal fun BackupSection(
     uiState: SettingsContract.UiState,
     onEvent: (SettingsContract.UiEvent) -> Unit,
+    onOpenDriveBackup: () -> Unit = {},
 ) {
     SettingsSection(title = stringResource(R.string.settings_backup)) {
         item {
@@ -57,6 +58,7 @@ internal fun BackupSection(
                 onClick = { onEvent(SettingsContract.UiEvent.ImportClicked) },
             )
         }
+        driveBackupEntry(drive = uiState.driveBackup, onEvent = onEvent, onOpen = onOpenDriveBackup)
     }
     BackupDialogs(uiState = uiState, onEvent = onEvent)
 }

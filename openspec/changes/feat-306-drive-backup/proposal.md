@@ -8,7 +8,9 @@ Tracked by [#306](https://github.com/sherrerapiqueras/tempo/issues/306), part of
 
 ## What Changes
 
-- **Settings → Backup gains a Google Drive section.** The user turns it on, authorises Drive (`drive.appdata` only), and sets a backup passphrase. The setup screen states what they'll need to restore.
+- **Settings → Backup & Restore gains a Google Drive backup row.** Its switch turns backup on
+  or off, and the row opens a Google Drive backup page with the status, schedule and passphrase.
+  The user turns it on, authorises Drive (`drive.appdata` only), and sets a backup passphrase. The setup screen states what they'll need to restore.
 - **Backups run on a schedule** (daily by default, or weekly) through WorkManager, on Wi-Fi only by default or on any network. "Back up now" runs one immediately.
 - **Each backup is the existing encrypted `.tempo` file** (schema v2, encryption envelope v1), written with the stored backup passphrase to Drive's hidden app data folder.
 - **Retention:** the newest 5 backups are kept, and older ones are deleted after each successful upload.
@@ -43,5 +45,5 @@ Tracked by [#306](https://github.com/sherrerapiqueras/tempo/issues/306), part of
   - `GoogleDriveAuthorization`;
   - a Hilt `DriveBackupWorker` and its scheduler;
   - a failure notifier.
-- **Settings UI:** a delegate, contract additions, a section, a passphrase dialog, and the consent launcher.
+- **Settings UI:** a delegate, contract additions, a Settings row with its own page, a passphrase dialog, and the consent launcher.
 - Backup and data-extraction rules, the sync-boundary doc, and the README section on backups.

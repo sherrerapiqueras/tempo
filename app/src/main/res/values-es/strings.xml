@@ -786,7 +786,14 @@
 
     <!-- Google Drive backup (#306) -->
     <string name="drive_backup_title">Copia en Google Drive</string>
-    <string name="drive_backup_turn_on_title">Copiar en Google Drive</string>
+    <string name="drive_backup_main_switch">Usar la copia en Google Drive</string>
+    <string name="drive_backup_screen_intro">Tempo copia tus tareas y rutinas en Google Drive automáticamente, cifradas con una frase que solo tú conoces. Google no puede leer tus copias.</string>
+    <string name="drive_backup_entry_last_backup">Última copia %1$s</string>
+    <string name="drive_backup_entry_pending">Activada, a la espera de la primera copia</string>
+    <string name="drive_backup_entry_attention">La copia necesita tu atención</string>
+    <string name="drive_backup_section_backups">Copias</string>
+    <string name="drive_backup_section_schedule">Programación</string>
+    <string name="drive_backup_section_passphrase">Frase de la copia</string>
     <string name="drive_backup_turn_on_description">Automáticamente, cifrada con una frase que solo tú conoces</string>
     <string name="drive_backup_last_backup">Última copia</string>
     <string name="drive_backup_never">Nunca</string>
@@ -799,8 +806,6 @@
     <string name="drive_backup_wifi_only">Solo con wifi</string>
     <string name="drive_backup_change_passphrase">Cambiar la frase de la copia</string>
     <string name="drive_backup_change_passphrase_description">Se aplica a las copias que se hagan a partir de ahora</string>
-    <string name="drive_backup_turn_off">Desactivar</string>
-    <string name="drive_backup_turn_off_description">Las copias que ya están en Google Drive se quedan allí</string>
     <string name="drive_backup_turn_off_title">¿Desactivar la copia en Google Drive?</string>
     <string name="drive_backup_turn_off_message">No se harán más copias y la frase de la copia se olvidará en este dispositivo. Las copias que ya están en Google Drive se quedan allí.</string>
     <string name="drive_backup_turn_off_confirm">Desactivar</string>

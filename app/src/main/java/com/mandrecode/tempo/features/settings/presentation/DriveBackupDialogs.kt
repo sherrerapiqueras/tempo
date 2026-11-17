@@ -1,13 +1,11 @@
 package com.mandrecode.tempo.features.settings.presentation
 
-import android.text.format.DateUtils
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -18,7 +16,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -31,129 +28,17 @@ import com.mandrecode.tempo.features.backup.domain.model.DriveBackupFailure
 import com.mandrecode.tempo.features.settings.presentation.SettingsContract.DriveBackupDialog as Dialog
 import com.mandrecode.tempo.features.settings.presentation.SettingsContract.UiEvent.DriveBackup as Event
 
-internal const val DRIVE_BACKUP_STATUS_TEST_TAG = "drive_backup_status"
-
 /**
- * Google Drive backup (#306). The status line comes first: whether the last backup worked, and
- * when, is what tells a user they are actually covered. Everything else is configuration.
+ * The Drive backup dialogs, shown over whichever Settings page is open: the switch on the main
+ * page starts the same setup and turn-off flows as the one on the Drive backup page.
  */
 @Composable
-internal fun DriveBackupSection(
+internal fun DriveBackupDialogHost(
     uiState: SettingsContract.UiState,
     onEvent: (SettingsContract.UiEvent) -> Unit,
 ) {
-    val drive = uiState.driveBackup
-    SettingsSection(title = stringResource(R.string.drive_backup_title)) {
-        item(visible = !drive.enabled) {
-            SettingsItem(
-                icon = R.drawable.ic_sync,
-                title = stringResource(R.string.drive_backup_turn_on_title),
-                subtitle = stringResource(R.string.drive_backup_turn_on_description),
-                trailingIcon = R.drawable.ic_chevron_right,
-                onClick = { onEvent(Event.TurnOnClicked) },
-            )
-        }
-        item(visible = drive.enabled) {
-            DriveBackupStatusItem(drive = drive, onEvent = onEvent)
-        }
-        item(visible = drive.enabled) {
-            SettingsItem(
-                icon = R.drawable.ic_file_upload,
-                title = stringResource(R.string.drive_backup_now),
-                subtitle = stringResource(R.string.drive_backup_now_description),
-                onClick = { onEvent(Event.BackUpNowClicked) },
-            )
-        }
-        item(visible = drive.enabled) {
-            SettingsItem(
-                icon = R.drawable.ic_repeat,
-                title = stringResource(R.string.drive_backup_frequency),
-                subtitle = drive.frequency.label(),
-                trailingIcon = R.drawable.ic_chevron_right,
-                onClick = { onEvent(Event.FrequencyClicked) },
-            )
-        }
-        item(visible = drive.enabled) {
-            SettingsSwitchItem(
-                icon = R.drawable.ic_savings,
-                title = stringResource(R.string.drive_backup_wifi_only),
-                checked = drive.unmeteredOnly,
-                onCheckedChange = { onEvent(Event.WifiOnlyToggled(it)) },
-            )
-        }
-        item(visible = drive.enabled) {
-            SettingsItem(
-                icon = R.drawable.ic_edit,
-                title = stringResource(R.string.drive_backup_change_passphrase),
-                subtitle = stringResource(R.string.drive_backup_change_passphrase_description),
-                onClick = { onEvent(Event.ChangePassphraseClicked) },
-            )
-        }
-        item(visible = drive.enabled) {
-            SettingsItem(
-                icon = R.drawable.ic_close,
-                title = stringResource(R.string.drive_backup_turn_off),
-                subtitle = stringResource(R.string.drive_backup_turn_off_description),
-                onClick = { onEvent(Event.TurnOffClicked) },
-            )
-        }
-    }
-    DriveBackupDialogs(dialog = uiState.driveBackupDialog, frequency = drive.frequency, onEvent = onEvent)
-}
-
-@Composable
-private fun DriveBackupStatusItem(
-    drive: SettingsContract.DriveBackupUiState,
-    onEvent: (SettingsContract.UiEvent) -> Unit,
-) {
-    val failure = drive.failure
-    val lastBackup =
-        drive.lastSuccessAt?.let {
-            DateUtils.getRelativeTimeSpanString(it, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString()
-        } ?: stringResource(R.string.drive_backup_never)
-    val action =
-        when (failure) {
-            DriveBackupFailure.AUTHORIZATION_NEEDED -> Event.ReconnectClicked
-            DriveBackupFailure.PASSPHRASE_UNAVAILABLE -> Event.ChangePassphraseClicked
-            DriveBackupFailure.STORAGE_FULL -> Event.ManageStorageClicked
-            else -> null
-        }
-    Column(modifier = Modifier.testTag(DRIVE_BACKUP_STATUS_TEST_TAG)) {
-        SettingsItem(
-            icon = if (failure == null) R.drawable.ic_history else R.drawable.ic_warning,
-            title = stringResource(R.string.drive_backup_last_backup),
-            subtitle = lastBackup,
-            onClick = { action?.let(onEvent) },
-        )
-        if (failure != null) {
-            Text(
-                text = failure.message(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(start = 56.dp, end = 16.dp, bottom = 12.dp),
-            )
-            action?.let {
-                Text(
-                    text = stringResource(it.actionLabel()),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier =
-                        Modifier
-                            .clickable { onEvent(it) }
-                            .padding(start = 56.dp, end = 16.dp, bottom = 16.dp),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun DriveBackupDialogs(
-    dialog: Dialog?,
-    frequency: BackupFrequency,
-    onEvent: (SettingsContract.UiEvent) -> Unit,
-) {
-    when (dialog) {
+    val frequency = uiState.driveBackup.frequency
+    when (val dialog = uiState.driveBackupDialog) {
         is Dialog.SetPassphrase -> DriveBackupPassphraseDialog(isChange = dialog.isChange, onEvent = onEvent)
         Dialog.ChooseFrequency -> FrequencyDialog(selected = frequency, onEvent = onEvent)
         Dialog.ConfirmTurnOff ->
@@ -261,7 +146,7 @@ private fun FrequencyDialog(
 }
 
 @Composable
-private fun BackupFrequency.label(): String =
+internal fun BackupFrequency.label(): String =
     stringResource(
         when (this) {
             BackupFrequency.DAILY -> R.string.drive_backup_frequency_daily
@@ -270,7 +155,7 @@ private fun BackupFrequency.label(): String =
     )
 
 @Composable
-private fun DriveBackupFailure.message(): String =
+internal fun DriveBackupFailure.message(): String =
     stringResource(
         when (this) {
             DriveBackupFailure.NETWORK -> R.string.drive_backup_failure_network
@@ -281,7 +166,7 @@ private fun DriveBackupFailure.message(): String =
         },
     )
 
-private fun Event.actionLabel(): Int =
+internal fun Event.actionLabel(): Int =
     when (this) {
         Event.ReconnectClicked -> R.string.drive_backup_reconnect
         Event.ManageStorageClicked -> R.string.drive_backup_manage_storage
