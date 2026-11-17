@@ -63,4 +63,16 @@ data class CloudBackupFile(
     /** Epoch milliseconds of creation. */
     val createdAt: Long,
     val sizeBytes: Long,
-)
+) {
+    /** Whether the install with [installId] wrote this backup (see [backupFileName]). */
+    fun isFrom(installId: String): Boolean = name.startsWith("$BACKUP_FILE_PREFIX$installId-")
+}
+
+const val BACKUP_FILE_PREFIX = "tempo-backup-"
+const val BACKUP_FILE_SUFFIX = ".tempo"
+
+/** `tempo-backup-<installId>-<epochMillis>.tempo`: which install wrote it, and when. */
+fun backupFileName(
+    installId: String,
+    atMillis: Long,
+): String = "$BACKUP_FILE_PREFIX$installId-$atMillis$BACKUP_FILE_SUFFIX"

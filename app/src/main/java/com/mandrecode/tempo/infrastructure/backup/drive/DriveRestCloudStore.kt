@@ -1,5 +1,6 @@
 package com.mandrecode.tempo.infrastructure.backup.drive
 
+import com.mandrecode.tempo.features.backup.domain.model.BACKUP_FILE_PREFIX
 import com.mandrecode.tempo.features.backup.domain.model.CloudBackupFile
 import com.mandrecode.tempo.features.backup.domain.model.DriveBackupFailure
 import com.mandrecode.tempo.features.backup.domain.repository.CloudBackupException
@@ -126,7 +127,7 @@ class DriveRestCloudStore
         companion object {
             const val API = "https://www.googleapis.com/drive/v3"
             const val UPLOAD_API = "https://www.googleapis.com/upload/drive/v3"
-            const val NAME_PREFIX = "tempo-backup-"
+            const val NAME_PREFIX = BACKUP_FILE_PREFIX
             private const val FIELDS = "id,name,createdTime,size"
             private const val PAGE_SIZE = 100
             private const val HTTP_OK = 200

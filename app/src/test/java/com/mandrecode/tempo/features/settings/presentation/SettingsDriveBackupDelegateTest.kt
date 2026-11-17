@@ -5,6 +5,7 @@ import android.content.Intent
 import com.google.common.truth.Truth.assertThat
 import com.mandrecode.tempo.features.backup.domain.model.BackupFrequency
 import com.mandrecode.tempo.features.backup.domain.model.DriveBackupFailure
+import com.mandrecode.tempo.features.backup.domain.repository.BackupPassphraseStore
 import com.mandrecode.tempo.features.backup.domain.repository.CloudBackupException
 import com.mandrecode.tempo.features.backup.domain.usecase.ChangeBackupPassphraseUseCase
 import com.mandrecode.tempo.features.backup.domain.usecase.DisableDriveBackupUseCase
@@ -183,6 +184,42 @@ class SettingsDriveBackupDelegateTest {
         }
 
     @Test
+    fun `a passphrase the Keystore cannot store is reported instead of crashing`() =
+        runTest(UnconfinedTestDispatcher()) {
+            coEvery { authorization.consentIntent() } returns null
+            val failingStore =
+                object : BackupPassphraseStore {
+                    override fun save(passphrase: CharArray) = throw java.security.ProviderException("no keystore")
+
+                    override fun read(): CharArray? = null
+
+                    override fun clear() = Unit
+                }
+            val failing =
+                SettingsDriveBackupDelegate(
+                    authorization = authorization,
+                    preferences = preferences,
+                    enable = EnableDriveBackupUseCase(failingStore, preferences, scheduler),
+                    changePassphrase = ChangeBackupPassphraseUseCase(failingStore, preferences, scheduler),
+                    disable = DisableDriveBackupUseCase(failingStore, preferences, scheduler),
+                    updateSchedule = UpdateDriveBackupScheduleUseCase(preferences, scheduler),
+                    backUpNow = RunDriveBackupNowUseCase(preferences, scheduler),
+                    restoreFlow = driveRestoreFlow(preferences = preferences, scheduler = scheduler),
+                    refreshStatus = refreshStatus(preferences),
+                    ioDispatcher = UnconfinedTestDispatcher(testScheduler),
+                )
+            val host = host()
+            failing.onEvent(Event.TurnOnClicked, host)
+
+            failing.onEvent(Event.PassphraseConfirmed("pw".toCharArray(), "pw".toCharArray()), host)
+
+            assertThat(preferences.settings.value.enabled).isFalse()
+            assertThat(state.driveBackupDialog).isNull()
+            assertThat((effects.last() as SettingsContract.UiEffect.ShowMessage).message)
+                .isEqualTo(com.mandrecode.tempo.R.string.drive_backup_passphrase_store_failed)
+        }
+
+    @Test
     fun `a full Drive opens Google storage`() =
         runTest(UnconfinedTestDispatcher()) {
             delegate.onEvent(Event.ManageStorageClicked, host())
@@ -217,6 +254,9 @@ internal fun driveBackupDelegate(
     updateSchedule = UpdateDriveBackupScheduleUseCase(preferences, scheduler),
     backUpNow = RunDriveBackupNowUseCase(preferences, scheduler),
     restoreFlow = driveRestoreFlow(store = store, preferences = preferences, scheduler = scheduler),
-    refreshStatus =
-        RefreshDriveBackupStatusUseCase(preferences, FakeAuthorization(), FakeCloudStore(), SteppingClock()),
+    refreshStatus = refreshStatus(preferences),
+    ioDispatcher = UnconfinedTestDispatcher(),
 )
+
+private fun refreshStatus(preferences: FakeDrivePreferences) =
+    RefreshDriveBackupStatusUseCase(preferences, FakeAuthorization(), FakeCloudStore(), SteppingClock())

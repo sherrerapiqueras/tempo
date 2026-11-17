@@ -810,6 +810,7 @@
     <string name="drive_backup_passphrase_confirm_label">Confirm passphrase</string>
     <string name="drive_backup_reconnect">Reconnect Google Drive</string>
     <string name="drive_backup_manage_storage">Manage Google storage</string>
+    <string name="drive_backup_passphrase_store_failed">Couldn\'t store the backup passphrase on this device, so backup wasn\'t changed. Try again.</string>
     <string name="drive_backup_set_passphrase">Set backup passphrase</string>
     <string name="drive_backup_unavailable_title">Couldn\'t connect to Google Drive</string>
     <string name="drive_backup_unavailable_message">Google Drive isn\'t available right now. Check your connection and that Google Play services are up to date, then try again.</string>

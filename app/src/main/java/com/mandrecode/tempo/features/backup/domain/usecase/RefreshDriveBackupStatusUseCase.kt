@@ -9,6 +9,7 @@ import com.mandrecode.tempo.features.backup.domain.repository.DriveBackupPrefere
 import kotlinx.coroutines.CancellationException
 import java.io.IOException
 import javax.inject.Inject
+import javax.inject.Singleton
 import kotlin.time.Clock
 
 /**
@@ -17,6 +18,7 @@ import kotlin.time.Clock
  * then becomes the newest backup still there, or none, and lost access is reported. A network
  * failure changes nothing; the next look tries again.
  */
+@Singleton
 class RefreshDriveBackupStatusUseCase
     @Inject
     constructor(
@@ -25,8 +27,15 @@ class RefreshDriveBackupStatusUseCase
         private val cloudStore: CloudBackupStore,
         private val clock: Clock,
     ) {
+        /** When the last check ran, so opening Settings repeatedly does not hit the network each time. */
+        @Volatile
+        private var lastCheckedAt: Long? = null
+
         suspend operator fun invoke() {
             if (!preferences.settings.value.enabled) return
+            val now = clock.now().toEpochMilliseconds()
+            lastCheckedAt?.let { if (now - it < MIN_INTERVAL_MILLIS) return }
+            lastCheckedAt = now
             try {
                 when (val auth = authorization.authorize()) {
                     CloudAuthorizationResult.NeedsUserConsent ->
@@ -35,7 +44,12 @@ class RefreshDriveBackupStatusUseCase
                             clock.now().toEpochMilliseconds(),
                         )
                     is CloudAuthorizationResult.Authorized -> {
-                        val newest = cloudStore.list(auth.accessToken).maxOfOrNull { it.createdAt }
+                        // This install's own backups: another device's must not read as this one's.
+                        val newest =
+                            cloudStore
+                                .list(auth.accessToken)
+                                .filter { it.isFrom(preferences.installId) }
+                                .maxOfOrNull { it.createdAt }
                         if (newest != preferences.status.value.lastSuccessAt) preferences.replaceLastSuccess(newest)
                     }
                 }
@@ -46,5 +60,10 @@ class RefreshDriveBackupStatusUseCase
             } catch (_: IOException) {
                 // Offline: keep what is known.
             }
+        }
+
+        companion object {
+            /** Disconnects are still noticed within the hour, without a request on every visit. */
+            const val MIN_INTERVAL_MILLIS = 60 * 60 * 1000L
         }
     }
