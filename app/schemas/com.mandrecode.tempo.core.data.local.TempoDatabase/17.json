@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 17,
-    "identityHash": "06b869cb2b4a62bd70f000547d560e02",
+    "identityHash": "c011192aa01ca250994ce816dbc38ea0",
     "entities": [
       {
         "tableName": "tasks",
@@ -810,7 +810,7 @@
       },
       {
         "tableName": "tombstones",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uid` TEXT NOT NULL, `entityType` TEXT NOT NULL, `deletedAt` INTEGER NOT NULL, PRIMARY KEY(`uid`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uid` TEXT NOT NULL, `entityType` TEXT NOT NULL, `deletedAt` INTEGER NOT NULL, PRIMARY KEY(`uid`, `entityType`))",
         "fields": [
           {
             "fieldPath": "uid",
@@ -834,7 +834,8 @@
         "primaryKey": {
           "autoGenerate": false,
           "columnNames": [
-            "uid"
+            "uid",
+            "entityType"
           ]
         },
         "indices": [
@@ -892,20 +893,21 @@
         },
         "indices": [
           {
-            "name": "index_pending_changes_uid",
+            "name": "index_pending_changes_uid_entityType",
             "unique": true,
             "columnNames": [
-              "uid"
+              "uid",
+              "entityType"
             ],
             "orders": [],
-            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_pending_changes_uid` ON `${TABLE_NAME}` (`uid`)"
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_pending_changes_uid_entityType` ON `${TABLE_NAME}` (`uid`, `entityType`)"
           }
         ]
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '06b869cb2b4a62bd70f000547d560e02')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c011192aa01ca250994ce816dbc38ea0')"
     ]
   }
 }

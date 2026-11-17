@@ -111,4 +111,18 @@ class MutationJournalTest {
             assertThat(pendingFor(quietUid)).isEmpty()
             assertThat(pendingFor(busyUid)).hasSize(1)
         }
+
+    @Test
+    fun aUidSharedByTwoKindsKeepsOnePendingChangePerKind() =
+        runTest {
+            val db = database.openHelper.writableDatabase
+            val uid = "0195a1b2-c3d4-7e5f-8a6b-0000000000bb"
+            db.execSQL("INSERT INTO categories (id, name, isDefault, sortOrder, uid) VALUES (50, 'C', 0, 0, '$uid')")
+            db.execSQL("INSERT INTO task_sections (id, categoryId, name, sortOrder, uid) VALUES (60, 50, 'S', 0, '$uid')")
+            db.execSQL("DELETE FROM task_sections WHERE id = 60")
+
+            val pending = pendingFor(uid).associate { it.entityType to it.operation }
+
+            assertThat(pending).containsExactly("categories", OPERATION_UPSERT, "task_sections", OPERATION_DELETE)
+        }
 }
