@@ -16,17 +16,17 @@ import kotlinx.datetime.toInstant
  * Timestamps are stamped by triggers rather than by each repository so that no write path, present
  * or future, can forget: about seventy DAO methods mutate these tables.
  *
- * - **Insert:** a row arriving with `uid = ''` gets a random UUID, and one arriving with
- *   `createdAt = 0` gets the current time for `createdAt` (and for `updatedAt`, unless that was
- *   supplied). Explicit values — a restore, a merge, a future sync — are kept as given.
- * - **Update:** any update that leaves `updatedAt` as it was (or sends 0) advances it to now, and
- *   always strictly past its old value. An update that supplies its own `updatedAt` keeps it.
+ * - **Insert:** a row arriving with `uid = ''` gets a random UUID, one arriving with
+ *   `createdAt = 0` gets the current time, and one arriving with `updatedAt = 0` gets its
+ *   `createdAt`. Explicit values — a restore, a merge, a future sync — are kept as given.
+ * - **Update:** any update whose `updatedAt` does not advance (unchanged, 0, or stale) advances it
+ *   to now, and always strictly past its old value. An update that supplies a newer one keeps it.
  * - **Immutability:** an update that sends `uid` / `createdAt` unset gets the stored values back;
  *   one that sets a different value aborts. So code above the DAOs never needs to carry them:
  *   domain models rebuilt into entities send `''` / `0`, and a copy saved as a new row gets a
  *   fresh identity from the insert trigger.
  *
- * Room's schema JSON does not record triggers, so they are recreated on every open, and only
+ * Room's schema JSON does not record triggers, so they are reconciled on every open, and only
  * there: that covers a fresh install, an upgrade, and a debug destructive reset, which skips
  * `onCreate`. Migrations never create them — a chain of migrations passes through intermediate
  * schemas this build's triggers do not fit, and Room runs `onOpen` right after the last migration,
@@ -78,14 +78,51 @@ internal object EntityIdentitySchema {
         )
 
     /**
-     * Drops and recreates every identity trigger, so a database always runs the triggers this build
-     * defines, even if an earlier build created different ones.
+     * Brings this database's triggers in line with the ones this build defines (#30): creates the
+     * missing, recreates any whose SQL differs (an earlier build's), and drops managed triggers this
+     * build no longer defines. Comparing against `sqlite_master` first keeps a normal open — where
+     * nothing changed — to one query instead of dropping and recreating every trigger.
+     *
+     * @return how many triggers were dropped or (re)created; 0 when everything already matched.
      */
-    fun createTriggers(db: SupportSQLiteDatabase) {
-        TABLES.forEach { table ->
-            triggerNames(table).forEach { db.execSQL("DROP TRIGGER IF EXISTS `$it`") }
-            (identityTriggers(table) + TombstoneSchema.triggers(table)).forEach(db::execSQL)
+    fun createTriggers(db: SupportSQLiteDatabase): Int =
+        syncTriggers(
+            db,
+            TABLES.flatMap {
+                identityTriggers(it) +
+                    TombstoneSchema.triggers(it)
+            },
+        )
+
+    private val TRIGGER_NAME = Regex("CREATE TRIGGER `([^`]+)`")
+
+    /** Prefixes of the triggers this app manages, so stale ones can be told from Room's own. */
+    private val MANAGED_TRIGGER_PREFIXES = listOf("identity_", "journal_")
+
+    private fun syncTriggers(
+        db: SupportSQLiteDatabase,
+        expected: List<String>,
+    ): Int {
+        val wanted = expected.associateBy { sql -> TRIGGER_NAME.find(sql)!!.groupValues[1] }
+        val existing = mutableMapOf<String, String?>()
+        db.query("SELECT name, sql FROM sqlite_master WHERE type = 'trigger'").use { cursor ->
+            while (cursor.moveToNext()) existing[cursor.getString(0)] = cursor.getString(1)
         }
+        var changed = 0
+        existing.forEach { (name, sql) ->
+            val managed = MANAGED_TRIGGER_PREFIXES.any(name::startsWith)
+            if (managed && wanted[name] != sql) {
+                db.execSQL("DROP TRIGGER IF EXISTS `$name`")
+                changed++
+            }
+        }
+        wanted.forEach { (name, sql) ->
+            if (existing[name] != sql) {
+                db.execSQL(sql)
+                changed++
+            }
+        }
+        return changed
     }
 
     /** uid assignment, timestamp stamping and immutability (#30). */
@@ -94,7 +131,7 @@ internal object EntityIdentitySchema {
             """
             CREATE TRIGGER `${insertTriggerName(table)}`
             AFTER INSERT ON `$table`
-            WHEN NEW.uid = '' OR NEW.createdAt = 0
+            WHEN NEW.uid = '' OR NEW.createdAt = 0 OR NEW.updatedAt = 0
             BEGIN
                 UPDATE `$table` SET
                     uid = CASE WHEN NEW.uid = '' THEN $RANDOM_UUID_V4 ELSE uid END,
@@ -107,8 +144,10 @@ internal object EntityIdentitySchema {
                 WHERE id = NEW.id;
             END
             """.trimIndent(),
-            // Advances updatedAt on any update that did not supply its own: one that left it as it
-            // was, or sent 0 (a mapper that does not carry it). `OLD.uid != ''` skips the insert
+            // Advances updatedAt on any update that did not supply a newer one: one that left it as
+            // it was, sent 0 (a mapper that does not carry it), or sent an older value (a domain
+            // object read before another write bumped the row). Only an explicitly newer value, as
+            // a sync apply would send, is kept as given. `OLD.uid != ''` skips the insert
             // trigger's own fill-in and the protect trigger's restore, which are not edits.
             // The stamp is strictly greater than the old value, even within one millisecond:
             // Android's SQLite runs with recursive triggers on, and a stamp equal to the old value
@@ -116,7 +155,7 @@ internal object EntityIdentitySchema {
             """
             CREATE TRIGGER `${updateTriggerName(table)}`
             AFTER UPDATE ON `$table`
-            WHEN OLD.uid != '' AND (NEW.updatedAt IS OLD.updatedAt OR NEW.updatedAt = 0)
+            WHEN OLD.uid != '' AND NEW.updatedAt <= OLD.updatedAt
             BEGIN
                 UPDATE `$table` SET updatedAt = MAX($NOW_MILLIS, OLD.updatedAt + 1) WHERE id = NEW.id;
             END
