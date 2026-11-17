@@ -139,7 +139,9 @@ so a hand-edited file cannot install a contradictory pause history.
 - The payload is validated (referential integrity, duplicate ids) before any database write;
   all writes happen in a single transaction.
 - **Replace** restores the file exactly (original ids preserved; Inbox re-seeded if the file
-  carries no default category). **Merge** adds records, skipping exact duplicates and
+  carries no default category). The seeded Inbox is always written under id `-1` in this
+  version, and the importer recognises it by that id, even though since #326 the app gives a
+  fresh Inbox an ordinary local id. **Merge** adds records, skipping exact duplicates and
   reporting conflicts by natural key (category name; task title within category/parent;
   habit/chain title). Sections never conflict: an incoming section reuses a same-named section
   of its resolved local category, otherwise it is appended to that category.
