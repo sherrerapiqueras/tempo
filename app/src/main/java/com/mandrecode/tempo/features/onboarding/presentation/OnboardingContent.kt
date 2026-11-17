@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -135,25 +136,24 @@ private fun OnboardingPage(
             contentAlignment = Alignment.Center,
         ) {
             when (page) {
-                OnboardingContract.Page.FOCUS -> FocusPage(layout = layout)
-                OnboardingContract.Page.TASKS -> TasksAndCategoriesPage(layout = layout)
-                OnboardingContract.Page.ROUTINES -> RoutinesAndRemindersPage(layout = layout)
-                OnboardingContract.Page.APPEARANCE ->
-                    AppearancePage(uiState = uiState, layout = layout, onEvent = onEvent)
-                else ->
+                OnboardingContract.Page.WELCOME ->
                     OnboardingWelcomePage(
                         layout = layout,
                         onRestoreClick = { onEvent(OnboardingContract.UiEvent.RestoreFromDriveClicked) },
                     )
+                OnboardingContract.Page.FOCUS -> FocusPage(layout = layout)
+                OnboardingContract.Page.TASKS -> TasksAndCategoriesPage(layout = layout)
+                OnboardingContract.Page.ROUTINES -> RoutinesAndRemindersPage(layout = layout)
+                else -> AppearancePage(uiState = uiState, layout = layout, onEvent = onEvent)
             }
         }
     }
 }
 
 /**
- * The last page: the app's name, and below it, for someone coming from another phone, a way to
- * bring their data back (#307). It sits on a glass card like the ideas on the pages before it,
- * at the foot of the page, so it reads as an option rather than competing with "Start using Tempo".
+ * The opener: the app's name and, for someone coming from another phone, a way to bring their data
+ * back (#307) before anything else. The offer is the onboarding's own button in its tonal style:
+ * clearly an action, but quieter than "Get started", at the foot of the page so the welcome leads.
  */
 @Composable
 internal fun OnboardingWelcomePage(
@@ -190,18 +190,33 @@ internal fun OnboardingWelcomePage(
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = layout.sectionSpacing),
         )
-        Spacer(modifier = Modifier.weight(1f))
-        ConceptCard(
-            concept =
-                EducationConcept(
-                    iconRes = R.drawable.ic_cloud_download,
-                    title = stringResource(R.string.onboarding_restore_title),
-                    description = stringResource(R.string.onboarding_restore_description),
-                ),
-            compact = layout.isShort,
-            onClick = onRestoreClick,
-            modifier = Modifier.widthIn(max = OnboardingMaxWidth).testTag(OnboardingTestTags.RESTORE),
+        Text(
+            text = stringResource(R.string.onboarding_welcome_tagline),
+            style = if (layout.isShort) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 8.dp),
         )
+        Spacer(modifier = Modifier.weight(1f))
+        Text(
+            text = stringResource(R.string.onboarding_restore_title),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        AnimatedOnboardingButton(
+            label = stringResource(R.string.drive_restore_title),
+            onClick = onRestoreClick,
+            style = OnboardingButtonStyle.Tonal,
+            modifier =
+                Modifier
+                    .padding(top = 12.dp)
+                    .widthIn(max = layout.footerMaxWidth)
+                    .fillMaxWidth()
+                    .testTag(OnboardingTestTags.RESTORE),
+        )
+        // Room between the offer and "Get started", so the two never read as one pair of choices.
+        Spacer(modifier = Modifier.height(if (layout.isShort) 16.dp else 48.dp))
     }
 }
 
@@ -226,10 +241,10 @@ private fun OnboardingFooter(
             )
         }
         val label =
-            if (uiState.isLastPage) {
-                R.string.onboarding_start
-            } else {
-                R.string.onboarding_next
+            when {
+                uiState.isLastPage -> R.string.onboarding_start
+                uiState.isFirstPage -> R.string.onboarding_get_started
+                else -> R.string.onboarding_next
             }
         AnimatedOnboardingButton(
             label = stringResource(label),

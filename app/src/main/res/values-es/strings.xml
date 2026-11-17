@@ -554,6 +554,8 @@
     <string name="view_onboarding_description">Aprende cómo Tempo te ayuda a crear hábitos y gestionar tareas</string>
     <string name="onboarding_skip">Saltar</string>
     <string name="onboarding_next">Siguiente</string>
+    <string name="onboarding_get_started">Empezar</string>
+    <string name="onboarding_welcome_tagline">Planifica tu día, mantén tus rutinas y céntrate en lo importante.</string>
     <string name="onboarding_start">Empezar a usar Tempo</string>
     <string name="onboarding_focus_title">Empieza con el día delante</string>
     <string name="onboarding_focus_description">Enfoque reúne las tareas para hoy y las tareas vencidas pendientes de todas tus categorías, con un temporizador para trabajar por sesiones.</string>
@@ -835,7 +837,6 @@
 
     <!-- Restore from Google Drive (#307) -->
     <string name="onboarding_restore_title">¿Vienes de otro móvil?</string>
-    <string name="onboarding_restore_description">Recupera tus tareas y rutinas desde una copia en Google Drive</string>
     <string name="drive_restore_title">Restaurar desde Google Drive</string>
     <string name="drive_restore_description">Recupera tus datos de una copia en Drive</string>
     <string name="drive_restore_searching">Buscando tus copias…</string>

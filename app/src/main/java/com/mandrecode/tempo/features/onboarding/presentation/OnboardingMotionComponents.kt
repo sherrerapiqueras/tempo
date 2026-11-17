@@ -93,7 +93,8 @@ internal fun AnimatedOnboardingButton(
     val shape = RoundedCornerShape(cornerRadiusState.value)
 
     when (style) {
-        OnboardingButtonStyle.Primary ->
+        // Tonal is a filled button too; only its colours differ.
+        OnboardingButtonStyle.Primary, OnboardingButtonStyle.Tonal ->
             PrimaryOnboardingButton(label, onHapticClick, interactionSource, shape, colors, buttonModifier)
         OnboardingButtonStyle.Outlined ->
             OutlinedOnboardingButton(label, onHapticClick, interactionSource, shape, colors, buttonModifier)
@@ -117,6 +118,12 @@ private fun onboardingButtonColors(style: OnboardingButtonStyle): OnboardingButt
             OnboardingButtonColors(
                 container = MaterialTheme.colorScheme.primary,
                 content = MaterialTheme.colorScheme.onPrimary,
+                border = Color.Transparent,
+            )
+        OnboardingButtonStyle.Tonal ->
+            OnboardingButtonColors(
+                container = MaterialTheme.colorScheme.secondaryContainer,
+                content = MaterialTheme.colorScheme.onSecondaryContainer,
                 border = Color.Transparent,
             )
         OnboardingButtonStyle.Outlined ->
@@ -200,6 +207,9 @@ private fun TextOnboardingButton(
 
 internal enum class OnboardingButtonStyle {
     Primary,
+
+    /** A secondary action that should still read as a button, such as the Welcome page's restore offer. */
+    Tonal,
     Outlined,
     Text,
 }

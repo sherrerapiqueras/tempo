@@ -14,11 +14,15 @@ object OnboardingContract {
      * found and corrected when it did.
      */
     object Page {
-        const val FOCUS = 0
-        const val TASKS = 1
-        const val ROUTINES = 2
-        const val APPEARANCE = 3
-        const val WELCOME = 4
+        /**
+         * First, so that someone who already knows Tempo can restore their backup (#307) before
+         * skipping the rest: Skip finishes onboarding, so an offer on a later page would be missed.
+         */
+        const val WELCOME = 0
+        const val FOCUS = 1
+        const val TASKS = 2
+        const val ROUTINES = 3
+        const val APPEARANCE = 4
     }
 
     const val PAGE_COUNT = 5

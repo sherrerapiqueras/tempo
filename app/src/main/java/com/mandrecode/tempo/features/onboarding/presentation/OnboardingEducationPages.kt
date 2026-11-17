@@ -143,19 +143,17 @@ private fun EducationPage(
     },
 )
 
-/**
- * One idea on a glass card. With [onClick] it is also an action — the Welcome page's restore
- * offer — and shows a chevron, the way a Settings row that leads somewhere does.
- */
 @Composable
-internal fun ConceptCard(
+private fun ConceptCard(
     concept: EducationConcept,
     compact: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null,
 ) {
-    val colors = CardDefaults.cardColors(containerColor = glassCardColor(MaterialTheme.colorScheme.surfaceContainer))
-    val content: @Composable () -> Unit = {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = glassCardColor(MaterialTheme.colorScheme.surfaceContainer)),
+        elevation = glassCardElevation(),
+        border = null,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
         Row(
             modifier = Modifier.padding(if (compact) 12.dp else 16.dp),
             horizontalArrangement = Arrangement.spacedBy(if (compact) 12.dp else 16.dp),
@@ -167,51 +165,28 @@ internal fun ConceptCard(
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(if (compact) 24.dp else 28.dp),
             )
-            ConceptText(concept = concept, compact = compact, modifier = Modifier.weight(1f))
-            if (onClick != null) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_chevron_right),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    concept.title,
+                    style =
+                        if (compact) {
+                            MaterialTheme.typography.titleSmall
+                        } else {
+                            MaterialTheme.typography.titleMedium
+                        },
+                )
+                Text(
+                    concept.description,
+                    style =
+                        if (compact) {
+                            MaterialTheme.typography.bodySmall
+                        } else {
+                            MaterialTheme.typography.bodyMedium
+                        },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
-    }
-    if (onClick != null) {
-        Card(
-            onClick = onClick,
-            colors = colors,
-            elevation = glassCardElevation(),
-            border = null,
-            modifier = modifier.fillMaxWidth(),
-        ) { content() }
-    } else {
-        Card(
-            colors = colors,
-            elevation = glassCardElevation(),
-            border = null,
-            modifier = modifier.fillMaxWidth(),
-        ) { content() }
-    }
-}
-
-@Composable
-private fun ConceptText(
-    concept: EducationConcept,
-    compact: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(
-            concept.title,
-            style = if (compact) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
-        )
-        Text(
-            concept.description,
-            style = if (compact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 
@@ -235,7 +210,7 @@ internal fun HeroIcon(iconRes: Int) {
 
 private val EducationIconShape = RoundedCornerShape(28.dp)
 
-internal data class EducationConcept(
+private data class EducationConcept(
     val iconRes: Int,
     val title: String,
     val description: String,

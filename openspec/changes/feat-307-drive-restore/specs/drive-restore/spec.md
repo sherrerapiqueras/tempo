@@ -7,7 +7,7 @@ Gets a user's data back from their Google Drive backup on a new or reset phone, 
 ## ADDED Requirements
 
 ### Requirement: Restore is offered during onboarding and in Settings
-Onboarding's last page and Settings SHALL offer to restore from Google Drive. Starting it SHALL connect to Drive (asking consent when needed) and SHALL offer the newest backup found, showing when it was taken and its size, or say that the account has no backups.
+Onboarding's first page and Settings SHALL offer to restore from Google Drive. The onboarding offer SHALL come before Skip can end onboarding. Starting it SHALL connect to Drive (asking consent when needed) and SHALL offer the newest backup found, showing when it was taken and its size, or say that the account has no backups.
 
 #### Scenario: A backup exists
 - **WHEN** the user starts a restore and the account has backups
