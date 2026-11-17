@@ -79,7 +79,6 @@ class BackupRepositoryImpl
             val data =
                 database
                     .withTransaction { readAll() }
-                    .withInboxAtLegacyId()
                     .copy(settings = settingsDataSource.snapshot())
             val exportedAt = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
             val plaintextJson =
@@ -302,19 +301,31 @@ class BackupRepositoryImpl
             sectionIds: Map<Long, Long>,
         ): Map<Long, Long> {
             val taskIds = plan.taskIdMap.toMutableMap()
+            // Category of each inserted task, so a subtask can follow its parent without a lookup.
+            val insertedCategory = mutableMapOf<Long, Long>()
             plan.tasksToInsert.forEach { task ->
-                taskIds[task.id] =
+                val parentId = task.parentTaskId?.let(taskIds::getValue)
+                val fileCategory = categoryIds.getValue(task.categoryId)
+                // A subtask lives in its parent's category. A parent matched by identity (#283) may
+                // have moved to another category on this device since the backup was taken.
+                val categoryId =
+                    parentId?.let { insertedCategory[it] ?: database.taskDao().getTaskById(it)?.categoryId }
+                        ?: fileCategory
+                val newId =
                     database.taskDao().insertTask(
                         task
                             .copy(
                                 id = 0,
-                                categoryId = categoryIds.getValue(task.categoryId),
-                                parentTaskId = task.parentTaskId?.let(taskIds::getValue),
+                                categoryId = categoryId,
+                                parentTaskId = parentId,
                                 nextInstanceId = null,
-                                // A task whose section did not come across lands unsectioned.
-                                sectionId = task.sectionId?.let(sectionIds::get),
+                                // A task whose section did not come across, or that followed its
+                                // parent into another category, lands unsectioned.
+                                sectionId = task.sectionId?.let(sectionIds::get)?.takeIf { categoryId == fileCategory },
                             ).toEntity(),
                     )
+                taskIds[task.id] = newId
+                insertedCategory[newId] = categoryId
             }
             // Second pass: next-instance links may point at tasks inserted later.
             plan.tasksToInsert
@@ -486,23 +497,3 @@ private fun BackupData.withLegacyInboxIdentity(): BackupData =
     )
 
 private fun SavedSession.isSameRecordAs(other: SavedSession) = uid != UNSET_UID && uid == other.uid
-
-/**
- * Version-1 files carry no uids and identify the seeded Inbox by the legacy id `-1`, which is how
- * import recognises it ([withLegacyInboxIdentity]). Since #326 a fresh install's Inbox has an
- * ordinary id, so the export writes it, and every reference to it, under `-1`: ids are only
- * meaningful inside the file, and this keeps an export-then-restore from losing the Inbox's
- * identity. Nothing changes when the Inbox already is `-1`, or when another category holds `-1`.
- */
-private fun BackupData.withInboxAtLegacyId(): BackupData {
-    val legacyId = EntityIdentitySchema.LEGACY_INBOX_ID
-    val inbox = categories.firstOrNull { it.uid == DEFAULT_INBOX_UID }
-    if (inbox == null || inbox.id == legacyId || categories.any { it.id == legacyId }) return this
-
-    fun Long.remapped() = if (this == inbox.id) legacyId else this
-    return copy(
-        categories = categories.map { it.copy(id = it.id.remapped()) },
-        sections = sections.map { it.copy(categoryId = it.categoryId.remapped()) },
-        tasks = tasks.map { it.copy(categoryId = it.categoryId.remapped()) },
-    )
-}

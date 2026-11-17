@@ -32,7 +32,17 @@ internal object JournalSchema {
     fun triggers(table: String): List<String> =
         listOf(
             journal(insertTriggerName(table), "AFTER INSERT", table, "NEW", "upsert"),
-            journal(updateTriggerName(table), "AFTER UPDATE", table, "NEW", "upsert"),
+            // Only once per edit: every real change moves updatedAt (or, for the identity fill-in and
+            // restore, uid), while the identity triggers' own nested updates that change neither
+            // would otherwise rewrite the row a second and third time.
+            journal(
+                updateTriggerName(table),
+                "AFTER UPDATE",
+                table,
+                "NEW",
+                "upsert",
+                extraCondition = "AND (NEW.updatedAt IS NOT OLD.updatedAt OR NEW.uid IS NOT OLD.uid)",
+            ),
             journal(deleteTriggerName(table), "AFTER DELETE", table, "OLD", "delete"),
         )
 
@@ -42,10 +52,11 @@ internal object JournalSchema {
         table: String,
         row: String,
         operation: String,
+        extraCondition: String = "",
     ) = """
         CREATE TRIGGER `$name`
         $event ON `$table`
-        WHEN $row.uid != ''
+        WHEN $row.uid != '' $extraCondition
         BEGIN
             DELETE FROM pending_changes WHERE uid = $row.uid AND entityType = '$table';
             INSERT INTO pending_changes (uid, entityType, operation, changedAt)

@@ -125,4 +125,18 @@ class MutationJournalTest {
 
             assertThat(pending).containsExactly("categories", OPERATION_UPSERT, "task_sections", OPERATION_DELETE)
         }
+
+    @Test
+    fun oneEditTakesOneSequenceNumber() =
+        runTest {
+            val categoryId = categories.insertCategory(Category(name = "Work"))
+            val id = tasks.insertTask(Task(title = "Draft", description = "", categoryId = categoryId))
+            val uid = tasks.getTaskById(id)!!.uid
+            val before = pendingFor(uid).single().seq
+
+            tasks.updateTask(tasks.getTaskById(id)!!.copy(title = "Edited"))
+
+            // Without the guard the stamp trigger's nested update journals the edit a second time.
+            assertThat(pendingFor(uid).single().seq).isEqualTo(before + 1)
+        }
 }
