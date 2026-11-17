@@ -21,6 +21,7 @@
 | 13 | `MIGRATION_12_13` | Adds `periodicityEndDate TEXT` to `tasks` (#509) |
 | 14 | `MIGRATION_13_14` | Adds the `focus_sessions` table for saved focus sessions (#517) |
 | 15 | `MIGRATION_14_15` | Stable record identity (#30): `uid`, `createdAt` and `updatedAt` on seven tables, unique `uid` indexes, backfill, and identity triggers (see [Identity triggers](#identity-triggers)) |
+| 16 | `MIGRATION_15_16` | Adds the `tombstones` table (#281): every deletion of an identity row records its `uid`, table and time |
 
 ### Identity triggers
 
@@ -31,9 +32,13 @@ Since version 15, `categories`, `tasks`, `task_sections`, `habits`, `habit_chain
 - **Protect:** a write that sends `uid` / `createdAt` unset gets the stored values back.
 - **Immutable:** a write that changes them to a different value aborts.
 
-Room's schema JSON does not record triggers. `EntityIdentitySchema` drops and recreates them on every open (`TriggersCallback`, registered in `TempoDatabase.configure`) as well as in the migration, so fresh installs, upgrades and debug destructive resets all run this build's triggers. A test database built without `configure` must add `EntityIdentitySchema.TriggersCallback`, or rows inserted with an empty `uid` collide on its unique index.
+Room's schema JSON does not record triggers. `EntityIdentitySchema` drops and recreates them on every open (`TriggersCallback`, registered in `TempoDatabase.configure`), so fresh installs, upgrades and debug destructive resets all run this build's triggers. A test database built without `configure` must add `EntityIdentitySchema.TriggersCallback`, or rows inserted with an empty `uid` collide on its unique index.
 
 Code that saves a copy of a stored record as a new row must call the domain model's `asNew()`.
+
+Since version 16, two more triggers per table maintain **tombstones** (#281). An `AFTER DELETE` trigger records `(uid, entityType, deletedAt)` in `tombstones` for every delete, from any code path or cascade. An `AFTER INSERT` trigger removes the tombstone when a row comes back under the same `uid` (Undo). Live tables keep only live rows, so no query filters on deletion. `TombstonePurgeCallback` drops tombstones older than 180 days on every open.
+
+Migrations never create triggers. A migration chain passes through intermediate schemas that this build's triggers don't fit, so only the open callback creates them, and Room runs it right after the last migration.
 
 ### Schema Exports
 

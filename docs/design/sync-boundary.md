@@ -80,10 +80,18 @@ nothing to propagate. Rows the completed-task retention setting has already remo
 don't upload either.
 
 ### Are tombstones synced, and for how long?
-Yes, for rows in shared categories, once the server has seen the row. A tombstone stays on device
-and server until the purge window in #281 ends. That window has to outlast the longest plausible
-offline period of a member device. After the purge, a device that was offline longer than the window
-may push the row back. #281 documents the window and why it was chosen.
+Yes, for rows in shared categories, once the server has seen the row. A tombstone records a
+deleted row's `uid`, its kind and the deletion time, and is kept for **180 days** on the device
+(#281). The server must keep it at least as long.
+
+The window has to outlast the longest plausible gap between a member device's syncs. Otherwise
+that device pushes back a row the others deleted. Half a year is far beyond normal use and still
+covers a phone left in a drawer for a season. **A device that hasn't synced for longer than the
+window must do a full resync, not an incremental one.** The API contract (#275) has to enforce
+this.
+
+Tombstones from completed-task retention clean-up are recorded like any other delete. Whether
+they propagate to a shared list's members is a sharing decision.
 
 ### Unsharing
 Unsharing stops future sync. The owner keeps their rows. What members keep is a sharing-design

@@ -26,9 +26,11 @@ import kotlinx.datetime.toInstant
  *   domain models rebuilt into entities send `''` / `0`, and a copy saved as a new row gets a
  *   fresh identity from the insert trigger.
  *
- * Room's schema JSON does not record triggers, so they are recreated on every open as well as in
- * the migration: that covers a fresh install, an upgrade, and a debug
- * destructive reset, which skips `onCreate`.
+ * Room's schema JSON does not record triggers, so they are recreated on every open, and only
+ * there: that covers a fresh install, an upgrade, and a debug destructive reset, which skips
+ * `onCreate`. Migrations never create them — a chain of migrations passes through intermediate
+ * schemas this build's triggers do not fit, and Room runs `onOpen` right after the last migration,
+ * before any app write.
  */
 internal object EntityIdentitySchema {
     /** Tables whose rows carry a stable identity. All use an `id INTEGER` primary key. */
@@ -48,7 +50,7 @@ internal object EntityIdentitySchema {
      * SQLite 3.42; the framework SQLite used by test helpers can be far older. SQLite evaluates
      * 'now' once per statement, so every use within one statement agrees.
      */
-    private const val NOW_MILLIS = "CAST(ROUND((julianday('now') - 2440587.5) * 86400000) AS INTEGER)"
+    const val NOW_MILLIS = "CAST(ROUND((julianday('now') - 2440587.5) * 86400000) AS INTEGER)"
 
     /** A random RFC 9562 version-4 UUID, lowercase canonical form; re-evaluated per row. */
     @VisibleForTesting
@@ -71,6 +73,8 @@ internal object EntityIdentitySchema {
             updateTriggerName(table),
             protectTriggerName(table),
             immutableTriggerName(table),
+            TombstoneSchema.tombstoneTriggerName(table),
+            TombstoneSchema.resurrectTriggerName(table),
         )
 
     /**
@@ -79,76 +83,71 @@ internal object EntityIdentitySchema {
      */
     fun createTriggers(db: SupportSQLiteDatabase) {
         TABLES.forEach { table ->
-            db.execSQL("DROP TRIGGER IF EXISTS `${insertTriggerName(table)}`")
-            db.execSQL("DROP TRIGGER IF EXISTS `${updateTriggerName(table)}`")
-            db.execSQL("DROP TRIGGER IF EXISTS `${protectTriggerName(table)}`")
-            db.execSQL("DROP TRIGGER IF EXISTS `${immutableTriggerName(table)}`")
-            db.execSQL(
-                """
-                CREATE TRIGGER `${insertTriggerName(table)}`
-                AFTER INSERT ON `$table`
-                WHEN NEW.uid = '' OR NEW.createdAt = 0
-                BEGIN
-                    UPDATE `$table` SET
-                        uid = CASE WHEN NEW.uid = '' THEN $RANDOM_UUID_V4 ELSE uid END,
-                        createdAt = CASE WHEN NEW.createdAt = 0 THEN $NOW_MILLIS ELSE createdAt END,
-                        updatedAt = CASE
-                            WHEN NEW.updatedAt != 0 THEN updatedAt
-                            WHEN NEW.createdAt != 0 THEN NEW.createdAt
-                            ELSE $NOW_MILLIS
-                        END
-                    WHERE id = NEW.id;
-                END
-                """.trimIndent(),
-            )
+            triggerNames(table).forEach { db.execSQL("DROP TRIGGER IF EXISTS `$it`") }
+            (identityTriggers(table) + TombstoneSchema.triggers(table)).forEach(db::execSQL)
+        }
+    }
+
+    /** uid assignment, timestamp stamping and immutability (#30). */
+    private fun identityTriggers(table: String): List<String> =
+        listOf(
+            """
+            CREATE TRIGGER `${insertTriggerName(table)}`
+            AFTER INSERT ON `$table`
+            WHEN NEW.uid = '' OR NEW.createdAt = 0
+            BEGIN
+                UPDATE `$table` SET
+                    uid = CASE WHEN NEW.uid = '' THEN $RANDOM_UUID_V4 ELSE uid END,
+                    createdAt = CASE WHEN NEW.createdAt = 0 THEN $NOW_MILLIS ELSE createdAt END,
+                    updatedAt = CASE
+                        WHEN NEW.updatedAt != 0 THEN updatedAt
+                        WHEN NEW.createdAt != 0 THEN NEW.createdAt
+                        ELSE $NOW_MILLIS
+                    END
+                WHERE id = NEW.id;
+            END
+            """.trimIndent(),
             // Advances updatedAt on any update that did not supply its own: one that left it as it
             // was, or sent 0 (a mapper that does not carry it). `OLD.uid != ''` skips the insert
             // trigger's own fill-in and the protect trigger's restore, which are not edits.
             // The stamp is strictly greater than the old value, even within one millisecond:
             // Android's SQLite runs with recursive triggers on, and a stamp equal to the old value
             // would satisfy WHEN again and recurse until SQLite gives up.
-            db.execSQL(
-                """
-                CREATE TRIGGER `${updateTriggerName(table)}`
-                AFTER UPDATE ON `$table`
-                WHEN OLD.uid != '' AND (NEW.updatedAt IS OLD.updatedAt OR NEW.updatedAt = 0)
-                BEGIN
-                    UPDATE `$table` SET updatedAt = MAX($NOW_MILLIS, OLD.updatedAt + 1) WHERE id = NEW.id;
-                END
-                """.trimIndent(),
-            )
+            """
+            CREATE TRIGGER `${updateTriggerName(table)}`
+            AFTER UPDATE ON `$table`
+            WHEN OLD.uid != '' AND (NEW.updatedAt IS OLD.updatedAt OR NEW.updatedAt = 0)
+            BEGIN
+                UPDATE `$table` SET updatedAt = MAX($NOW_MILLIS, OLD.updatedAt + 1) WHERE id = NEW.id;
+            END
+            """.trimIndent(),
             // uid and createdAt never change once stored. An update that sends them unset — a row
             // rebuilt from a domain model that does not carry them, so '' and 0 — gets the stored
             // values back. The restore's own UPDATE sees OLD.uid = '' or OLD.createdAt = 0, so it
             // does not fire again.
-            db.execSQL(
-                """
-                CREATE TRIGGER `${protectTriggerName(table)}`
-                AFTER UPDATE ON `$table`
-                WHEN (OLD.uid != '' AND NEW.uid = '') OR (OLD.createdAt != 0 AND NEW.createdAt = 0)
-                BEGIN
-                    UPDATE `$table` SET
-                        uid = CASE WHEN NEW.uid = '' THEN OLD.uid ELSE uid END,
-                        createdAt = CASE WHEN NEW.createdAt = 0 THEN OLD.createdAt ELSE createdAt END
-                    WHERE id = NEW.id;
-                END
-                """.trimIndent(),
-            )
+            """
+            CREATE TRIGGER `${protectTriggerName(table)}`
+            AFTER UPDATE ON `$table`
+            WHEN (OLD.uid != '' AND NEW.uid = '') OR (OLD.createdAt != 0 AND NEW.createdAt = 0)
+            BEGIN
+                UPDATE `$table` SET
+                    uid = CASE WHEN NEW.uid = '' THEN OLD.uid ELSE uid END,
+                    createdAt = CASE WHEN NEW.createdAt = 0 THEN OLD.createdAt ELSE createdAt END
+                WHERE id = NEW.id;
+            END
+            """.trimIndent(),
             // Setting either to a *different* stored value is a bug (two records claiming one
             // identity), so it fails loudly instead of being quietly undone.
-            db.execSQL(
-                """
-                CREATE TRIGGER `${immutableTriggerName(table)}`
-                BEFORE UPDATE ON `$table`
-                WHEN (OLD.uid != '' AND NEW.uid != '' AND NEW.uid IS NOT OLD.uid)
-                    OR (OLD.createdAt != 0 AND NEW.createdAt != 0 AND NEW.createdAt IS NOT OLD.createdAt)
-                BEGIN
-                    SELECT RAISE(ABORT, 'uid and createdAt are immutable');
-                END
-                """.trimIndent(),
-            )
-        }
-    }
+            """
+            CREATE TRIGGER `${immutableTriggerName(table)}`
+            BEFORE UPDATE ON `$table`
+            WHEN (OLD.uid != '' AND NEW.uid != '' AND NEW.uid IS NOT OLD.uid)
+                OR (OLD.createdAt != 0 AND NEW.createdAt != 0 AND NEW.createdAt IS NOT OLD.createdAt)
+            BEGIN
+                SELECT RAISE(ABORT, 'uid and createdAt are immutable');
+            END
+            """.trimIndent(),
+        )
 
     /** Recreates the triggers on every open; see the class docs for why not only in `onCreate`. */
     val TriggersCallback =
@@ -160,7 +159,7 @@ internal object EntityIdentitySchema {
 
     /**
      * v14 -> v15. Adds the columns, gives every existing row a uid (the seeded Inbox, id -1, the
-     * well-known one), backfills creation times, then adds the unique indexes and triggers.
+     * well-known one), backfills creation times, then adds the unique indexes. The triggers come from [TriggersCallback].
      *
      * Habits and chains already record a local creation date, converted with the device's current
      * zone (SQLite has no zone data; approximate across DST, fine for history). Saved sessions use
@@ -194,8 +193,6 @@ internal object EntityIdentitySchema {
             db.execSQL("UPDATE `$table` SET updatedAt = createdAt")
             db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_${table}_uid` ON `$table` (`uid`)")
         }
-
-        createTriggers(db)
     }
 
     private fun backfillFromLocalDate(
