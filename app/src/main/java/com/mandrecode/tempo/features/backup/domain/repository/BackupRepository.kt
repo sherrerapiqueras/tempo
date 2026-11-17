@@ -7,6 +7,9 @@ interface BackupRepository {
     /** Serializes the full local dataset and encrypts it with a key derived from [passphrase]. */
     suspend fun exportEncrypted(passphrase: CharArray): String
 
+    /** Whether the device holds any of the user's own data: a task, habit or chain, or a non-default category. */
+    suspend fun hasUserData(): Boolean
+
     /** True when [content] is this app's encrypted backup envelope — every valid export is one. */
     fun isEncryptedBackup(content: String): Boolean
 

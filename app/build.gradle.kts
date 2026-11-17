@@ -43,6 +43,7 @@ kover {
                     "com.mandrecode.tempo.features.settings.presentation.VacationModeSection*",
                     "com.mandrecode.tempo.features.settings.presentation.BackupSection*",
                     "com.mandrecode.tempo.features.settings.presentation.DriveBackupSection*",
+                    "com.mandrecode.tempo.features.backup.presentation.DriveRestoreDialogs*",
                     "com.mandrecode.tempo.features.settings.presentation.ImportModeDialog*",
                     "com.mandrecode.tempo.features.*.presentation.*ExternalActions*",
                     "com.mandrecode.tempo.features.focus.presentation.FocusEditors*",

@@ -57,6 +57,16 @@ class OnboardingContentTest {
     }
 
     @Test
+    fun givenWelcomePage_whenRestoreClicked_thenRestoreFromDriveIsRequested() {
+        var emittedEvent: OnboardingContract.UiEvent? = null
+        setContent(OnboardingContract.UiState(currentPage = OnboardingContract.Page.WELCOME), onEvent = { emittedEvent = it })
+
+        composeTestRule.onNodeWithTag(OnboardingTestTags.RESTORE).assertIsDisplayed().performClick()
+
+        assertThat(emittedEvent).isEqualTo(OnboardingContract.UiEvent.RestoreFromDriveClicked)
+    }
+
+    @Test
     fun givenFirstPage_whenForwardClicked_thenNextEventIsEmitted() {
         var emittedEvent: OnboardingContract.UiEvent? = null
         setContent(OnboardingContract.UiState(), onEvent = { emittedEvent = it })

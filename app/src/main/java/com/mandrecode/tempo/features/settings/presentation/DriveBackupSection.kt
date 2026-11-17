@@ -28,6 +28,7 @@ import com.mandrecode.tempo.core.ui.components.TempoConfirmDialog
 import com.mandrecode.tempo.core.ui.components.TempoMessageDialog
 import com.mandrecode.tempo.features.backup.domain.model.BackupFrequency
 import com.mandrecode.tempo.features.backup.domain.model.DriveBackupFailure
+import com.mandrecode.tempo.features.backup.presentation.DriveRestoreDialogs
 import com.mandrecode.tempo.features.settings.presentation.SettingsContract.DriveBackupDialog as Dialog
 import com.mandrecode.tempo.features.settings.presentation.SettingsContract.UiEvent.DriveBackup as Event
 
@@ -56,37 +57,14 @@ internal fun DriveBackupSection(
         item(visible = drive.enabled) {
             DriveBackupStatusItem(drive = drive, onEvent = onEvent)
         }
-        item(visible = drive.enabled) {
+        driveBackupOnItems(drive, onEvent)
+        item {
             SettingsItem(
-                icon = R.drawable.ic_file_upload,
-                title = stringResource(R.string.drive_backup_now),
-                subtitle = stringResource(R.string.drive_backup_now_description),
-                onClick = { onEvent(Event.BackUpNowClicked) },
-            )
-        }
-        item(visible = drive.enabled) {
-            SettingsItem(
-                icon = R.drawable.ic_repeat,
-                title = stringResource(R.string.drive_backup_frequency),
-                subtitle = drive.frequency.label(),
+                icon = R.drawable.ic_file_download,
+                title = stringResource(R.string.drive_restore_title),
+                subtitle = stringResource(R.string.drive_restore_description),
                 trailingIcon = R.drawable.ic_chevron_right,
-                onClick = { onEvent(Event.FrequencyClicked) },
-            )
-        }
-        item(visible = drive.enabled) {
-            SettingsSwitchItem(
-                icon = R.drawable.ic_savings,
-                title = stringResource(R.string.drive_backup_wifi_only),
-                checked = drive.unmeteredOnly,
-                onCheckedChange = { onEvent(Event.WifiOnlyToggled(it)) },
-            )
-        }
-        item(visible = drive.enabled) {
-            SettingsItem(
-                icon = R.drawable.ic_edit,
-                title = stringResource(R.string.drive_backup_change_passphrase),
-                subtitle = stringResource(R.string.drive_backup_change_passphrase_description),
-                onClick = { onEvent(Event.ChangePassphraseClicked) },
+                onClick = { onEvent(Event.RestoreClicked) },
             )
         }
         item(visible = drive.enabled) {
@@ -99,6 +77,47 @@ internal fun DriveBackupSection(
         }
     }
     DriveBackupDialogs(dialog = uiState.driveBackupDialog, frequency = drive.frequency, onEvent = onEvent)
+    DriveRestoreDialogs(step = uiState.driveRestore, onEvent = { onEvent(Event.Restore(it)) })
+}
+
+/** The actions shown while Drive backup is on. */
+private fun SettingsGroupScope.driveBackupOnItems(
+    drive: SettingsContract.DriveBackupUiState,
+    onEvent: (SettingsContract.UiEvent) -> Unit,
+) {
+    item(visible = drive.enabled) {
+        SettingsItem(
+            icon = R.drawable.ic_file_upload,
+            title = stringResource(R.string.drive_backup_now),
+            subtitle = stringResource(R.string.drive_backup_now_description),
+            onClick = { onEvent(Event.BackUpNowClicked) },
+        )
+    }
+    item(visible = drive.enabled) {
+        SettingsItem(
+            icon = R.drawable.ic_repeat,
+            title = stringResource(R.string.drive_backup_frequency),
+            subtitle = drive.frequency.label(),
+            trailingIcon = R.drawable.ic_chevron_right,
+            onClick = { onEvent(Event.FrequencyClicked) },
+        )
+    }
+    item(visible = drive.enabled) {
+        SettingsSwitchItem(
+            icon = R.drawable.ic_savings,
+            title = stringResource(R.string.drive_backup_wifi_only),
+            checked = drive.unmeteredOnly,
+            onCheckedChange = { onEvent(Event.WifiOnlyToggled(it)) },
+        )
+    }
+    item(visible = drive.enabled) {
+        SettingsItem(
+            icon = R.drawable.ic_edit,
+            title = stringResource(R.string.drive_backup_change_passphrase),
+            subtitle = stringResource(R.string.drive_backup_change_passphrase_description),
+            onClick = { onEvent(Event.ChangePassphraseClicked) },
+        )
+    }
 }
 
 @Composable

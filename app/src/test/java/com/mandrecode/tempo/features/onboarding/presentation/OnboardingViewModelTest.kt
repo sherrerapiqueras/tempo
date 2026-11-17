@@ -5,6 +5,7 @@ import com.google.common.truth.Truth.assertThat
 import com.mandrecode.tempo.core.data.preferences.OnboardingPreferencesRepository
 import com.mandrecode.tempo.core.data.preferences.ThemePreferencesRepository
 import com.mandrecode.tempo.core.domain.model.ThemeMode
+import com.mandrecode.tempo.features.backup.presentation.driveRestoreFlow
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -111,5 +112,6 @@ class OnboardingViewModelTest {
         OnboardingViewModel(
             themePreferencesRepository = themePreferencesRepository,
             onboardingPreferencesRepository = onboardingPreferencesRepository,
+            driveRestore = driveRestoreFlow(),
         )
 }

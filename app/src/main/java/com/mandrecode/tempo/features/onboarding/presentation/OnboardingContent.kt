@@ -140,7 +140,11 @@ private fun OnboardingPage(
                 OnboardingContract.Page.ROUTINES -> RoutinesAndRemindersPage(layout = layout)
                 OnboardingContract.Page.APPEARANCE ->
                     AppearancePage(uiState = uiState, layout = layout, onEvent = onEvent)
-                else -> OnboardingWelcomePage(layout = layout)
+                else ->
+                    OnboardingWelcomePage(
+                        layout = layout,
+                        onRestoreClick = { onEvent(OnboardingContract.UiEvent.RestoreFromDriveClicked) },
+                    )
             }
         }
     }
@@ -149,6 +153,7 @@ private fun OnboardingPage(
 @Composable
 internal fun OnboardingWelcomePage(
     layout: OnboardingLayout,
+    onRestoreClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -179,6 +184,13 @@ internal fun OnboardingWelcomePage(
                 },
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = layout.sectionSpacing),
+        )
+        // A new phone is exactly when a backup matters (#307).
+        AnimatedOnboardingButton(
+            label = stringResource(R.string.drive_restore_title),
+            onClick = onRestoreClick,
+            style = OnboardingButtonStyle.Text,
+            modifier = Modifier.padding(top = layout.sectionSpacing).testTag(OnboardingTestTags.RESTORE),
         )
     }
 }
@@ -284,6 +296,7 @@ internal object OnboardingTestTags {
     const val PROGRESS_SEGMENT = "onboarding_progress_segment"
     const val PAGE = "onboarding_page"
     const val WELCOME_LOGO = "onboarding_welcome_logo"
+    const val RESTORE = "onboarding_restore_from_drive"
     const val SINGLE_PANE = "onboarding_single_pane"
     const val TWO_PANE = "onboarding_two_pane"
 }

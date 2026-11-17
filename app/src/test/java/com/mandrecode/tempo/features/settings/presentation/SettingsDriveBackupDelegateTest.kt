@@ -14,6 +14,7 @@ import com.mandrecode.tempo.features.backup.domain.usecase.FakePassphraseStore
 import com.mandrecode.tempo.features.backup.domain.usecase.FakeScheduler
 import com.mandrecode.tempo.features.backup.domain.usecase.RunDriveBackupNowUseCase
 import com.mandrecode.tempo.features.backup.domain.usecase.UpdateDriveBackupScheduleUseCase
+import com.mandrecode.tempo.features.backup.presentation.driveRestoreFlow
 import com.mandrecode.tempo.infrastructure.backup.drive.GoogleDriveAuthorization
 import io.mockk.coEvery
 import io.mockk.every
@@ -203,4 +204,5 @@ internal fun driveBackupDelegate(
     disable = DisableDriveBackupUseCase(store, preferences, scheduler),
     updateSchedule = UpdateDriveBackupScheduleUseCase(preferences, scheduler),
     backUpNow = RunDriveBackupNowUseCase(preferences, scheduler),
+    restoreFlow = driveRestoreFlow(store = store, preferences = preferences, scheduler = scheduler),
 )

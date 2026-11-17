@@ -9,6 +9,7 @@ import com.mandrecode.tempo.features.backup.domain.usecase.EnableDriveBackupUseC
 import com.mandrecode.tempo.features.backup.domain.usecase.PassphraseCheck
 import com.mandrecode.tempo.features.backup.domain.usecase.RunDriveBackupNowUseCase
 import com.mandrecode.tempo.features.backup.domain.usecase.UpdateDriveBackupScheduleUseCase
+import com.mandrecode.tempo.features.backup.presentation.DriveRestoreFlow
 import com.mandrecode.tempo.infrastructure.backup.drive.GoogleDriveAuthorization
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.combine
@@ -32,6 +33,7 @@ class SettingsDriveBackupDelegate
         private val disable: DisableDriveBackupUseCase,
         private val updateSchedule: UpdateDriveBackupScheduleUseCase,
         private val backUpNow: RunDriveBackupNowUseCase,
+        private val restoreFlow: DriveRestoreFlow,
     ) {
         /** What the consent being shown was asked for. */
         private enum class ConsentPurpose { TURN_ON, RECONNECT }
@@ -66,12 +68,8 @@ class SettingsDriveBackupDelegate
                 is Event.ConsentFinished ->
                     if (authorization.isGranted(event.data)) onConsentGranted(host) else pendingConsent = null
                 is Event.PassphraseConfirmed -> confirmPassphrase(event, host)
-                Event.FrequencyClicked -> showDialog(Dialog.ChooseFrequency, host)
-                is Event.FrequencySelected -> {
-                    updateSchedule(frequency = event.frequency)
-                    showDialog(null, host)
-                }
-                is Event.WifiOnlyToggled -> updateSchedule(unmeteredOnly = event.enabled)
+                Event.FrequencyClicked, is Event.FrequencySelected, is Event.WifiOnlyToggled ->
+                    onScheduleEvent(event, host)
                 Event.BackUpNowClicked -> {
                     backUpNow()
                     host.sendEffect(SettingsContract.UiEffect.ShowMessage(R.string.drive_backup_now_started))
@@ -83,8 +81,43 @@ class SettingsDriveBackupDelegate
                     showDialog(null, host)
                 }
                 Event.DialogDismissed -> showDialog(null, host)
+                Event.RestoreClicked, is Event.Restore -> onRestoreEvent(event, host)
             }
         }
+
+        private fun onScheduleEvent(
+            event: Event,
+            host: SettingsBackupDelegate.Host,
+        ) {
+            when (event) {
+                Event.FrequencyClicked -> showDialog(Dialog.ChooseFrequency, host)
+                is Event.FrequencySelected -> {
+                    updateSchedule(frequency = event.frequency)
+                    showDialog(null, host)
+                }
+                is Event.WifiOnlyToggled -> updateSchedule(unmeteredOnly = event.enabled)
+                else -> Unit
+            }
+        }
+
+        /** Restoring from Drive (#307) is its own flow, shared with onboarding. */
+        private fun onRestoreEvent(
+            event: Event,
+            host: SettingsBackupDelegate.Host,
+        ) {
+            when (event) {
+                Event.RestoreClicked -> restoreFlow.start(restoreHost(host))
+                is Event.Restore -> restoreFlow.onEvent(event.event, restoreHost(host))
+                else -> Unit
+            }
+        }
+
+        private fun restoreHost(host: SettingsBackupDelegate.Host) =
+            DriveRestoreFlow.Host(
+                scope = host.scope,
+                showStep = { step -> host.updateState { it.copy(driveRestore = step) } },
+                launchConsent = { host.sendEffect(SettingsContract.UiEffect.LaunchDriveRestoreConsent(it)) },
+            )
 
         private fun requestConsent(
             purpose: ConsentPurpose,
