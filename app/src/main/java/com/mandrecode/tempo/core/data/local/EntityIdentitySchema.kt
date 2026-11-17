@@ -26,9 +26,11 @@ import kotlinx.datetime.toInstant
  *   domain models rebuilt into entities send `''` / `0`, and a copy saved as a new row gets a
  *   fresh identity from the insert trigger.
  *
- * Room's schema JSON does not record triggers, so they are reconciled on every open as well as in
- * the migration: that covers a fresh install, an upgrade, and a debug
- * destructive reset, which skips `onCreate`.
+ * Room's schema JSON does not record triggers, so they are reconciled on every open, and only
+ * there: that covers a fresh install, an upgrade, and a debug destructive reset, which skips
+ * `onCreate`. Migrations never create them — a chain of migrations passes through intermediate
+ * schemas this build's triggers do not fit, and Room runs `onOpen` right after the last migration,
+ * before any app write.
  */
 internal object EntityIdentitySchema {
     /** Tables whose rows carry a stable identity. All use an `id INTEGER` primary key. */
@@ -48,7 +50,7 @@ internal object EntityIdentitySchema {
      * SQLite 3.42; the framework SQLite used by test helpers can be far older. SQLite evaluates
      * 'now' once per statement, so every use within one statement agrees.
      */
-    private const val NOW_MILLIS = "CAST(ROUND((julianday('now') - 2440587.5) * 86400000) AS INTEGER)"
+    const val NOW_MILLIS = "CAST(ROUND((julianday('now') - 2440587.5) * 86400000) AS INTEGER)"
 
     /** A random RFC 9562 version-4 UUID, lowercase canonical form; re-evaluated per row. */
     @VisibleForTesting
@@ -71,6 +73,8 @@ internal object EntityIdentitySchema {
             updateTriggerName(table),
             protectTriggerName(table),
             immutableTriggerName(table),
+            TombstoneSchema.tombstoneTriggerName(table),
+            TombstoneSchema.resurrectTriggerName(table),
         )
 
     /**
@@ -81,7 +85,14 @@ internal object EntityIdentitySchema {
      *
      * @return how many triggers were dropped or (re)created; 0 when everything already matched.
      */
-    fun createTriggers(db: SupportSQLiteDatabase): Int = syncTriggers(db, TABLES.flatMap(::identityTriggers))
+    fun createTriggers(db: SupportSQLiteDatabase): Int =
+        syncTriggers(
+            db,
+            TABLES.flatMap {
+                identityTriggers(it) +
+                    TombstoneSchema.triggers(it)
+            },
+        )
 
     private val TRIGGER_NAME = Regex("CREATE TRIGGER `([^`]+)`")
 
@@ -187,7 +198,7 @@ internal object EntityIdentitySchema {
 
     /**
      * v14 -> v15. Adds the columns, gives every existing row a uid (the seeded Inbox, id -1, the
-     * well-known one), backfills creation times, then adds the unique indexes and triggers.
+     * well-known one), backfills creation times, then adds the unique indexes. The triggers come from [TriggersCallback].
      *
      * Habits and chains already record a local creation date, converted with the device's current
      * zone (SQLite has no zone data; approximate across DST, fine for history). Saved sessions use
@@ -221,8 +232,6 @@ internal object EntityIdentitySchema {
             db.execSQL("UPDATE `$table` SET updatedAt = createdAt")
             db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_${table}_uid` ON `$table` (`uid`)")
         }
-
-        createTriggers(db)
     }
 
     private fun backfillFromLocalDate(

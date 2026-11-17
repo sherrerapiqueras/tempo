@@ -22,6 +22,7 @@ import com.mandrecode.tempo.core.data.entity.SavedSessionEntity
 import com.mandrecode.tempo.core.data.entity.TaskAttachmentEntity
 import com.mandrecode.tempo.core.data.entity.TaskEntity
 import com.mandrecode.tempo.core.data.entity.TaskSectionEntity
+import com.mandrecode.tempo.core.data.entity.TombstoneEntity
 import com.mandrecode.tempo.core.data.local.dao.CategoryDao
 import com.mandrecode.tempo.core.data.local.dao.DailyFocusActivityDao
 import com.mandrecode.tempo.core.data.local.dao.HabitChainDao
@@ -31,6 +32,7 @@ import com.mandrecode.tempo.core.data.local.dao.SavedSessionDao
 import com.mandrecode.tempo.core.data.local.dao.TaskAttachmentDao
 import com.mandrecode.tempo.core.data.local.dao.TaskDao
 import com.mandrecode.tempo.core.data.local.dao.TaskSectionDao
+import com.mandrecode.tempo.core.data.local.dao.TombstoneDao
 import com.mandrecode.tempo.core.data.local.security.DatabaseEncryptionMigrator
 import com.mandrecode.tempo.core.data.local.security.DbKdfIterMarker
 import com.mandrecode.tempo.core.data.local.security.DbPassphraseProvider
@@ -52,8 +54,9 @@ import kotlin.time.Clock
         TaskAttachmentEntity::class,
         TaskSectionEntity::class,
         SavedSessionEntity::class,
+        TombstoneEntity::class,
     ],
-    version = 15,
+    version = 16,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -73,6 +76,8 @@ abstract class TempoDatabase : RoomDatabase() {
     abstract fun taskAttachmentDao(): TaskAttachmentDao
 
     abstract fun taskSectionDao(): TaskSectionDao
+
+    abstract fun tombstoneDao(): TombstoneDao
 
     abstract fun savedSessionDao(): SavedSessionDao
 
@@ -367,6 +372,14 @@ abstract class TempoDatabase : RoomDatabase() {
                 }
             }
 
+        /** Deletion tombstones (#281); see [TombstoneSchema]. */
+        val MIGRATION_15_16 =
+            object : Migration(15, 16) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    TombstoneSchema.migrate15To16(db)
+                }
+            }
+
         val MIGRATIONS =
             arrayOf(
                 MIGRATION_1_2,
@@ -383,6 +396,7 @@ abstract class TempoDatabase : RoomDatabase() {
                 MIGRATION_12_13,
                 MIGRATION_13_14,
                 MIGRATION_14_15,
+                MIGRATION_15_16,
             )
 
         suspend fun getDatabase(
@@ -448,6 +462,7 @@ abstract class TempoDatabase : RoomDatabase() {
                 .addMigrations(*MIGRATIONS)
                 // Before the Inbox seed, so the seeded row is timestamped like any other insert.
                 .addCallback(EntityIdentitySchema.TriggersCallback)
+                .addCallback(TombstoneSchema.TombstonePurgeCallback)
                 .addCallback(inboxCallback(context))
                 .addCallback(OrphanedAttachmentRowsCallback)
                 .addCallback(DestructiveMigrationWarningCallback)

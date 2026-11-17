@@ -84,7 +84,12 @@ Yes, but only for rows the server has already seen (see [Tombstone provenance](#
 A tombstone records a deleted row's `uid`, its kind and the deletion time, and is kept for **180
 days** on the device (#281). The server must keep it at least as long.
 
-The window has to outlast the longest plausible gap between a member device's syncs.
+The window has to outlast the longest plausible gap between a member device's syncs. Otherwise
+that device pushes back a row the others deleted. Half a year is far beyond normal use and still
+covers a phone left in a drawer for a season.
+
+Tombstones from completed-task retention clean-up are recorded like any other delete. Whether
+they propagate to a shared list's members is a sharing decision.
 
 ### Tombstone provenance
 A tombstone records only `uid`, kind and time, not which category the row was in. After a delete,

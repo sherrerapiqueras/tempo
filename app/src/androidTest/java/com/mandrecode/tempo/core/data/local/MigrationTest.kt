@@ -1,5 +1,6 @@
 package com.mandrecode.tempo.core.data.local
 
+import androidx.room.Room
 import androidx.room.testing.MigrationTestHelper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -482,14 +483,71 @@ class MigrationTest {
     }
 
     @Test
-    fun migrateAll_fromVersion1To15() {
+    fun migrateAll_fromVersion1ToLatest_16() {
         helper.createDatabase(DB_NAME, 1).use { it.close() }
-        helper.runMigrationsAndValidate(DB_NAME, 15, true, *TempoDatabase.MIGRATIONS).use { db ->
+        helper.runMigrationsAndValidate(DB_NAME, 16, true, *TempoDatabase.MIGRATIONS).close()
+    }
+
+    @Test
+    fun upgradedDatabase_openedAsTheAppDoes_hasEveryIdentityTrigger() {
+        // Migrations never create triggers; the open callback does. Open a v14 file the way the
+        // app does (configure) and check they are all there.
+        helper.createDatabase(DB_NAME, 14).use { db ->
+            db.execSQL("INSERT INTO categories (id, name, isDefault, sortOrder, sectionsEnabled) VALUES (5, 'Work', 0, 0, 0)")
+        }
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val database =
+            TempoDatabase
+                .configure(Room.databaseBuilder(context, TempoDatabase::class.java, DB_NAME), context, false)
+                .build()
+        try {
+            val db = database.openHelper.writableDatabase
             EntityIdentitySchema.TABLES.forEach { table ->
-                db.query("SELECT COUNT(*) FROM sqlite_master WHERE type = 'trigger' AND tbl_name = '$table'").use {
-                    it.moveToFirst()
-                    assertThat(it.getInt(0)).isEqualTo(EntityIdentitySchema.triggerNames(table).size)
+                val names = mutableSetOf<String>()
+                db.query("SELECT name FROM sqlite_master WHERE type = 'trigger' AND tbl_name = '$table'").use {
+                    while (it.moveToNext()) names += it.getString(0)
                 }
+                assertThat(names).isEqualTo(EntityIdentitySchema.triggerNames(table))
+            }
+            db.execSQL("DELETE FROM categories WHERE id = 5")
+            db.query("SELECT COUNT(*) FROM tombstones WHERE entityType = 'categories'").use {
+                it.moveToFirst()
+                assertThat(it.getInt(0)).isEqualTo(1)
+            }
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun migrate15To16_addsAnEmptyTombstoneTableAndKeepsData() {
+        helper.createDatabase(DB_NAME, 15).use { db ->
+            db.execSQL(
+                "INSERT INTO categories (id, name, isDefault, sortOrder, sectionsEnabled, uid, createdAt, updatedAt) " +
+                    "VALUES (5, 'Work', 0, 0, 0, '01234567-89ab-4def-8123-456789abcdef', 1000, 2000)",
+            )
+            db.execSQL(
+                "INSERT INTO tasks (id, title, description, isCompleted, categoryId, periodicityInterval, sortOrder, " +
+                    "uid, createdAt, updatedAt) VALUES (1, 'T', '', 0, 5, 1, 0, " +
+                    "'11111111-89ab-4def-8123-456789abcdef', 1000, 2000)",
+            )
+        }
+
+        helper.runMigrationsAndValidate(DB_NAME, 16, true, TempoDatabase.MIGRATION_15_16).use { db ->
+            db.query("SELECT COUNT(*) FROM tombstones").use {
+                it.moveToFirst()
+                assertThat(it.getInt(0)).isEqualTo(0)
+            }
+            db.query("SELECT name, uid, createdAt, updatedAt FROM categories WHERE id = 5").use {
+                it.moveToFirst()
+                assertThat(it.getString(0)).isEqualTo("Work")
+                assertThat(it.getString(1)).isEqualTo("01234567-89ab-4def-8123-456789abcdef")
+                assertThat(it.getLong(2)).isEqualTo(1000L)
+                assertThat(it.getLong(3)).isEqualTo(2000L)
+            }
+            db.query("SELECT title FROM tasks WHERE id = 1").use {
+                it.moveToFirst()
+                assertThat(it.getString(0)).isEqualTo("T")
             }
         }
     }
