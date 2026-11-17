@@ -103,6 +103,17 @@ it can't be the identity of anyone's shared list. Clients don't offer "share" on
 contract has to reject any category with that `uid`. A user who wants to share their Inbox's tasks
 moves them to another category and shares that.
 
+## How the sync engine finds what to send
+
+The device keeps a **pending-changes journal** (#546): one row per record that changed since it
+was last acknowledged, with the record's `uid`, kind, latest operation (`upsert` or `delete`)
+and a sequence number. The journal records every identity-bearing table, because it describes the
+device, not what may leave it. **The sync engine applies this document when it pushes:** it
+sends only the journal rows whose record belongs in "Syncs in 2.0" (a shared category, or a task
+or section inside one), reading the live row for an upsert and the tombstone for a delete. It
+acknowledges each row it delivered by `uid` and sequence number, so a record edited during the
+upload stays pending.
+
 ## Changing this document
 
 A change that makes anything new leave the device updates this document in the same PR, with

@@ -22,6 +22,7 @@
 | 14 | `MIGRATION_13_14` | Adds the `focus_sessions` table for saved focus sessions (#517) |
 | 15 | `MIGRATION_14_15` | Stable record identity (#30): `uid`, `createdAt` and `updatedAt` on seven tables, unique `uid` indexes, backfill, and identity triggers (see [Identity triggers](#identity-triggers)) |
 | 16 | `MIGRATION_15_16` | Adds the `tombstones` table (#281): every deletion of an identity row records its `uid`, table and time |
+| 17 | `MIGRATION_16_17` | Adds the `pending_changes` journal (#546): one coalesced row per changed identity record, with its latest operation and an `AUTOINCREMENT` sequence |
 
 ### Identity triggers
 
@@ -37,6 +38,8 @@ Room's schema JSON does not record triggers. `EntityIdentitySchema` drops and re
 Code that saves a copy of a stored record as a new row must call the domain model's `asNew()`.
 
 Since version 16, two more triggers per table maintain **tombstones** (#281). An `AFTER DELETE` trigger records `(uid, entityType, deletedAt)` in `tombstones` for every delete, from any code path or cascade. An `AFTER INSERT` trigger removes the tombstone when a row comes back under the same `uid` (Undo). Live tables keep only live rows, so no query filters on deletion. `TombstonePurgeCallback` drops tombstones older than 180 days on every open.
+
+Since version 17, three more triggers per table maintain the **pending-changes journal** (#546). Every insert, update or delete replaces the record's single `pending_changes` row with its latest operation (`upsert` or `delete`) and a fresh `seq`. `PendingChangeDao.acknowledge(uid, seq)` removes a row only if `seq` hasn't moved. Triggers coalesce with an explicit delete-then-insert, never `INSERT OR REPLACE`, because inside a trigger the outer statement's conflict policy wins and Room's `@Update` runs as `UPDATE OR ABORT`.
 
 Migrations never create triggers. A migration chain passes through intermediate schemas that this build's triggers don't fit, so only the open callback creates them, and Room runs it right after the last migration.
 

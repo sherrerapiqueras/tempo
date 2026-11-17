@@ -483,9 +483,36 @@ class MigrationTest {
     }
 
     @Test
-    fun migrateAll_fromVersion1ToLatest_16() {
+    fun migrateAll_fromVersion1ToLatest_17() {
         helper.createDatabase(DB_NAME, 1).use { it.close() }
-        helper.runMigrationsAndValidate(DB_NAME, 16, true, *TempoDatabase.MIGRATIONS).close()
+        helper.runMigrationsAndValidate(DB_NAME, 17, true, *TempoDatabase.MIGRATIONS).close()
+    }
+
+    @Test
+    fun migrate16To17_addsAnEmptyJournalAndKeepsData() {
+        helper.createDatabase(DB_NAME, 16).use { db ->
+            db.execSQL(
+                "INSERT INTO categories (id, name, isDefault, sortOrder, sectionsEnabled, uid, createdAt, updatedAt) " +
+                    "VALUES (5, 'Work', 0, 0, 0, '01234567-89ab-4def-8123-456789abcdef', 1000, 2000)",
+            )
+            db.execSQL("INSERT INTO tombstones (uid, entityType, deletedAt) VALUES ('gone', 'tasks', 3000)")
+        }
+
+        helper.runMigrationsAndValidate(DB_NAME, 17, true, TempoDatabase.MIGRATION_16_17).use { db ->
+            db.query("SELECT COUNT(*) FROM pending_changes").use {
+                it.moveToFirst()
+                assertThat(it.getInt(0)).isEqualTo(0)
+            }
+            db.query("SELECT name, updatedAt FROM categories WHERE id = 5").use {
+                it.moveToFirst()
+                assertThat(it.getString(0)).isEqualTo("Work")
+                assertThat(it.getLong(1)).isEqualTo(2000L)
+            }
+            db.query("SELECT COUNT(*) FROM tombstones").use {
+                it.moveToFirst()
+                assertThat(it.getInt(0)).isEqualTo(1)
+            }
+        }
     }
 
     @Test

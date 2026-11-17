@@ -20,13 +20,15 @@ internal object TombstoneSchema {
     fun triggers(table: String): List<String> =
         listOf(
             // Every delete, from any code path or cascade, leaves a tombstone (#281): live tables
-            // keep only live rows, so no query can show a deleted record.
+            // keep only live rows, so no query can show a deleted record. Delete-then-insert rather
+            // than INSERT OR REPLACE: the outer statement's conflict policy overrides a trigger's.
             """
             CREATE TRIGGER `${tombstoneTriggerName(table)}`
             AFTER DELETE ON `$table`
             WHEN OLD.uid != ''
             BEGIN
-                INSERT OR REPLACE INTO tombstones (uid, entityType, deletedAt)
+                DELETE FROM tombstones WHERE uid = OLD.uid;
+                INSERT INTO tombstones (uid, entityType, deletedAt)
                 VALUES (OLD.uid, '$table', ${EntityIdentitySchema.NOW_MILLIS});
             END
             """.trimIndent(),

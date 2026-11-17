@@ -80,7 +80,7 @@ internal object EntityIdentitySchema {
             immutableTriggerName(table),
             TombstoneSchema.tombstoneTriggerName(table),
             TombstoneSchema.resurrectTriggerName(table),
-        )
+        ) + JournalSchema.triggerNames(table)
 
     /**
      * Drops and recreates every identity trigger, so a database always runs the triggers this build
@@ -89,7 +89,8 @@ internal object EntityIdentitySchema {
     fun createTriggers(db: SupportSQLiteDatabase) {
         TABLES.forEach { table ->
             triggerNames(table).forEach { db.execSQL("DROP TRIGGER IF EXISTS `$it`") }
-            (identityTriggers(table) + TombstoneSchema.triggers(table)).forEach(db::execSQL)
+            (identityTriggers(table) + TombstoneSchema.triggers(table) + JournalSchema.triggers(table))
+                .forEach(db::execSQL)
         }
     }
 
