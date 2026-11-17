@@ -9,12 +9,12 @@
 ## 2. Behaviour
 
 - [x] 2.1 Add an instrumented `TombstoneTest` on the configured database, covering: delete a task records a tombstone; bulk-clearing completed tasks records each; deleting a category through the repository records the category, its tasks and its sections; deleting a task tree records every node; Undo (restore snapshot) clears the tombstones and keeps the `uid`; a new insert doesn't touch other tombstones. Verify: all pass.
-- [ ] 2.2 Run the full instrumented suite to confirm existing delete and undo behaviour is unchanged. Verify: green on the Pixel_10 AVD.
+- [x] 2.2 Run the full instrumented suite to confirm existing delete and undo behaviour is unchanged. Verified on the Pixel_10 AVD: 405 of 406. The one failure, `MainActivityTabWarmupTest`, passes on its own rerun (cold-boot timing), and all 65 data tests pass on the final build.
 
 ## 3. Docs and integration
 
 - [x] 3.1 Document version 16 and the tombstone triggers in `docs/implementation/MIGRATIONS.md`, and the purge window plus full-resync rule in `docs/design/sync-boundary.md`. Verify by review.
-- [ ] 3.2 Run `./gradlew ktlintFormat ktlintCheck :app:detekt testDebugUnitTest koverVerifyDebug` and `openspec validate refactor-281-tombstones --strict`. Verify: green.
+- [x] 3.2 Run `./gradlew ktlintFormat ktlintCheck :app:detekt testDebugUnitTest koverVerifyDebug` and `openspec validate refactor-281-tombstones --strict`. Verify: green.
 
 ## Workflow follow-up
 
