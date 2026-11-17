@@ -22,9 +22,9 @@ import com.mandrecode.tempo.features.settings.presentation.SettingsContract.Driv
 import com.mandrecode.tempo.features.settings.presentation.SettingsContract.UiEvent.DriveBackup as Event
 
 /**
- * Owns the Google Drive backup section of Settings (#306) for [SettingsViewModel]: mirrors the
- * stored settings and status into state, runs the consent → passphrase setup, and the rest of
- * the section's actions through their use cases.
+ * Owns Google Drive backup in Settings (#306) for [SettingsViewModel], both its row on the main page
+ * and its own page: mirrors the stored settings and status into state, runs the consent →
+ * passphrase setup, and the page's other actions through their use cases.
  */
 class SettingsDriveBackupDelegate
     @Inject
@@ -82,8 +82,9 @@ class SettingsDriveBackupDelegate
                 Event.ChangePassphraseClicked -> showDialog(Dialog.SetPassphrase(isChange = true), host)
                 Event.TurnOffClicked -> showDialog(Dialog.ConfirmTurnOff, host)
                 Event.TurnOffConfirmed -> {
-                    disable()
                     showDialog(null, host)
+                    // Off the main thread: forgetting the passphrase deletes a Keystore key and commits to disk.
+                    host.scope.launch { withContext(ioDispatcher) { disable() } }
                 }
                 Event.DialogDismissed -> showDialog(null, host)
                 Event.ManageStorageClicked -> host.sendEffect(SettingsContract.UiEffect.OpenGoogleStorage)
@@ -131,6 +132,8 @@ class SettingsDriveBackupDelegate
             when (pendingConsent) {
                 ConsentPurpose.TURN_ON -> showDialog(Dialog.SetPassphrase(isChange = false), host)
                 ConsentPurpose.RECONNECT -> {
+                    // Access is back: the lost-access failure is fixed, whatever the next backup says.
+                    preferences.clearFailure()
                     backUpNow()
                     host.sendEffect(SettingsContract.UiEffect.ShowMessage(R.string.drive_backup_now_started))
                 }

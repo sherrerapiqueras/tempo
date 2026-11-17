@@ -48,6 +48,10 @@ class FakeDrivePreferences(
         status.value = status.value.copy(lastSuccessAt = atMillis)
     }
 
+    override fun clearFailure() {
+        status.value = status.value.copy(lastFailure = null, lastFailureAt = null)
+    }
+
     override fun recordFailure(
         failure: DriveBackupFailure,
         atMillis: Long,

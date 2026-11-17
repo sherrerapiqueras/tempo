@@ -166,13 +166,19 @@ private fun RouteTopBar(
 }
 
 @Composable
-internal fun SettingsDestination(navigator: TempoNavigator) {
+internal fun SettingsDestination(
+    navigator: TempoNavigator,
+    openDriveBackupPage: Boolean = false,
+    onDriveBackupPageOpen: () -> Unit = {},
+) {
     val isRailLayout = isFloatingNavigationRailLayout()
     SettingsScreen(
         onBackClick = { navigator.pop() },
         onOnboardingClick = { navigator.navigate(OnboardingRoute(isReplay = true)) },
         showBackButton = !isRailLayout,
         showTitle = !isExpandedFloatingRailLayout(),
+        openDriveBackupPage = openDriveBackupPage,
+        onDriveBackupPageOpen = onDriveBackupPageOpen,
     )
 }
 

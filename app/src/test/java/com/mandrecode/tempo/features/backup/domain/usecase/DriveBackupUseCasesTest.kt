@@ -82,6 +82,35 @@ class DriveBackupUseCasesTest {
     }
 
     @Test
+    fun `turning backup on again forgets a failure from before it was off`() {
+        preferences.recordFailure(DriveBackupFailure.AUTHORIZATION_NEEDED, atMillis = 5)
+
+        EnableDriveBackupUseCase(store, preferences, scheduler)("secret".toCharArray(), "secret".toCharArray())
+
+        assertThat(preferences.status.value.currentFailure).isNull()
+    }
+
+    @Test
+    fun `setting the passphrase again clears the unreadable-passphrase failure`() {
+        enabled()
+        preferences.recordFailure(DriveBackupFailure.PASSPHRASE_UNAVAILABLE, atMillis = 5)
+
+        ChangeBackupPassphraseUseCase(store, preferences, scheduler)("new".toCharArray(), "new".toCharArray())
+
+        assertThat(preferences.status.value.currentFailure).isNull()
+    }
+
+    @Test
+    fun `a mismatched passphrase leaves the failure showing`() {
+        enabled()
+        preferences.recordFailure(DriveBackupFailure.PASSPHRASE_UNAVAILABLE, atMillis = 5)
+
+        ChangeBackupPassphraseUseCase(store, preferences, scheduler)("a".toCharArray(), "b".toCharArray())
+
+        assertThat(preferences.status.value.currentFailure).isEqualTo(DriveBackupFailure.PASSPHRASE_UNAVAILABLE)
+    }
+
+    @Test
     fun `updating the schedule saves and reschedules`() {
         enabled()
 

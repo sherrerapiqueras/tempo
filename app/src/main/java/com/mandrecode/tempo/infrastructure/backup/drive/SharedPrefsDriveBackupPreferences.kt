@@ -59,6 +59,16 @@ class SharedPrefsDriveBackupPreferences
         }
 
         @Synchronized
+        override fun clearFailure() {
+            prefs
+                .edit()
+                .remove(KEY_LAST_FAILURE_AT)
+                .remove(KEY_LAST_FAILURE)
+                .apply()
+            _status.value = _status.value.copy(lastFailure = null, lastFailureAt = null)
+        }
+
+        @Synchronized
         override fun recordFailure(
             failure: DriveBackupFailure,
             atMillis: Long,

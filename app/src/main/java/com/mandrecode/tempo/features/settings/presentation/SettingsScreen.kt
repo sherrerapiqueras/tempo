@@ -1,5 +1,6 @@
 package com.mandrecode.tempo.features.settings.presentation
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -36,6 +37,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
@@ -61,6 +63,8 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     showBackButton: Boolean = true,
     showTitle: Boolean = true,
+    openDriveBackupPage: Boolean = false,
+    onDriveBackupPageOpen: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -105,16 +109,7 @@ fun SettingsScreen(
                 is SettingsContract.UiEffect.LaunchImportPicker ->
                     importLauncher.launch(arrayOf("application/json"))
 
-                is SettingsContract.UiEffect.ShowMessage -> {
-                    @Suppress("LocalContextGetResourceValueCall")
-                    val message =
-                        if (effect.formatArgs.isNotEmpty()) {
-                            context.getString(effect.message, *effect.formatArgs.toTypedArray())
-                        } else {
-                            context.getString(effect.message)
-                        }
-                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                }
+                is SettingsContract.UiEffect.ShowMessage -> showMessage(context, effect)
             }
         }
     }
@@ -127,6 +122,8 @@ fun SettingsScreen(
         modifier = modifier,
         showBackButton = showBackButton,
         showTitle = showTitle,
+        openDriveBackupPage = openDriveBackupPage,
+        onDriveBackupPageOpen = onDriveBackupPageOpen,
     )
 }
 
@@ -147,9 +144,19 @@ internal fun SettingsScaffold(
     modifier: Modifier = Modifier,
     showBackButton: Boolean = true,
     showTitle: Boolean = true,
-    initialPage: SettingsPage = SettingsPage.MAIN,
+    openDriveBackupPage: Boolean = false,
+    onDriveBackupPageOpen: () -> Unit = {},
 ) {
-    var page by rememberSaveable { mutableStateOf(initialPage) }
+    var page by rememberSaveable { mutableStateOf(SettingsPage.MAIN) }
+    // A one-off request (a Drive backup failure notification): open the page holding the fix, then
+    // hand the request back so a later visit to Settings starts on the main page as usual.
+    val currentOnDriveBackupPageOpen by rememberUpdatedState(onDriveBackupPageOpen)
+    LaunchedEffect(openDriveBackupPage) {
+        if (openDriveBackupPage) {
+            page = SettingsPage.DRIVE_BACKUP
+            currentOnDriveBackupPageOpen()
+        }
+    }
     // Keeps each page's saved state (its scroll position above all) while another page is shown,
     // so coming back from an inner page lands where the user left the main one.
     val pageStates = rememberSaveableStateHolder()
@@ -315,6 +322,20 @@ private fun SettingsTopBar(
             scrollBehavior = scrollBehavior,
         )
     }
+}
+
+private fun showMessage(
+    context: Context,
+    effect: SettingsContract.UiEffect.ShowMessage,
+) {
+    @Suppress("LocalContextGetResourceValueCall")
+    val message =
+        if (effect.formatArgs.isNotEmpty()) {
+            context.getString(effect.message, *effect.formatArgs.toTypedArray())
+        } else {
+            context.getString(effect.message)
+        }
+    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
 }
 
 /** Where a Google account's storage is managed and freed. */

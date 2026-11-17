@@ -44,6 +44,8 @@ class EnableDriveBackupUseCase
                 checkPassphrase(passphrase, confirmation).also { check ->
                     if (check == PassphraseCheck.OK) {
                         passphraseStore.save(passphrase)
+                        // Whatever failed before backup was turned off is not this setup's problem.
+                        preferences.clearFailure()
                         val settings = preferences.settings.value.copy(enabled = true)
                         preferences.updateSettings(settings)
                         scheduler.sync(settings)
@@ -75,6 +77,8 @@ class ChangeBackupPassphraseUseCase
                 checkPassphrase(passphrase, confirmation).also { check ->
                     if (check == PassphraseCheck.OK) {
                         passphraseStore.save(passphrase)
+                        // Setting it again is the fix for an unreadable passphrase.
+                        preferences.clearFailure()
                         scheduler.runNow(preferences.settings.value)
                     }
                 }

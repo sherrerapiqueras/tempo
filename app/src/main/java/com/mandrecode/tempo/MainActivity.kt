@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -84,6 +85,9 @@ class MainActivity :
     private val routinesNavigationTrigger = mutableLongStateOf(0L)
     private val tasksNavigationTrigger = mutableLongStateOf(0L)
     private val settingsNavigationTrigger = mutableLongStateOf(0L)
+
+    /** Set by a Drive backup failure notification (#306); Settings opens its Drive page, then clears it. */
+    private val driveBackupPageRequested = mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
@@ -187,6 +191,8 @@ class MainActivity :
                                     routinesNavigationTrigger = routinesNavigationTrigger.longValue,
                                     tasksNavigationTrigger = tasksNavigationTrigger.longValue,
                                     settingsNavigationTrigger = settingsNavigationTrigger.longValue,
+                                    driveBackupPageRequested = driveBackupPageRequested.value,
+                                    onDriveBackupPageOpen = { driveBackupPageRequested.value = false },
                                     pendingNotificationAction = pendingNotificationAction,
                                     onConsumePendingNotificationAction = {
                                         mainViewModel.consumePendingNotificationAction()
@@ -293,8 +299,9 @@ class MainActivity :
             tasksNavigationTrigger.longValue++
             intent.removeExtra(TaskReminderReceiver.EXTRA_OPEN_TASKS)
         }
-        // A Drive backup failure the user has to fix (#306): the fix is in Settings.
+        // A Drive backup failure the user has to fix (#306): the fix is on Settings' Drive backup page.
         if (intent.getBooleanExtra(DriveBackupNotifier.EXTRA_OPEN_SETTINGS, false)) {
+            driveBackupPageRequested.value = true
             settingsNavigationTrigger.longValue++
             intent.removeExtra(DriveBackupNotifier.EXTRA_OPEN_SETTINGS)
         }
