@@ -139,4 +139,88 @@ class MutationJournalTest {
             // Without the guard the stamp trigger's nested update journals the edit a second time.
             assertThat(pendingFor(uid).single().seq).isEqualTo(before + 1)
         }
+
+    /** A minimal row for each identity table, and a column to edit on it. */
+    private val rowsByTable =
+        mapOf(
+            "categories" to ("INSERT INTO categories (id, name, isDefault, sortOrder) VALUES (900, 'C', 0, 0)" to "name = 'C2'"),
+            "tasks" to (
+                "INSERT INTO tasks (id, title, description, isCompleted, categoryId, periodicityInterval, sortOrder) " +
+                    "VALUES (900, 'T', '', 0, 900, 1, 0)" to "title = 'T2'"
+            ),
+            "task_sections" to ("INSERT INTO task_sections (id, categoryId, name, sortOrder) VALUES (900, 900, 'S', 0)" to "name = 'S2'"),
+            "habits" to (
+                "INSERT INTO habits (id, title, description, isCompleted, habitType, createdDate, completionHistory) " +
+                    "VALUES (900, 'H', '', 0, 'BUILD', '2026-01-01T08:00', '')" to "title = 'H2'"
+            ),
+            "habit_chains" to (
+                "INSERT INTO habit_chains (id, title, description, createdDate, completionHistory) " +
+                    "VALUES (900, 'Ch', '', '2026-01-01T08:00', '')" to "title = 'Ch2'"
+            ),
+            "task_attachments" to (
+                "INSERT INTO task_attachments (id, taskId, displayName, mimeType, sizeBytes, storedName) " +
+                    "VALUES (900, 900, 'a.pdf', NULL, 1, 's900')" to "displayName = 'b.pdf'"
+            ),
+            "focus_sessions" to (
+                "INSERT INTO focus_sessions (id, title, focusMinutes, breakMinutes, rounds, lastUsedAt) " +
+                    "VALUES (900, 'F', 25, 5, 1, 0)" to "title = 'F2'"
+            ),
+        )
+
+    private fun uidOf(table: String): String =
+        database.openHelper.writableDatabase.query("SELECT uid FROM `$table` WHERE id = 900").use {
+            it.moveToFirst()
+            it.getString(0)
+        }
+
+    @Test
+    fun everyIdentityTableJournalsInsertUpdateAndDelete() =
+        runTest {
+            assertThat(rowsByTable.keys).containsExactlyElementsIn(EntityIdentitySchema.TABLES)
+            val db = database.openHelper.writableDatabase
+            rowsByTable.forEach { (table, sql) ->
+                val (insert, edit) = sql
+                db.execSQL(insert)
+                val uid = uidOf(table)
+                assertThat(pendingFor(uid).map { it.entityType to it.operation })
+                    .containsExactly(table to OPERATION_UPSERT)
+
+                val afterInsert = pendingFor(uid).single().seq
+                db.execSQL("UPDATE `$table` SET $edit WHERE id = 900")
+                assertThat(pendingFor(uid).single().seq).isGreaterThan(afterInsert)
+
+                db.execSQL("DELETE FROM `$table` WHERE id = 900")
+                assertThat(pendingFor(uid).map { it.entityType to it.operation })
+                    .containsExactly(table to OPERATION_DELETE)
+            }
+        }
+
+    @Test
+    fun bulkQueryUpdatesJournalEveryRowTheyTouch() =
+        runTest {
+            val categoryId = categories.insertCategory(Category(name = "Work"))
+            val ids = List(3) { tasks.insertTask(Task(title = "T$it", description = "", categoryId = categoryId)) }
+            val before = ids.associate { tasks.getTaskById(it)!!.uid to pendingFor(tasks.getTaskById(it)!!.uid).single().seq }
+
+            database.openHelper.writableDatabase.execSQL("UPDATE tasks SET sortOrder = sortOrder + 1")
+
+            before.forEach { (uid, seq) -> assertThat(pendingFor(uid).single().seq).isGreaterThan(seq) }
+        }
+
+    @Test
+    fun cleanupPathsJournalTheirDeletes() =
+        runTest {
+            val db = database.openHelper.writableDatabase
+            // An attachment whose task is gone is swept when the database opens.
+            db.execSQL(rowsByTable.getValue("task_attachments").first)
+            val attachmentUid = uidOf("task_attachments")
+            TempoDatabase.OrphanedAttachmentRowsCallback.onOpen(db)
+            assertThat(pendingFor(attachmentUid).single().operation).isEqualTo(OPERATION_DELETE)
+
+            // Saved sessions past the recent few are trimmed.
+            db.execSQL(rowsByTable.getValue("focus_sessions").first)
+            val sessionUid = uidOf("focus_sessions")
+            database.savedSessionDao().trimTo(0)
+            assertThat(pendingFor(sessionUid).single().operation).isEqualTo(OPERATION_DELETE)
+        }
 }

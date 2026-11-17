@@ -127,11 +127,18 @@ moves them to another category and shares that.
 The device keeps a **pending-changes journal** (#546): one row per record that changed since it
 was last acknowledged, with the record's `uid`, kind, latest operation (`upsert` or `delete`)
 and a sequence number. The journal records every identity-bearing table, because it describes the
-device, not what may leave it. **The sync engine applies this document when it pushes:** it
-sends only the journal rows whose record belongs in "Syncs in 2.0" (a shared category, or a task
-or section inside one), reading the live row for an upsert and the tombstone for a delete. It
-acknowledges each row it delivered by `uid` and sequence number, so a record edited during the
-upload stays pending.
+device, not what may leave it. **The sync engine applies this document when it pushes**, and the
+rule differs by operation, because a deleted row's category is gone:
+
+- **Upsert:** the live row still exists, so the engine checks it against "Syncs in 2.0" (a shared
+  category, or a task or section inside one) and sends it only if it qualifies.
+- **Delete:** the row and its category link are gone, so membership can't be read from it. The
+  engine applies [Tombstone provenance](#tombstone-provenance) instead: it sends the delete only
+  if the server already knows that `uid` for that kind. That covers every shared row, including
+  cascades, and never an unshared or pre-share one.
+
+It acknowledges each journal row it delivered, or decided not to send, by `uid`, kind and
+sequence number, so a record edited during the upload stays pending.
 
 ## Changing this document
 
