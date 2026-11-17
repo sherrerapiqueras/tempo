@@ -68,6 +68,7 @@ fun SettingsContent(
         CompletedTaskRetentionSection(uiState = uiState, onEvent = onEvent)
         FocusSection(uiState = uiState, onEvent = onEvent)
         BackupSection(uiState = uiState, onEvent = onEvent)
+        DriveBackupSection(uiState = uiState, onEvent = onEvent)
         NotificationsSection()
         LanguageSection()
         AboutSection(

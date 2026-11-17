@@ -1,0 +1,72 @@
+package com.mandrecode.tempo.infrastructure.backup.drive
+
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import com.google.android.gms.auth.api.identity.AuthorizationRequest
+import com.google.android.gms.auth.api.identity.AuthorizationResult
+import com.google.android.gms.auth.api.identity.Identity
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.CommonStatusCodes
+import com.google.android.gms.common.api.Scope
+import com.mandrecode.tempo.features.backup.domain.model.DriveBackupFailure
+import com.mandrecode.tempo.features.backup.domain.repository.CloudAuthorization
+import com.mandrecode.tempo.features.backup.domain.repository.CloudAuthorizationResult
+import com.mandrecode.tempo.features.backup.domain.repository.CloudBackupException
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
+
+/**
+ * Drive access through Play services' AuthorizationClient (#304), for the `drive.appdata` scope
+ * only. Silent by design: once granted, asking again returns a fresh access token (about an hour)
+ * with no UI, which is all a scheduled backup needs. No refresh token is ever stored on the device.
+ */
+class GoogleDriveAuthorization
+    @Inject
+    constructor(
+        @ApplicationContext private val context: Context,
+    ) : CloudAuthorization {
+        override suspend fun authorize(): CloudAuthorizationResult {
+            val result = request()
+            val token = result.accessToken
+            return if (result.hasResolution() || token == null) {
+                CloudAuthorizationResult.NeedsUserConsent
+            } else {
+                CloudAuthorizationResult.Authorized(token)
+            }
+        }
+
+        /**
+         * For the screen asking interactively: the consent to show, or null when access is
+         * already granted. Throws [CloudBackupException] when Play services cannot authorise at all.
+         */
+        suspend fun consentIntent(): PendingIntent? = request().takeIf { it.hasResolution() }?.pendingIntent
+
+        /** Whether the consent screen launched from [consentIntent] ended with access granted. */
+        fun isGranted(data: Intent?): Boolean =
+            runCatching {
+                Identity.getAuthorizationClient(context).getAuthorizationResultFromIntent(data).accessToken != null
+            }.getOrDefault(false)
+
+        private suspend fun request(): AuthorizationResult =
+            try {
+                Identity
+                    .getAuthorizationClient(context)
+                    .authorize(AuthorizationRequest.builder().setRequestedScopes(listOf(Scope(DRIVE_APPDATA))).build())
+                    .await()
+            } catch (e: ApiException) {
+                val failure =
+                    if (e.statusCode == CommonStatusCodes.NETWORK_ERROR) {
+                        DriveBackupFailure.NETWORK
+                    } else {
+                        // DEVELOPER_ERROR (no OAuth client for this app and signature) and the like.
+                        DriveBackupFailure.UNEXPECTED
+                    }
+                throw CloudBackupException(failure, e)
+            }
+
+        companion object {
+            const val DRIVE_APPDATA = "https://www.googleapis.com/auth/drive.appdata"
+        }
+    }

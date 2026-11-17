@@ -115,6 +115,7 @@ fun TempoNavHost(
     modifier: Modifier = Modifier,
     routinesNavigationTrigger: Long = 0L,
     tasksNavigationTrigger: Long = 0L,
+    settingsNavigationTrigger: Long = 0L,
     pendingNotificationAction: PendingNotificationAction? = null,
     onConsumePendingNotificationAction: () -> Unit = {},
     startDestination: NavKey = RoutinesRoute,
@@ -129,6 +130,7 @@ fun TempoNavHost(
         navigator = navigator,
         routinesNavigationTrigger = routinesNavigationTrigger,
         tasksNavigationTrigger = tasksNavigationTrigger,
+        settingsNavigationTrigger = settingsNavigationTrigger,
         onRouteChange = onRouteChange,
     )
 
@@ -370,6 +372,7 @@ private fun NotificationNavigationEffects(
     navigator: TempoNavigator,
     routinesNavigationTrigger: Long,
     tasksNavigationTrigger: Long,
+    settingsNavigationTrigger: Long,
     onRouteChange: (String) -> Unit,
 ) {
     val currentOnRouteChange by rememberUpdatedState(onRouteChange)
@@ -385,6 +388,12 @@ private fun NotificationNavigationEffects(
         if (tasksNavigationTrigger > 0) {
             navigator.navigateToTopLevel(TasksRoute)
             currentOnRouteChange(TempoTab.TASKS.preferenceValue)
+        }
+    }
+
+    LaunchedEffect(settingsNavigationTrigger) {
+        if (settingsNavigationTrigger > 0 && navigator.currentRoute != SettingsRoute) {
+            navigator.navigate(SettingsRoute)
         }
     }
 }

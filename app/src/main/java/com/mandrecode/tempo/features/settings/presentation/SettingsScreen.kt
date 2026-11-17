@@ -2,6 +2,7 @@ package com.mandrecode.tempo.features.settings.presentation
 
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -68,9 +69,17 @@ fun SettingsScreen(
             uri?.let { viewModel.onEvent(SettingsContract.UiEvent.ImportFilePicked(it)) }
         }
 
+    val driveConsentLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
+            viewModel.onEvent(SettingsContract.UiEvent.DriveBackup.ConsentFinished(result.data))
+        }
+
     LaunchedEffect(viewModel) {
         viewModel.uiEffect.collect { effect ->
             when (effect) {
+                is SettingsContract.UiEffect.LaunchDriveConsent ->
+                    driveConsentLauncher.launch(IntentSenderRequest.Builder(effect.intent).build())
+
                 is SettingsContract.UiEffect.LaunchExportPicker ->
                     exportLauncher.launch(effect.suggestedFileName)
 

@@ -47,6 +47,7 @@ import com.mandrecode.tempo.features.focus.presentation.FocusViewModel
 import com.mandrecode.tempo.features.routines.presentation.RoutinesViewModel
 import com.mandrecode.tempo.features.tasks.presentation.TasksViewModel
 import com.mandrecode.tempo.features.widget.presentation.QuickAddTaskWidget
+import com.mandrecode.tempo.infrastructure.backup.drive.DriveBackupNotifier
 import com.mandrecode.tempo.infrastructure.reminders.ReminderRefreshScheduler
 import com.mandrecode.tempo.infrastructure.reminders.receivers.HabitReminderReceiver
 import com.mandrecode.tempo.infrastructure.reminders.receivers.MarkAsCompletedReceiver
@@ -82,6 +83,7 @@ class MainActivity :
     // Triggers for navigation
     private val routinesNavigationTrigger = mutableLongStateOf(0L)
     private val tasksNavigationTrigger = mutableLongStateOf(0L)
+    private val settingsNavigationTrigger = mutableLongStateOf(0L)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
@@ -184,6 +186,7 @@ class MainActivity :
                                     focusSessionRepository = focusSessionRepository,
                                     routinesNavigationTrigger = routinesNavigationTrigger.longValue,
                                     tasksNavigationTrigger = tasksNavigationTrigger.longValue,
+                                    settingsNavigationTrigger = settingsNavigationTrigger.longValue,
                                     pendingNotificationAction = pendingNotificationAction,
                                     onConsumePendingNotificationAction = {
                                         mainViewModel.consumePendingNotificationAction()
@@ -289,6 +292,11 @@ class MainActivity :
         ) {
             tasksNavigationTrigger.longValue++
             intent.removeExtra(TaskReminderReceiver.EXTRA_OPEN_TASKS)
+        }
+        // A Drive backup failure the user has to fix (#306): the fix is in Settings.
+        if (intent.getBooleanExtra(DriveBackupNotifier.EXTRA_OPEN_SETTINGS, false)) {
+            settingsNavigationTrigger.longValue++
+            intent.removeExtra(DriveBackupNotifier.EXTRA_OPEN_SETTINGS)
         }
 
         // Launched from the home-screen quick-add-task widget. Guarded by the notification

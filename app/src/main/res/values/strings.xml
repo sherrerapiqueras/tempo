@@ -779,4 +779,45 @@
     <string name="msg_attachment_failed">Couldn\'t attach that file</string>
     <string name="msg_attachment_remove_failed">Couldn\'t remove that attachment</string>
     <string name="msg_attachment_no_app">No app on this device can open this file</string>
+
+    <!-- Google Drive backup (#306) -->
+    <string name="drive_backup_title">Google Drive backup</string>
+    <string name="drive_backup_turn_on_title">Back up to Google Drive</string>
+    <string name="drive_backup_turn_on_description">Automatically, encrypted with a passphrase only you know</string>
+    <string name="drive_backup_last_backup">Last backup</string>
+    <string name="drive_backup_never">Never</string>
+    <string name="drive_backup_now">Back up now</string>
+    <string name="drive_backup_now_description">Runs as soon as the network allows</string>
+    <string name="drive_backup_now_started">Backup started</string>
+    <string name="drive_backup_frequency">Frequency</string>
+    <string name="drive_backup_frequency_daily">Daily</string>
+    <string name="drive_backup_frequency_weekly">Weekly</string>
+    <string name="drive_backup_wifi_only">Only on Wi-Fi</string>
+    <string name="drive_backup_change_passphrase">Change backup passphrase</string>
+    <string name="drive_backup_change_passphrase_description">Applies to backups made from now on</string>
+    <string name="drive_backup_turn_off">Turn off</string>
+    <string name="drive_backup_turn_off_description">Backups already in Google Drive stay there</string>
+    <string name="drive_backup_turn_off_title">Turn off Google Drive backup?</string>
+    <string name="drive_backup_turn_off_message">No more backups will be made, and the backup passphrase is forgotten on this device. Backups already in Google Drive stay there.</string>
+    <string name="drive_backup_turn_off_confirm">Turn off</string>
+    <string name="drive_backup_setup_title">Set a backup passphrase</string>
+    <string name="drive_backup_setup_message">You\'ll need this passphrase to restore your backup on a new phone. Tempo can\'t recover it: if you forget it, your backups can\'t be read.\n\nIt\'s stored on this device so backups can run automatically, and it\'s never sent to Google or to Tempo.</string>
+    <string name="drive_backup_setup_confirm">Turn on</string>
+    <string name="drive_backup_change_title">Change backup passphrase</string>
+    <string name="drive_backup_change_message">New backups will use this passphrase. Backups already in Google Drive still need the passphrase they were made with.</string>
+    <string name="drive_backup_change_confirm">Change</string>
+    <string name="drive_backup_passphrase_label">Backup passphrase</string>
+    <string name="drive_backup_passphrase_confirm_label">Confirm passphrase</string>
+    <string name="drive_backup_reconnect">Reconnect Google Drive</string>
+    <string name="drive_backup_set_passphrase">Set backup passphrase</string>
+    <string name="drive_backup_unavailable_title">Couldn\'t connect to Google Drive</string>
+    <string name="drive_backup_unavailable_message">Google Drive isn\'t available right now. Check your connection and that Google Play services are up to date, then try again.</string>
+    <string name="drive_backup_failure_network">Couldn\'t reach Google Drive. Tempo will try again.</string>
+    <string name="drive_backup_failure_authorization">Tempo no longer has access to Google Drive. Reconnect to keep backing up.</string>
+    <string name="drive_backup_failure_storage">Your Google storage is full. Free up space to keep backing up.</string>
+    <string name="drive_backup_failure_passphrase">The backup passphrase can\'t be read on this device anymore. Set it again to keep backing up.</string>
+    <string name="drive_backup_failure_unexpected">The last backup failed. Tempo will try again at the next scheduled time.</string>
+    <string name="drive_backup_notification_title">Google Drive backup stopped</string>
+    <string name="drive_backup_notification_channel_name">Backup</string>
+    <string name="drive_backup_notification_channel_description">Problems with automatic Google Drive backups</string>
 </resources>

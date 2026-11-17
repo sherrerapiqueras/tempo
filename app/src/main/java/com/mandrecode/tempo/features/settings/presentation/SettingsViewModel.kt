@@ -57,6 +57,7 @@ class SettingsViewModel
         private val missedReminderPreferences: MissedReminderPreferences,
         private val missedReminderScheduler: MissedReminderScheduler,
         private val backupDelegate: SettingsBackupDelegate,
+        private val driveBackupDelegate: SettingsDriveBackupDelegate,
         private val vacationModeRepository: VacationModeRepository,
         private val focusSessionRepository: FocusSessionRepository,
         @ApplicationContext private val appContext: Context,
@@ -80,6 +81,7 @@ class SettingsViewModel
             loadVersionInfo()
             observeFocusPreferences()
             observePreferenceStores()
+            driveBackupDelegate.start(backupHost)
         }
 
         private fun observeThemeMode() {
@@ -177,6 +179,8 @@ class SettingsViewModel
                 is SettingsContract.UiEvent.ImportModeChosen,
                 is SettingsContract.UiEvent.BackupDialogDismissed,
                 -> backupDelegate.onEvent(event, backupHost)
+
+                is SettingsContract.UiEvent.DriveBackup -> driveBackupDelegate.onEvent(event, backupHost)
             }
         }
 

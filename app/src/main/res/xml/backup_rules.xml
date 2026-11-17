@@ -12,6 +12,10 @@
     <exclude domain="database" path="tempo_database-wal"/>
     <exclude domain="database" path="tempo_database-shm"/>
     <exclude domain="sharedpref" path="tempo_secure_prefs.xml"/>
+    <!-- Drive backup (#305/#306): the passphrase blob is useless without its Keystore key, and
+         "backup on" without that passphrase would only fail on the new device. -->
+    <exclude domain="sharedpref" path="tempo_backup_secret_prefs.xml"/>
+    <exclude domain="sharedpref" path="drive_backup_prefs.xml"/>
     <!-- Task attachments are only reachable through rows in the excluded database. -->
     <exclude domain="file" path="attachments/"/>
 </full-backup-content>

@@ -783,4 +783,45 @@
     <string name="msg_attachment_failed">No se ha podido adjuntar ese archivo</string>
     <string name="msg_attachment_remove_failed">No se ha podido quitar ese adjunto</string>
     <string name="msg_attachment_no_app">Ninguna app de este dispositivo puede abrir este archivo</string>
+
+    <!-- Google Drive backup (#306) -->
+    <string name="drive_backup_title">Copia en Google Drive</string>
+    <string name="drive_backup_turn_on_title">Copiar en Google Drive</string>
+    <string name="drive_backup_turn_on_description">Automáticamente, cifrada con una frase que solo tú conoces</string>
+    <string name="drive_backup_last_backup">Última copia</string>
+    <string name="drive_backup_never">Nunca</string>
+    <string name="drive_backup_now">Hacer copia ahora</string>
+    <string name="drive_backup_now_description">Se hace en cuanto la red lo permita</string>
+    <string name="drive_backup_now_started">Copia iniciada</string>
+    <string name="drive_backup_frequency">Frecuencia</string>
+    <string name="drive_backup_frequency_daily">Diaria</string>
+    <string name="drive_backup_frequency_weekly">Semanal</string>
+    <string name="drive_backup_wifi_only">Solo con wifi</string>
+    <string name="drive_backup_change_passphrase">Cambiar la frase de la copia</string>
+    <string name="drive_backup_change_passphrase_description">Se aplica a las copias que se hagan a partir de ahora</string>
+    <string name="drive_backup_turn_off">Desactivar</string>
+    <string name="drive_backup_turn_off_description">Las copias que ya están en Google Drive se quedan allí</string>
+    <string name="drive_backup_turn_off_title">¿Desactivar la copia en Google Drive?</string>
+    <string name="drive_backup_turn_off_message">No se harán más copias y la frase de la copia se olvidará en este dispositivo. Las copias que ya están en Google Drive se quedan allí.</string>
+    <string name="drive_backup_turn_off_confirm">Desactivar</string>
+    <string name="drive_backup_setup_title">Elige una frase para la copia</string>
+    <string name="drive_backup_setup_message">Necesitarás esta frase para restaurar la copia en un teléfono nuevo. Tempo no puede recuperarla: si la olvidas, tus copias no se podrán leer.\n\nSe guarda en este dispositivo para que las copias se hagan solas, y nunca se envía a Google ni a Tempo.</string>
+    <string name="drive_backup_setup_confirm">Activar</string>
+    <string name="drive_backup_change_title">Cambiar la frase de la copia</string>
+    <string name="drive_backup_change_message">Las copias nuevas usarán esta frase. Las que ya están en Google Drive siguen necesitando la frase con la que se hicieron.</string>
+    <string name="drive_backup_change_confirm">Cambiar</string>
+    <string name="drive_backup_passphrase_label">Frase de la copia</string>
+    <string name="drive_backup_passphrase_confirm_label">Confirma la frase</string>
+    <string name="drive_backup_reconnect">Volver a conectar Google Drive</string>
+    <string name="drive_backup_set_passphrase">Elegir la frase de la copia</string>
+    <string name="drive_backup_unavailable_title">No se pudo conectar con Google Drive</string>
+    <string name="drive_backup_unavailable_message">Google Drive no está disponible ahora. Comprueba la conexión y que los servicios de Google Play estén actualizados, y vuelve a intentarlo.</string>
+    <string name="drive_backup_failure_network">No se pudo conectar con Google Drive. Tempo lo volverá a intentar.</string>
+    <string name="drive_backup_failure_authorization">Tempo ya no tiene acceso a Google Drive. Vuelve a conectarlo para seguir haciendo copias.</string>
+    <string name="drive_backup_failure_storage">Tu almacenamiento de Google está lleno. Libera espacio para seguir haciendo copias.</string>
+    <string name="drive_backup_failure_passphrase">La frase de la copia ya no se puede leer en este dispositivo. Vuelve a elegirla para seguir haciendo copias.</string>
+    <string name="drive_backup_failure_unexpected">La última copia falló. Tempo lo volverá a intentar en la próxima copia programada.</string>
+    <string name="drive_backup_notification_title">La copia en Google Drive se ha detenido</string>
+    <string name="drive_backup_notification_channel_name">Copia de seguridad</string>
+    <string name="drive_backup_notification_channel_description">Problemas con las copias automáticas en Google Drive</string>
 </resources>

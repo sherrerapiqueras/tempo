@@ -1,8 +1,12 @@
 package com.mandrecode.tempo.features.settings.presentation
 
+import android.app.PendingIntent
+import android.content.Intent
 import android.net.Uri
 import androidx.annotation.StringRes
 import com.mandrecode.tempo.core.domain.model.ThemeMode
+import com.mandrecode.tempo.features.backup.domain.model.BackupFrequency
+import com.mandrecode.tempo.features.backup.domain.model.DriveBackupFailure
 import com.mandrecode.tempo.features.backup.domain.model.ImportConflict
 import com.mandrecode.tempo.features.backup.domain.model.ImportMode
 import com.mandrecode.tempo.features.backup.domain.model.ValidationIssue
@@ -41,7 +45,35 @@ object SettingsContract {
         val vacationEndDate: LocalDate? = null,
         val backupInProgress: Boolean = false,
         val backupDialog: BackupDialog? = null,
+        val driveBackup: DriveBackupUiState = DriveBackupUiState(),
+        val driveBackupDialog: DriveBackupDialog? = null,
     )
+
+    /** Google Drive backup (#306): its configuration and what is known about recent backups. */
+    data class DriveBackupUiState(
+        val enabled: Boolean = false,
+        val frequency: BackupFrequency = BackupFrequency.DAILY,
+        val unmeteredOnly: Boolean = true,
+        /** Epoch millis of the last successful backup, null when there has never been one. */
+        val lastSuccessAt: Long? = null,
+        /** The failure to report, only while it is newer than the last success. */
+        val failure: DriveBackupFailure? = null,
+    )
+
+    /** Modal state of the Google Drive backup section. */
+    sealed interface DriveBackupDialog {
+        /** Set the backup passphrase: first time ([isChange] false) or a replacement. */
+        data class SetPassphrase(
+            val isChange: Boolean,
+        ) : DriveBackupDialog
+
+        data object ChooseFrequency : DriveBackupDialog
+
+        data object ConfirmTurnOff : DriveBackupDialog
+
+        /** Play services could not authorise at all (no connection, outdated, not configured). */
+        data object Unavailable : DriveBackupDialog
+    }
 
     /** Modal state of the Settings Backup section. */
     sealed interface BackupDialog {
@@ -159,6 +191,43 @@ object SettingsContract {
         ) : UiEvent
 
         data object BackupDialogDismissed : UiEvent
+
+        /** Events of the Google Drive backup section (#306). */
+        sealed interface DriveBackup : UiEvent {
+            data object TurnOnClicked : DriveBackup
+
+            data object ReconnectClicked : DriveBackup
+
+            /** The Drive consent screen returned; [data] is its result intent, null if cancelled. */
+            data class ConsentFinished(
+                val data: Intent?,
+            ) : DriveBackup
+
+            data class PassphraseConfirmed(
+                val passphrase: CharArray,
+                val confirmation: CharArray,
+            ) : DriveBackup
+
+            data object FrequencyClicked : DriveBackup
+
+            data class FrequencySelected(
+                val frequency: BackupFrequency,
+            ) : DriveBackup
+
+            data class WifiOnlyToggled(
+                val enabled: Boolean,
+            ) : DriveBackup
+
+            data object BackUpNowClicked : DriveBackup
+
+            data object ChangePassphraseClicked : DriveBackup
+
+            data object TurnOffClicked : DriveBackup
+
+            data object TurnOffConfirmed : DriveBackup
+
+            data object DialogDismissed : DriveBackup
+        }
     }
 
     /**
@@ -170,6 +239,11 @@ object SettingsContract {
         ) : UiEffect
 
         data object LaunchImportPicker : UiEffect
+
+        /** Show Google's consent for Drive access (#306); the result comes back as ConsentFinished. */
+        data class LaunchDriveConsent(
+            val intent: PendingIntent,
+        ) : UiEffect
 
         data class ShowMessage(
             @param:StringRes val message: Int,
