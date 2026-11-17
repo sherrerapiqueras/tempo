@@ -61,6 +61,14 @@ class FocusSessionSheetTest {
      */
     private fun nameIt(name: String) {
         composeTestRule.onNodeWithTag(SESSION_EDITOR_TITLE_FIELD_TEST_TAG).performTextInput(name)
+        hideKeyboard()
+    }
+
+    /**
+     * Puts the keyboard away. A new session opens with the name focused, so the keyboard is up, and
+     * on a small screen it sits over the buttons below and takes their clicks.
+     */
+    private fun hideKeyboard() {
         composeTestRule.onNodeWithTag(SESSION_EDITOR_TITLE_FIELD_TEST_TAG).performImeAction()
         composeTestRule.waitForIdle()
     }
@@ -81,6 +89,7 @@ class FocusSessionSheetTest {
     fun startingWithoutAName_asksForOneInsteadOfStarting() {
         setSheet(settingUp)
 
+        hideKeyboard()
         composeTestRule.onNodeWithText("Start 25 min").performScrollTo().performClick()
 
         composeTestRule.onNodeWithText("Title is required").assertExists()
@@ -117,6 +126,7 @@ class FocusSessionSheetTest {
         composeTestRule.onNodeWithText("50:00").assertIsDisplayed()
         // The chip of the topic now in the form shows as the one chosen.
         composeTestRule.onNode(hasText("Study") and isSelected()).assertExists()
+        hideKeyboard()
         composeTestRule.onNodeWithText("Start 50 min").performScrollTo().performClick()
 
         assertThat(events).containsExactly(FocusContract.UiEvent.StartNewSession(study.copy(id = 0)))
