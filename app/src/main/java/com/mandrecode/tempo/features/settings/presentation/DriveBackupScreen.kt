@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -244,15 +245,12 @@ private fun DriveBackupStatusItem(
                 modifier = Modifier.padding(start = 72.dp, end = 16.dp, bottom = 12.dp),
             )
             action?.let {
-                Text(
-                    text = stringResource(it.actionLabel()),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier =
-                        Modifier
-                            .clickable { onEvent(it) }
-                            .padding(start = 72.dp, end = 16.dp, bottom = 16.dp),
-                )
+                FilledTonalButton(
+                    onClick = { onEvent(it) },
+                    modifier = Modifier.padding(start = 72.dp, end = 16.dp, bottom = 16.dp),
+                ) {
+                    Text(stringResource(it.actionLabel()))
+                }
             }
         }
     }
