@@ -191,6 +191,46 @@ class EntityIdentityTriggersTest {
             assertThat(stored.updatedAt).isAtLeast(before - 1)
         }
 
+    @Test
+    fun updateFromAStaleCopyStillAdvancesUpdatedAt() =
+        runTest {
+            // The editor read the row at 1_000; something else wrote it since (now 5_000).
+            val dao = database.categoryDao()
+            val id = dao.insertCategory(CategoryEntity(name = "Old", uid = UID, createdAt = 1_000L, updatedAt = 1_000L))
+            val stale = dao.getCategoryById(id)!!
+            dao.updateCategory(stale.copy(name = "Elsewhere", updatedAt = 5_000L))
+
+            dao.updateCategory(stale.copy(name = "Mine"))
+
+            val stored = dao.getCategoryById(id)!!
+            assertThat(stored.name).isEqualTo("Mine")
+            assertThat(stored.updatedAt).isGreaterThan(5_000L)
+        }
+
+    @Test
+    fun insertWithCreatedAtButNoUpdatedAtTakesCreatedAt() =
+        runTest {
+            val id = database.categoryDao().insertCategory(CategoryEntity(name = "Restored", uid = UID, createdAt = 1_000L))
+
+            assertThat(database.categoryDao().getCategoryById(id)!!.updatedAt).isEqualTo(1_000L)
+        }
+
+    @Test
+    fun reopeningLeavesMatchingTriggersAlone() {
+        // The open already reconciled them; doing it again has nothing to change.
+        assertThat(EntityIdentitySchema.createTriggers(db)).isEqualTo(0)
+
+        db.execSQL("DROP TRIGGER `${EntityIdentitySchema.updateTriggerName("tasks")}`")
+        db.execSQL("CREATE TRIGGER `identity_obsolete_tasks` AFTER INSERT ON `tasks` BEGIN SELECT 1; END")
+
+        assertThat(EntityIdentitySchema.createTriggers(db)).isEqualTo(2)
+        assertThat(EntityIdentitySchema.createTriggers(db)).isEqualTo(0)
+        db.query("SELECT COUNT(*) FROM sqlite_master WHERE name = 'identity_obsolete_tasks'").use {
+            it.moveToFirst()
+            assertThat(it.getInt(0)).isEqualTo(0)
+        }
+    }
+
     private companion object {
         const val UID = "01234567-89ab-7def-8123-456789abcdef"
     }
