@@ -7,6 +7,7 @@ import com.mandrecode.tempo.features.backup.domain.usecase.ChangeBackupPassphras
 import com.mandrecode.tempo.features.backup.domain.usecase.DisableDriveBackupUseCase
 import com.mandrecode.tempo.features.backup.domain.usecase.EnableDriveBackupUseCase
 import com.mandrecode.tempo.features.backup.domain.usecase.PassphraseCheck
+import com.mandrecode.tempo.features.backup.domain.usecase.RefreshDriveBackupStatusUseCase
 import com.mandrecode.tempo.features.backup.domain.usecase.RunDriveBackupNowUseCase
 import com.mandrecode.tempo.features.backup.domain.usecase.UpdateDriveBackupScheduleUseCase
 import com.mandrecode.tempo.features.backup.presentation.DriveRestoreFlow
@@ -34,6 +35,7 @@ class SettingsDriveBackupDelegate
         private val updateSchedule: UpdateDriveBackupScheduleUseCase,
         private val backUpNow: RunDriveBackupNowUseCase,
         private val restoreFlow: DriveRestoreFlow,
+        private val refreshStatus: RefreshDriveBackupStatusUseCase,
     ) {
         /** What the consent being shown was asked for. */
         private enum class ConsentPurpose { TURN_ON, RECONNECT }
@@ -56,6 +58,7 @@ class SettingsDriveBackupDelegate
                     )
                 }.collect { drive -> host.updateState { it.copy(driveBackup = drive) } }
             }
+            host.scope.launch { refreshStatus() }
         }
 
         fun onEvent(
@@ -82,6 +85,7 @@ class SettingsDriveBackupDelegate
                 }
                 Event.DialogDismissed -> showDialog(null, host)
                 Event.RestoreClicked, is Event.Restore -> onRestoreEvent(event, host)
+                Event.ManageStorageClicked -> host.sendEffect(SettingsContract.UiEffect.OpenGoogleStorage)
             }
         }
 

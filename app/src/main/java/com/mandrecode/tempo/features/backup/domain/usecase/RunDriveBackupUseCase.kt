@@ -42,7 +42,7 @@ class RunDriveBackupUseCase
 
         suspend operator fun invoke(): Result {
             if (!preferences.settings.value.enabled) return Result.Skipped
-            val result =
+            val result: Result =
                 try {
                     backUp()
                     Result.Succeeded
@@ -58,7 +58,9 @@ class RunDriveBackupUseCase
             val now = clock.now().toEpochMilliseconds()
             when (result) {
                 is Result.Failed -> preferences.recordFailure(result.failure, now)
-                else -> preferences.recordSuccess(now)
+                Result.Succeeded -> preferences.recordSuccess(now)
+                // A run queued before backup was turned off: nothing ran, so nothing is recorded.
+                Result.Skipped -> Unit
             }
             return result
         }

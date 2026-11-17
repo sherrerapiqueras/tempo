@@ -9,10 +9,14 @@ import com.mandrecode.tempo.features.backup.domain.repository.CloudBackupExcepti
 import com.mandrecode.tempo.features.backup.domain.usecase.ChangeBackupPassphraseUseCase
 import com.mandrecode.tempo.features.backup.domain.usecase.DisableDriveBackupUseCase
 import com.mandrecode.tempo.features.backup.domain.usecase.EnableDriveBackupUseCase
+import com.mandrecode.tempo.features.backup.domain.usecase.FakeAuthorization
+import com.mandrecode.tempo.features.backup.domain.usecase.FakeCloudStore
 import com.mandrecode.tempo.features.backup.domain.usecase.FakeDrivePreferences
 import com.mandrecode.tempo.features.backup.domain.usecase.FakePassphraseStore
 import com.mandrecode.tempo.features.backup.domain.usecase.FakeScheduler
+import com.mandrecode.tempo.features.backup.domain.usecase.RefreshDriveBackupStatusUseCase
 import com.mandrecode.tempo.features.backup.domain.usecase.RunDriveBackupNowUseCase
+import com.mandrecode.tempo.features.backup.domain.usecase.SteppingClock
 import com.mandrecode.tempo.features.backup.domain.usecase.UpdateDriveBackupScheduleUseCase
 import com.mandrecode.tempo.features.backup.presentation.driveRestoreFlow
 import com.mandrecode.tempo.infrastructure.backup.drive.GoogleDriveAuthorization
@@ -179,6 +183,14 @@ class SettingsDriveBackupDelegateTest {
         }
 
     @Test
+    fun `a full Drive opens Google storage`() =
+        runTest(UnconfinedTestDispatcher()) {
+            delegate.onEvent(Event.ManageStorageClicked, host())
+
+            assertThat(effects.single()).isEqualTo(SettingsContract.UiEffect.OpenGoogleStorage)
+        }
+
+    @Test
     fun `dismissing closes the dialog`() =
         runTest(UnconfinedTestDispatcher()) {
             val host = host()
@@ -205,4 +217,6 @@ internal fun driveBackupDelegate(
     updateSchedule = UpdateDriveBackupScheduleUseCase(preferences, scheduler),
     backUpNow = RunDriveBackupNowUseCase(preferences, scheduler),
     restoreFlow = driveRestoreFlow(store = store, preferences = preferences, scheduler = scheduler),
+    refreshStatus =
+        RefreshDriveBackupStatusUseCase(preferences, FakeAuthorization(), FakeCloudStore(), SteppingClock()),
 )

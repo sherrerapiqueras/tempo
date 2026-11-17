@@ -51,7 +51,14 @@ class KeystoreBackupPassphraseStore
         @Synchronized
         override fun read(): CharArray? {
             val blob = prefs.getString(KEY_BLOB, null)
-            val key = keyStore().getKey(KEY_ALIAS, null) as? SecretKey
+            // Keystore access itself can fail (an invalidated or unavailable key): that also reads
+            // as "no passphrase", which a backup run reports as PASSPHRASE_UNAVAILABLE.
+            val key =
+                try {
+                    keyStore().getKey(KEY_ALIAS, null) as? SecretKey
+                } catch (_: GeneralSecurityException) {
+                    null
+                }
             return if (blob == null || key == null) null else unwrap(blob, key)
         }
 

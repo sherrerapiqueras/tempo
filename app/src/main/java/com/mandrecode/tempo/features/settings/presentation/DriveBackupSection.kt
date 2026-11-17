@@ -134,6 +134,7 @@ private fun DriveBackupStatusItem(
         when (failure) {
             DriveBackupFailure.AUTHORIZATION_NEEDED -> Event.ReconnectClicked
             DriveBackupFailure.PASSPHRASE_UNAVAILABLE -> Event.ChangePassphraseClicked
+            DriveBackupFailure.STORAGE_FULL -> Event.ManageStorageClicked
             else -> null
         }
     Column(modifier = Modifier.testTag(DRIVE_BACKUP_STATUS_TEST_TAG)) {
@@ -302,5 +303,6 @@ private fun DriveBackupFailure.message(): String =
 private fun Event.actionLabel(): Int =
     when (this) {
         Event.ReconnectClicked -> R.string.drive_backup_reconnect
+        Event.ManageStorageClicked -> R.string.drive_backup_manage_storage
         else -> R.string.drive_backup_set_passphrase
     }

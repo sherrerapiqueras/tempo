@@ -28,6 +28,9 @@ interface DriveBackupPreferences {
 
     fun recordSuccess(atMillis: Long)
 
+    /** Replaces the last success with what Drive actually holds; null when no backup is there any more. */
+    fun replaceLastSuccess(atMillis: Long?)
+
     fun recordFailure(
         failure: DriveBackupFailure,
         atMillis: Long,

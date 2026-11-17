@@ -24,13 +24,21 @@ class DriveRestCloudStore
     ) : CloudBackupStore {
         private val json = Json { ignoreUnknownKeys = true }
 
+        /** Every page: retention must see all backups, however many accumulated while pruning failed. */
         override suspend fun list(accessToken: String): List<CloudBackupFile> {
             val query = "name contains '$NAME_PREFIX' and trashed = false"
-            val url =
+            val base =
                 "$API/files?spaces=appDataFolder&pageSize=$PAGE_SIZE&orderBy=createdTime%20desc" +
-                    "&fields=${encode("files($FIELDS)")}&q=${encode(query)}"
-            val response = call(HttpRequest("GET", url, auth(accessToken)))
-            return json.decodeFromString<FileList>(response.body).files.map { it.toDomain() }
+                    "&fields=${encode("nextPageToken,files($FIELDS)")}&q=${encode(query)}"
+            val files = mutableListOf<CloudBackupFile>()
+            var pageToken: String? = null
+            do {
+                val url = pageToken?.let { "$base&pageToken=${encode(it)}" } ?: base
+                val page = json.decodeFromString<FileList>(call(HttpRequest("GET", url, auth(accessToken))).body)
+                files += page.files.map { it.toDomain() }
+                pageToken = page.nextPageToken
+            } while (pageToken != null)
+            return files
         }
 
         override suspend fun upload(
@@ -96,6 +104,7 @@ class DriveRestCloudStore
         @Serializable
         private data class FileList(
             val files: List<DriveFile> = emptyList(),
+            val nextPageToken: String? = null,
         )
 
         @Serializable

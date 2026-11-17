@@ -813,6 +813,7 @@
     <string name="drive_backup_passphrase_label">Frase de la copia</string>
     <string name="drive_backup_passphrase_confirm_label">Confirma la frase</string>
     <string name="drive_backup_reconnect">Volver a conectar Google Drive</string>
+    <string name="drive_backup_manage_storage">Gestionar el almacenamiento de Google</string>
     <string name="drive_backup_set_passphrase">Elegir la frase de la copia</string>
     <string name="drive_backup_unavailable_title">No se pudo conectar con Google Drive</string>
     <string name="drive_backup_unavailable_message">Google Drive no está disponible ahora. Comprueba la conexión y que los servicios de Google Play estén actualizados, y vuelve a intentarlo.</string>
