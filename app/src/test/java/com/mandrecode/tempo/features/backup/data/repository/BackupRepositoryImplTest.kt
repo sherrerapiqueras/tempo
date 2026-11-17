@@ -131,7 +131,7 @@ class BackupRepositoryImplTest {
                 )
 
             assertThat(outcome)
-                .isEqualTo(ImportOutcome.UnsupportedVersion(fileVersion = 99, maxSupported = 1))
+                .isEqualTo(ImportOutcome.UnsupportedVersion(fileVersion = 99, maxSupported = BACKUP_SCHEMA_VERSION))
             coVerify(exactly = 0) { taskDao.insertTask(any()) }
             coVerify(exactly = 0) { taskDao.deleteAllTasks() }
         }
@@ -247,6 +247,55 @@ class BackupRepositoryImplTest {
             assertThat(insertedMembers.single()).containsExactlyElementsIn(localMembers())
             coVerify { sectionDao.deleteAll() }
             coVerify { sectionDao.insertSection(localSections().single()) }
+        }
+
+    @Test
+    fun `frozen v2 fixture restores every record under its identity`() =
+        runTest {
+            val envelope = BackupEncryptionService().encrypt(readFixture("/backup/v2-backup.json"), testPassphrase)
+            val envelopeJson = testJsonFormat.encodeToString(envelope.toDto())
+            val categories = mutableListOf<CategoryEntity>()
+            val tasks = mutableListOf<TaskEntity>()
+            val habits = mutableListOf<HabitEntity>()
+            coEvery { categoryDao.insertCategory(capture(categories)) } returns 0
+            coEvery { taskDao.insertTask(capture(tasks)) } returns 0
+            coEvery { habitDao.insertHabit(capture(habits)) } returns 0
+
+            val outcome = repository.importFromJson(envelopeJson, ImportMode.REPLACE, testPassphrase)
+
+            assertThat(outcome).isInstanceOf(ImportOutcome.Success::class.java)
+            val work = categories.single { it.name == "Work" }
+            assertThat(work.uid).isEqualTo("0195a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b")
+            assertThat(work.createdAt).isEqualTo(1767312000000L)
+            assertThat(work.updatedAt).isEqualTo(1767398400000L)
+            // The Inbox keeps the well-known uid without any legacy id mapping.
+            assertThat(categories.single { it.isDefault }.uid).isEqualTo(DEFAULT_INBOX_UID)
+            assertThat(tasks.map { it.uid })
+                .containsExactly("0195a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2d", "0195a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2e")
+            assertThat(tasks.single { it.title == "Report" }.updatedAt).isEqualTo(1767484800000L)
+            assertThat(habits.single().uid).isEqualTo("0195a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2f")
+        }
+
+    @Test
+    fun `export carries each record's identity through a replace-import`() =
+        runTest {
+            stubLocalData()
+            val identified =
+                localCategories().mapIndexed { index, category ->
+                    category.copy(
+                        uid = "0195a1b2-c3d4-7e5f-8a6b-00000000000$index",
+                        createdAt = 1_000L,
+                        updatedAt = 2_000L,
+                    )
+                }
+            coEvery { categoryDao.getAllCategoriesSync() } returns identified
+            val json = repository.exportEncrypted(testPassphrase)
+            val inserted = mutableListOf<CategoryEntity>()
+            coEvery { categoryDao.insertCategory(capture(inserted)) } returns 0
+
+            repository.importFromJson(json, ImportMode.REPLACE, testPassphrase)
+
+            assertThat(inserted).containsExactlyElementsIn(identified)
         }
 
     @Test

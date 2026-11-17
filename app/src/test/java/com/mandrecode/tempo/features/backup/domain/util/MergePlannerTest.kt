@@ -273,6 +273,96 @@ class MergePlannerTest {
         assertThat(plan.tasksToInsert.last().sortOrder).isEqualTo(2)
     }
 
+    @Test
+    fun `record already known by identity maps onto the local one and keeps it, even when renamed`() {
+        val local =
+            backupData(
+                categories = listOf(category(id = 5, name = "Work (renamed here)").copy(uid = CATEGORY_UID)),
+                tasks = listOf(task(id = 50, categoryId = 5, title = "Report v2").copy(uid = PARENT_UID)),
+            )
+        val incoming =
+            backupData(
+                categories = listOf(category(id = 1, name = "Work").copy(uid = CATEGORY_UID)),
+                tasks = listOf(task(id = 10, categoryId = 1, title = "Report").copy(uid = PARENT_UID)),
+            )
+
+        val plan = planner.plan(incoming, local)
+
+        assertThat(plan.categoriesToInsert).isEmpty()
+        assertThat(plan.tasksToInsert).isEmpty()
+        assertThat(plan.categoryIdMap).containsEntry(1L, 5L)
+        assertThat(plan.taskIdMap).containsEntry(10L, 50L)
+        assertThat(plan.summary.totalConflicts).isEqualTo(0)
+        assertThat(plan.summary.categories.skipped).isEqualTo(1)
+        assertThat(plan.summary.tasks.skipped).isEqualTo(1)
+    }
+
+    @Test
+    fun `children of a record known by identity are matched on their own identity, not cascaded`() {
+        val local =
+            backupData(
+                categories = listOf(category(id = 5, name = "Work").copy(uid = CATEGORY_UID)),
+                tasks =
+                    listOf(
+                        task(id = 50, categoryId = 5, title = "Edited here").copy(uid = PARENT_UID),
+                        task(id = 51, categoryId = 5, title = "Sub", parentTaskId = 50).copy(uid = CHILD_UID),
+                    ),
+            )
+        val incoming =
+            backupData(
+                categories = listOf(category(id = 1, name = "Work").copy(uid = CATEGORY_UID)),
+                tasks =
+                    listOf(
+                        task(id = 10, categoryId = 1, title = "Original").copy(uid = PARENT_UID),
+                        task(id = 11, categoryId = 1, title = "Sub", parentTaskId = 10).copy(uid = CHILD_UID),
+                        task(id = 12, categoryId = 1, title = "New sub", parentTaskId = 10).copy(uid = NEW_UID),
+                    ),
+            )
+
+        val plan = planner.plan(incoming, local)
+
+        assertThat(plan.taskIdMap).containsEntry(11L, 51L)
+        assertThat(plan.tasksToInsert.map { it.uid }).containsExactly(NEW_UID)
+        assertThat(plan.summary.totalConflicts).isEqualTo(0)
+    }
+
+    @Test
+    fun `importing the same identified data twice inserts nothing the second time`() {
+        val data =
+            backupData(
+                categories = listOf(category(id = 1, name = "Work").copy(uid = CATEGORY_UID)),
+                tasks = listOf(task(id = 10, categoryId = 1, title = "Report").copy(uid = PARENT_UID)),
+                habits = listOf(habit(id = 20, title = "Run").copy(uid = HABIT_UID)),
+                habitChains = listOf(chain(id = 30, title = "Morning").copy(uid = CHAIN_UID)),
+            )
+        // What the device holds after the first import: same identities, its own local ids.
+        val afterFirst =
+            backupData(
+                categories = listOf(category(id = 101, name = "Work").copy(uid = CATEGORY_UID)),
+                tasks = listOf(task(id = 110, categoryId = 101, title = "Report").copy(uid = PARENT_UID)),
+                habits = listOf(habit(id = 120, title = "Run").copy(uid = HABIT_UID)),
+                habitChains = listOf(chain(id = 130, title = "Morning").copy(uid = CHAIN_UID)),
+            )
+
+        val plan = planner.plan(data, afterFirst)
+
+        assertThat(plan.summary.totalImported).isEqualTo(0)
+        assertThat(plan.habitIdMap).containsEntry(20L, 120L)
+        assertThat(plan.chainIdMap).containsEntry(30L, 130L)
+    }
+
+    @Test
+    fun `an unknown identity with a natural-key match still follows the natural-key rules`() {
+        val local = backupData(categories = listOf(category(id = 5, name = "Work").copy(uid = CATEGORY_UID)))
+        val incoming = backupData(categories = listOf(category(id = 1, name = "Work").copy(uid = NEW_UID)))
+
+        val plan = planner.plan(incoming, local)
+
+        // Same content, different identity: an exact duplicate, as for a version-1 file.
+        assertThat(plan.categoriesToInsert).isEmpty()
+        assertThat(plan.categoryIdMap).containsEntry(1L, 5L)
+    }
+
     private fun emptyData() = backupData()
 
     @Test
@@ -348,4 +438,13 @@ class MergePlannerTest {
         title = title,
         createdDate = LocalDateTime(2026, 1, 1, 8, 0),
     )
+
+    private companion object {
+        const val CATEGORY_UID = "0195a1b2-c3d4-7e5f-8a6b-000000000001"
+        const val PARENT_UID = "0195a1b2-c3d4-7e5f-8a6b-000000000002"
+        const val CHILD_UID = "0195a1b2-c3d4-7e5f-8a6b-000000000003"
+        const val NEW_UID = "0195a1b2-c3d4-7e5f-8a6b-000000000004"
+        const val HABIT_UID = "0195a1b2-c3d4-7e5f-8a6b-000000000005"
+        const val CHAIN_UID = "0195a1b2-c3d4-7e5f-8a6b-000000000006"
+    }
 }

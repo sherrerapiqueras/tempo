@@ -56,7 +56,7 @@ import javax.inject.Inject
 import kotlin.time.Clock
 
 /** Highest backup schema version this app can read and the version it writes. */
-const val BACKUP_SCHEMA_VERSION = 1
+const val BACKUP_SCHEMA_VERSION = 2
 
 class BackupRepositoryImpl
     @Inject
@@ -244,6 +244,11 @@ class BackupRepositoryImpl
          * references. The plan is computed (reading current data and running the
          * CPU-bound classification) before opening the write transaction, so the
          * transaction itself only performs mutations.
+         *
+         * Merged-in records keep the identity they had in the file (#283): they are the same
+         * records, so importing the file again matches them instead of adding them twice.
+         * MergePlanner never inserts a uid this device already has; a version-1 file has none, and
+         * the database assigns one.
          */
         private suspend fun merge(data: BackupData): ImportSummary {
             val plan = mergePlanner.plan(incoming = data, local = readAll())
@@ -251,13 +256,13 @@ class BackupRepositoryImpl
                 val categoryIds = plan.categoryIdMap.toMutableMap()
                 plan.categoriesToInsert.forEach { category ->
                     categoryIds[category.id] =
-                        database.categoryDao().insertCategory(category.asNew().toEntity())
+                        database.categoryDao().insertCategory(category.copy(id = 0).toEntity())
                 }
                 val sectionIds = plan.sectionIdMap.toMutableMap()
                 plan.sectionsToInsert.forEach { section ->
                     sectionIds[section.id] =
                         database.taskSectionDao().insertSection(
-                            section.asNew().copy(categoryId = categoryIds.getValue(section.categoryId)).toEntity(),
+                            section.copy(id = 0, categoryId = categoryIds.getValue(section.categoryId)).toEntity(),
                         )
                 }
                 plan.sectionAliases.forEach { (alias, canonical) ->
@@ -267,12 +272,12 @@ class BackupRepositoryImpl
                 database.savedSessionDao().insertMerged(data.focusSessions)
                 val habitIds = plan.habitIdMap.toMutableMap()
                 plan.habitsToInsert.forEach { habit ->
-                    habitIds[habit.id] = database.habitDao().insertHabit(habit.asNew().toEntity())
+                    habitIds[habit.id] = database.habitDao().insertHabit(habit.copy(id = 0).toEntity())
                 }
                 val chainIds = plan.chainIdMap.toMutableMap()
                 plan.chainsToInsert.forEach { chain ->
                     chainIds[chain.id] =
-                        database.habitChainDao().insertHabitChain(chain.asNew().toEntity())
+                        database.habitChainDao().insertHabitChain(chain.copy(id = 0).toEntity())
                 }
                 database.habitChainMemberDao().insertMembers(
                     plan.membershipsToInsert.map { membership ->
@@ -297,8 +302,8 @@ class BackupRepositoryImpl
                 taskIds[task.id] =
                     database.taskDao().insertTask(
                         task
-                            .asNew()
                             .copy(
+                                id = 0,
                                 categoryId = categoryIds.getValue(task.categoryId),
                                 parentTaskId = task.parentTaskId?.let(taskIds::getValue),
                                 nextInstanceId = null,
@@ -324,13 +329,14 @@ class BackupRepositoryImpl
  * only as many as the app ever keeps.
  *
  * The name is the session: importing the same file twice must not double a topic, and a topic both
- * sides have keeps this device's lengths.
+ * sides have keeps this device's lengths. A session this device already has by identity (#283) is
+ * skipped too, even if renamed since.
  */
 private suspend fun SavedSessionDao.insertMerged(incoming: List<SavedSession>) {
     val known = getAllSync().map { it.toDomain() }.toMutableList()
     incoming.forEach { session ->
-        if (known.any { it.hasSameNameAs(session) }) return@forEach
-        insert(session.asNew().toEntity())
+        if (known.any { it.hasSameNameAs(session) || it.isSameRecordAs(session) }) return@forEach
+        insert(session.copy(id = 0).toEntity())
         known += session
     }
     trimTo(SavedSession.RECENT_LIMIT)
@@ -463,3 +469,5 @@ private fun decodeData(
  */
 private fun Category.withLegacyInboxIdentity(): Category =
     if (id == EntityIdentitySchema.LEGACY_INBOX_ID && uid == UNSET_UID) copy(uid = DEFAULT_INBOX_UID) else this
+
+private fun SavedSession.isSameRecordAs(other: SavedSession) = uid != UNSET_UID && uid == other.uid
