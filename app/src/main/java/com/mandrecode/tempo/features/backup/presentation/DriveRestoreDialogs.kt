@@ -6,9 +6,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,15 +60,7 @@ internal fun DriveRestoreDialogs(
             TempoMessageDialog(title = stringResource(R.string.drive_restore_none_title), onDismiss = dismiss) {
                 Text(stringResource(R.string.drive_restore_none_message))
             }
-        is DriveRestoreStep.ChooseMode ->
-            TempoConfirmDialog(
-                title = stringResource(R.string.drive_restore_mode_title),
-                confirmLabel = stringResource(R.string.drive_restore_mode_merge),
-                cancelLabel = stringResource(R.string.drive_restore_mode_replace),
-                onConfirm = { onEvent(DriveRestoreEvent.ModeChosen(ImportMode.MERGE)) },
-                onCancel = { onEvent(DriveRestoreEvent.ModeChosen(ImportMode.REPLACE)) },
-                isDestructive = false,
-            ) { Text(stringResource(R.string.drive_restore_mode_message)) }
+        is DriveRestoreStep.ChooseMode -> ChooseModeDialog(onEvent)
         is DriveRestoreStep.EnterPassphrase -> PassphraseDialog(step.previousAttemptWrong, onEvent)
         is DriveRestoreStep.Restored ->
             if (step.offerToKeepBackingUp) {
@@ -87,6 +82,30 @@ internal fun DriveRestoreDialogs(
                 Text(step.reason.message())
             }
         null -> Unit
+    }
+}
+
+/**
+ * Merge or replace. Back, outside taps and Cancel only ever cancel: replacing this device's data
+ * takes its own deliberate, destructive-looking tap.
+ */
+@Composable
+private fun ChooseModeDialog(onEvent: (DriveRestoreEvent) -> Unit) {
+    TempoConfirmDialog(
+        title = stringResource(R.string.drive_restore_mode_title),
+        confirmLabel = stringResource(R.string.drive_restore_mode_merge),
+        onConfirm = { onEvent(DriveRestoreEvent.ModeChosen(ImportMode.MERGE)) },
+        onCancel = { onEvent(DriveRestoreEvent.Dismissed) },
+        isDestructive = false,
+    ) {
+        Column {
+            Text(stringResource(R.string.drive_restore_mode_message))
+            TextButton(
+                onClick = { onEvent(DriveRestoreEvent.ModeChosen(ImportMode.REPLACE)) },
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                modifier = Modifier.padding(top = 8.dp),
+            ) { Text(stringResource(R.string.drive_restore_mode_replace)) }
+        }
     }
 }
 

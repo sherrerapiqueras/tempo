@@ -834,7 +834,7 @@
     <string name="drive_restore_mode_title">This device already has data</string>
     <string name="drive_restore_mode_message">Merge adds what the backup has and this device doesn\'t. Replace makes this device match the backup exactly.</string>
     <string name="drive_restore_mode_merge">Merge</string>
-    <string name="drive_restore_mode_replace">Replace</string>
+    <string name="drive_restore_mode_replace">Replace this device\'s data</string>
     <string name="drive_restore_passphrase_title">Enter the backup passphrase</string>
     <string name="drive_restore_passphrase_message">The passphrase you set when you turned on Google Drive backup.</string>
     <string name="drive_restore_passphrase_wrong">That passphrase doesn\'t open this backup. Try again.</string>

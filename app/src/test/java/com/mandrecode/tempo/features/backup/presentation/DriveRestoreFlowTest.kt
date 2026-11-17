@@ -225,6 +225,23 @@ class DriveRestoreFlowTest {
         }
 
     @Test
+    fun `an unexpected failure during the restore ends in a failure and wipes the passphrase`() =
+        runTest(UnconfinedTestDispatcher()) {
+            backup()
+            coEvery { importBackup(any(), any(), any()) } throws IllegalStateException("disk full")
+            val host = host()
+            flow.start(host)
+            flow.onEvent(DriveRestoreEvent.RestoreClicked, host)
+            val passphrase = "pw".toCharArray()
+
+            flow.onEvent(DriveRestoreEvent.PassphraseEntered(passphrase), host)
+
+            assertThat(step)
+                .isEqualTo(DriveRestoreStep.Failed(DriveRestoreFailure.Cloud(DriveBackupFailure.UNEXPECTED)))
+            assertThat(passphrase.all { it == '\u0000' }).isTrue()
+        }
+
+    @Test
     fun `dismissing ends the flow`() =
         runTest(UnconfinedTestDispatcher()) {
             backup()

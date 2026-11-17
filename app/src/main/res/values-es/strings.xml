@@ -838,7 +838,7 @@
     <string name="drive_restore_mode_title">Este dispositivo ya tiene datos</string>
     <string name="drive_restore_mode_message">Combinar añade lo que tiene la copia y no este dispositivo. Reemplazar deja este dispositivo exactamente como la copia.</string>
     <string name="drive_restore_mode_merge">Combinar</string>
-    <string name="drive_restore_mode_replace">Reemplazar</string>
+    <string name="drive_restore_mode_replace">Reemplazar los datos de este dispositivo</string>
     <string name="drive_restore_passphrase_title">Escribe la frase de la copia</string>
     <string name="drive_restore_passphrase_message">La frase que elegiste al activar la copia en Google Drive.</string>
     <string name="drive_restore_passphrase_wrong">Esa frase no abre esta copia. Vuelve a intentarlo.</string>

@@ -56,6 +56,17 @@ class HasUserDataTest {
         }
 
     @Test
+    fun aCustomDefaultCategoryIsData_evenWithTheInboxDeleted() =
+        runTest {
+            val inbox = database.categoryDao().getAllCategoriesSync().single()
+            val work = database.categoryDao().insertCategory(CategoryEntity(name = "Work"))
+            database.categoryDao().setDefaultCategory(work)
+            database.categoryDao().deleteCategoryById(inbox.id)
+
+            assertThat(repository.hasUserData()).isTrue()
+        }
+
+    @Test
     fun aCategoryOfTheUsersOwnIsData() =
         runTest {
             database.categoryDao().insertCategory(CategoryEntity(name = "Work"))

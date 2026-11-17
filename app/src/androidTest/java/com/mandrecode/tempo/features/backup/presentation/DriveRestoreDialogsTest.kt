@@ -50,6 +50,15 @@ class DriveRestoreDialogsTest {
     }
 
     @Test
+    fun cancellingTheModeChoiceNeverReplaces() {
+        show(DriveRestoreStep.ChooseMode(backup))
+
+        composeTestRule.onNodeWithText(text(R.string.cancel)).performClick()
+
+        assertThat(events).containsExactly(DriveRestoreEvent.Dismissed)
+    }
+
+    @Test
     fun aWrongPassphraseIsCalledOut() {
         show(DriveRestoreStep.EnterPassphrase(backup, ImportMode.REPLACE, previousAttemptWrong = true))
 

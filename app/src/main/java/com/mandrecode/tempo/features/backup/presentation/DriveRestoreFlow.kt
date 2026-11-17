@@ -199,7 +199,17 @@ class DriveRestoreFlow
         ) {
             show(DriveRestoreStep.Restoring, host)
             host.scope.launch {
-                val outcome = restore(step.backup, step.mode, passphrase)
+                val outcome =
+                    try {
+                        restore(step.backup, step.mode, passphrase)
+                    } catch (e: CancellationException) {
+                        passphrase.fill('\u0000')
+                        throw e
+                    } catch (_: Exception) {
+                        // A database or scheduler failure mid-import: the import's transaction left the
+                        // data as it was, and the user gets a terminal answer instead of a spinner.
+                        RestoreOutcome.CloudFailed(DriveBackupFailure.UNEXPECTED)
+                    }
                 val next =
                     when (outcome) {
                         is RestoreOutcome.Restored -> {
@@ -214,7 +224,8 @@ class DriveRestoreFlow
                                 DriveRestoreFailure.NewerVersion(outcome.fileVersion, outcome.maxSupported),
                             )
                         RestoreOutcome.Invalid -> DriveRestoreStep.Failed(DriveRestoreFailure.Invalid)
-                        is RestoreOutcome.CloudFailed -> failure(outcome.failure)
+                        is RestoreOutcome.CloudFailed ->
+                            DriveRestoreStep.Failed(DriveRestoreFailure.Cloud(outcome.failure))
                     }
                 passphrase.fill('\u0000')
                 show(next, host)

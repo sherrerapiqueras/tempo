@@ -101,7 +101,8 @@ class BackupRepositoryImpl
             return data.tasks.isNotEmpty() ||
                 data.habits.isNotEmpty() ||
                 data.habitChains.isNotEmpty() ||
-                data.categories.any { !it.isDefault }
+                // Only the seeded Inbox is not the user's own: the default flag can move to any category.
+                data.categories.any { it.uid != DEFAULT_INBOX_UID }
         }
 
         override fun isEncryptedBackup(content: String): Boolean =
