@@ -112,6 +112,27 @@ class TombstoneTest {
         }
 
     @Test
+    fun aUidSharedByTwoKindsKeepsOneTombstonePerKind() =
+        runTest {
+            // A uid is unique per table, not across tables: an explicit restore could reuse one.
+            val db = database.openHelper.writableDatabase
+            db.execSQL("INSERT INTO categories (id, name, isDefault, sortOrder, uid) VALUES (50, 'C', 0, 0, '$SHARED_UID')")
+            db.execSQL(
+                "INSERT INTO task_sections (id, categoryId, name, sortOrder, uid) VALUES (60, 50, 'S', 0, '$SHARED_UID')",
+            )
+
+            db.execSQL("DELETE FROM categories WHERE id = 50")
+            db.execSQL("DELETE FROM task_sections WHERE id = 60")
+            assertThat(database.tombstoneDao().getAll().map { it.entityType })
+                .containsExactly("categories", "task_sections")
+
+            // Restoring one kind clears only its own tombstone.
+            db.execSQL("INSERT INTO categories (id, name, isDefault, sortOrder, uid) VALUES (50, 'C', 0, 0, '$SHARED_UID')")
+            assertThat(database.tombstoneDao().get(SHARED_UID, "categories")).isNull()
+            assertThat(database.tombstoneDao().get(SHARED_UID, "task_sections")).isNotNull()
+        }
+
+    @Test
     fun openingPurgesTombstonesOlderThanTheWindowOnly() =
         runTest {
             val context = ApplicationProvider.getApplicationContext<Context>()
@@ -135,4 +156,8 @@ class TombstoneTest {
                 context.deleteDatabase(name)
             }
         }
+
+    private companion object {
+        const val SHARED_UID = "0195a1b2-c3d4-7e5f-8a6b-0000000000aa"
+    }
 }
