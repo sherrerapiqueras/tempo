@@ -116,7 +116,7 @@ abstract class TempoDatabase : RoomDatabase() {
                     db.execSQL(
                         """
                         INSERT OR IGNORE INTO categories (id, name, color, icon, isDefault, sortOrder)
-                        VALUES (-1, 'Inbox', NULL, 'inbox', 1, -1)
+                        VALUES (${EntityIdentitySchema.LEGACY_INBOX_ID}, 'Inbox', NULL, 'inbox', 1, -1)
                         """.trimIndent(),
                     )
                 }
@@ -126,7 +126,8 @@ abstract class TempoDatabase : RoomDatabase() {
             object : Migration(4, 5) {
                 override fun migrate(db: SupportSQLiteDatabase) {
                     db.execSQL(
-                        "UPDATE categories SET icon = 'inbox' WHERE id = -1 AND icon IS NULL",
+                        "UPDATE categories SET icon = 'inbox' " +
+                            "WHERE id = ${EntityIdentitySchema.LEGACY_INBOX_ID} AND icon IS NULL",
                     )
                 }
             }
@@ -536,12 +537,11 @@ abstract class TempoDatabase : RoomDatabase() {
                 override fun onOpen(db: SupportSQLiteDatabase) {
                     db.execSQL(
                         """
-                        INSERT OR IGNORE INTO categories (id, name, icon, isDefault, sortOrder, uid)
-                        SELECT ?, ?, ?, 1, ?, ?
+                        INSERT OR IGNORE INTO categories (name, icon, isDefault, sortOrder, uid)
+                        SELECT ?, ?, 1, ?, ?
                         WHERE NOT EXISTS (SELECT 1 FROM categories WHERE isDefault = 1)
                         """.trimIndent(),
                         arrayOf<Any?>(
-                            DEFAULT_INBOX_CATEGORY_ENTITY.id,
                             context.getString(R.string.category_inbox),
                             DEFAULT_INBOX_CATEGORY_ENTITY.icon,
                             DEFAULT_INBOX_CATEGORY_ENTITY.sortOrder,

@@ -25,6 +25,7 @@ class TaskDaoClearRemindersTest {
             val id =
                 dao.insertTask(
                     TaskEntity(
+                        categoryId = 0,
                         title = "Water plants",
                         description = "",
                         reminderDate = LocalDateTime(2099, 1, 1, 10, 0),
@@ -46,6 +47,7 @@ class TaskDaoClearRemindersTest {
             val id =
                 dao.insertTask(
                     TaskEntity(
+                        categoryId = 0,
                         title = "Water plants",
                         description = "",
                         periodicity = Periodicity.DAILY,

@@ -16,8 +16,8 @@ import com.google.common.truth.Truth.assertThat
 import com.mandrecode.tempo.core.domain.model.Priority
 import com.mandrecode.tempo.core.ui.components.LOADING_INDICATOR_REVEAL_DELAY_MILLIS
 import com.mandrecode.tempo.core.ui.theme.TempoTheme
+import com.mandrecode.tempo.features.tasks.TEST_INBOX_CATEGORY
 import com.mandrecode.tempo.features.tasks.domain.model.Category
-import com.mandrecode.tempo.features.tasks.domain.model.DEFAULT_INBOX_CATEGORY
 import com.mandrecode.tempo.features.tasks.domain.model.Task
 import com.mandrecode.tempo.features.tasks.presentation.model.ActiveGroupKey
 import com.mandrecode.tempo.features.tasks.presentation.model.CompletedGroupKey
@@ -63,7 +63,7 @@ class TasksContentTest {
                         TasksContract.UiState(
                             isLoading = false,
                             tasks = persistentListOf(),
-                            categories = persistentListOf(DEFAULT_INBOX_CATEGORY),
+                            categories = persistentListOf(TEST_INBOX_CATEGORY),
                         ),
                     onEvent = {},
                 )
@@ -81,7 +81,7 @@ class TasksContentTest {
                 id = 1,
                 title = "Buy groceries",
                 description = "",
-                categoryId = DEFAULT_INBOX_CATEGORY.id,
+                categoryId = TEST_INBOX_CATEGORY.id,
                 sortOrder = 0,
             )
 
@@ -96,7 +96,7 @@ class TasksContentTest {
                                 persistentMapOf(
                                     ActiveGroupKey.Flat to persistentListOf(task),
                                 ),
-                            categories = persistentListOf(DEFAULT_INBOX_CATEGORY),
+                            categories = persistentListOf(TEST_INBOX_CATEGORY),
                         ),
                     onEvent = {},
                 )
@@ -116,7 +116,7 @@ class TasksContentTest {
                         TasksContract.UiState(
                             isLoading = false,
                             tasks = persistentListOf(),
-                            categories = persistentListOf(DEFAULT_INBOX_CATEGORY, testCategory),
+                            categories = persistentListOf(TEST_INBOX_CATEGORY, testCategory),
                         ),
                     onEvent = {},
                 )
@@ -136,7 +136,7 @@ class TasksContentTest {
                 title = "Done task",
                 description = "",
                 isCompleted = true,
-                categoryId = DEFAULT_INBOX_CATEGORY.id,
+                categoryId = TEST_INBOX_CATEGORY.id,
                 sortOrder = 0,
             )
 
@@ -151,7 +151,7 @@ class TasksContentTest {
                                 persistentMapOf(
                                     CompletedGroupKey.Flat to persistentListOf(completedTask),
                                 ),
-                            categories = persistentListOf(DEFAULT_INBOX_CATEGORY),
+                            categories = persistentListOf(TEST_INBOX_CATEGORY),
                             showCompletedTasks = true,
                         ),
                     onEvent = {},
@@ -172,7 +172,7 @@ class TasksContentTest {
                 title = "Done task",
                 description = "",
                 isCompleted = true,
-                categoryId = DEFAULT_INBOX_CATEGORY.id,
+                categoryId = TEST_INBOX_CATEGORY.id,
                 sortOrder = 0,
             )
         val events = mutableListOf<TasksContract.UiEvent>()
@@ -189,7 +189,7 @@ class TasksContentTest {
                                 persistentMapOf(
                                     CompletedGroupKey.Flat to persistentListOf(completedTask),
                                 ),
-                            categories = persistentListOf(DEFAULT_INBOX_CATEGORY),
+                            categories = persistentListOf(TEST_INBOX_CATEGORY),
                             showCompletedTasks = showCompleted,
                         ),
                     onEvent = { events += it },
@@ -223,7 +223,7 @@ class TasksContentTest {
                 title = "Done task",
                 description = "",
                 isCompleted = true,
-                categoryId = DEFAULT_INBOX_CATEGORY.id,
+                categoryId = TEST_INBOX_CATEGORY.id,
                 sortOrder = 0,
             )
 
@@ -238,7 +238,7 @@ class TasksContentTest {
                                 persistentMapOf(
                                     CompletedGroupKey.Flat to persistentListOf(completedTask),
                                 ),
-                            categories = persistentListOf(DEFAULT_INBOX_CATEGORY),
+                            categories = persistentListOf(TEST_INBOX_CATEGORY),
                             showCompletedTasks = true,
                             sortOption = SortOption.MANUAL,
                         ),
@@ -264,7 +264,7 @@ class TasksContentTest {
                 description = "",
                 isCompleted = true,
                 priority = Priority.HIGH,
-                categoryId = DEFAULT_INBOX_CATEGORY.id,
+                categoryId = TEST_INBOX_CATEGORY.id,
                 sortOrder = 0,
             )
         val lowTask =
@@ -274,7 +274,7 @@ class TasksContentTest {
                 description = "",
                 isCompleted = true,
                 priority = Priority.LOW,
-                categoryId = DEFAULT_INBOX_CATEGORY.id,
+                categoryId = TEST_INBOX_CATEGORY.id,
                 sortOrder = 1,
             )
 
@@ -292,7 +292,7 @@ class TasksContentTest {
                                     CompletedGroupKey.ByPriority(Priority.LOW) to
                                         persistentListOf(lowTask),
                                 ),
-                            categories = persistentListOf(DEFAULT_INBOX_CATEGORY),
+                            categories = persistentListOf(TEST_INBOX_CATEGORY),
                             showCompletedTasks = true,
                             sortOption = SortOption.BY_PRIORITY,
                         ),
@@ -316,7 +316,7 @@ class TasksContentTest {
                 title = "Alpha task",
                 description = "",
                 isCompleted = true,
-                categoryId = DEFAULT_INBOX_CATEGORY.id,
+                categoryId = TEST_INBOX_CATEGORY.id,
                 sortOrder = 0,
             )
 
@@ -331,7 +331,7 @@ class TasksContentTest {
                                 persistentMapOf(
                                     CompletedGroupKey.ByTitle to persistentListOf(completedTask),
                                 ),
-                            categories = persistentListOf(DEFAULT_INBOX_CATEGORY),
+                            categories = persistentListOf(TEST_INBOX_CATEGORY),
                             showCompletedTasks = true,
                             sortOption = SortOption.BY_TITLE,
                         ),
@@ -357,7 +357,7 @@ class TasksContentTest {
                 title = "Done task",
                 description = "",
                 isCompleted = true,
-                categoryId = DEFAULT_INBOX_CATEGORY.id,
+                categoryId = TEST_INBOX_CATEGORY.id,
                 sortOrder = 0,
             )
         val completedOnlyState =
@@ -368,7 +368,7 @@ class TasksContentTest {
                     persistentMapOf(
                         CompletedGroupKey.Flat to persistentListOf(completedTask),
                     ),
-                categories = persistentListOf(DEFAULT_INBOX_CATEGORY),
+                categories = persistentListOf(TEST_INBOX_CATEGORY),
                 showCompletedTasks = true,
                 sortOption = SortOption.MANUAL,
             )
@@ -378,7 +378,7 @@ class TasksContentTest {
                 id = 2,
                 title = "Active task",
                 description = "",
-                categoryId = DEFAULT_INBOX_CATEGORY.id,
+                categoryId = TEST_INBOX_CATEGORY.id,
                 sortOrder = 0,
             )
         val activeOnlyState =
@@ -389,7 +389,7 @@ class TasksContentTest {
                     persistentMapOf(
                         ActiveGroupKey.Flat to persistentListOf(activeTask),
                     ),
-                categories = persistentListOf(DEFAULT_INBOX_CATEGORY),
+                categories = persistentListOf(TEST_INBOX_CATEGORY),
                 sortOption = SortOption.MANUAL,
             )
 
@@ -472,7 +472,7 @@ class TasksContentTest {
                             tasks = tasks.toPersistentList(),
                             activeTasks = persistentMapOf(ActiveGroupKey.Flat to tasks.toPersistentList()),
                             reorderableRuns = buildReorderableRuns(listOf(tasks), SortOption.MANUAL),
-                            categories = persistentListOf(DEFAULT_INBOX_CATEGORY),
+                            categories = persistentListOf(TEST_INBOX_CATEGORY),
                             sortOption = SortOption.MANUAL,
                         ),
                     onEvent = { events += it },
@@ -497,7 +497,7 @@ class TasksContentTest {
                 description = "",
                 priority = Priority.HIGH,
                 reminderDate = LocalDateTime(2025, 6, 1, 9, 0),
-                categoryId = DEFAULT_INBOX_CATEGORY.id,
+                categoryId = TEST_INBOX_CATEGORY.id,
                 sortOrder = index,
             )
         }
@@ -513,7 +513,7 @@ class TasksContentTest {
                 ActiveGroupKey.ByPriority(Priority.HIGH) to tasks.toPersistentList(),
             ),
         reorderableRuns = runs,
-        categories = persistentListOf(DEFAULT_INBOX_CATEGORY),
+        categories = persistentListOf(TEST_INBOX_CATEGORY),
         sortOption = SortOption.BY_PRIORITY,
     )
 

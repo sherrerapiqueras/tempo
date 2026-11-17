@@ -78,11 +78,4 @@ data class Task(
         )
 }
 
-/**
- * Legacy constant for the seeded Inbox category (id = -1).
- * Only used in database seed/migration code. UI code should use
- * [Category.isDefault] instead of identity checks.
- */
-@Deprecated("Use Category.isDefault instead of identity checks")
-val DEFAULT_INBOX_CATEGORY = Category(id = -1, name = "Inbox", isDefault = true)
 val DEFAULT_ADD_CATEGORY = Category(id = -2, name = "Add Category")

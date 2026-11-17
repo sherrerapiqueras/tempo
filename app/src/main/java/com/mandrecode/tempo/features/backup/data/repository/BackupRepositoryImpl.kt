@@ -4,12 +4,14 @@ import android.content.Context
 import androidx.room.withTransaction
 import com.mandrecode.tempo.BuildConfig
 import com.mandrecode.tempo.R
-import com.mandrecode.tempo.core.data.entity.CategoryEntity
 import com.mandrecode.tempo.core.data.entity.DEFAULT_INBOX_CATEGORY_ENTITY
 import com.mandrecode.tempo.core.data.entity.HabitChainEntity
 import com.mandrecode.tempo.core.data.entity.HabitChainMemberEntity
+import com.mandrecode.tempo.core.data.local.EntityIdentitySchema
 import com.mandrecode.tempo.core.data.local.TempoDatabase
 import com.mandrecode.tempo.core.data.local.dao.SavedSessionDao
+import com.mandrecode.tempo.core.domain.model.DEFAULT_INBOX_UID
+import com.mandrecode.tempo.core.domain.model.UNSET_UID
 import com.mandrecode.tempo.core.domain.repository.DailyFocusActivityRepository
 import com.mandrecode.tempo.features.backup.data.BackupSettingsDataSource
 import com.mandrecode.tempo.features.backup.data.mapper.toDomain
@@ -77,6 +79,7 @@ class BackupRepositoryImpl
             val data =
                 database
                     .withTransaction { readAll() }
+                    .withInboxAtLegacyId()
                     .copy(settings = settingsDataSource.snapshot())
             val exportedAt = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
             val plaintextJson =
@@ -184,8 +187,9 @@ class BackupRepositoryImpl
                 database.taskSectionDao().deleteAll()
                 database.savedSessionDao().deleteAll()
 
-                data.categories.forEach { database.categoryDao().insertCategory(it.toEntity()) }
-                val seededInboxCount = ensureDefaultCategory(data.categories)
+                val categories = data.categories.map { it.withLegacyInboxIdentity() }
+                categories.forEach { database.categoryDao().insertCategory(it.toEntity()) }
+                val seededInboxCount = ensureDefaultCategory(categories)
                 data.sections.forEach { database.taskSectionDao().insertSection(it.toEntity()) }
                 data.tasks.forEach { database.taskDao().insertTask(it.toEntity()) }
                 // Already sanitized by the validator: unique ids and named. Trimmed afterwards, in
@@ -209,32 +213,30 @@ class BackupRepositoryImpl
             }
 
         /**
-         * Restores two app invariants a payload may violate (pre-existing exports
-         * or edited files): the seeded Inbox row (id -1) always exists — other code
-         * references it directly, e.g. as the fallback task category — and some
-         * category is marked default (the Inbox only when the payload brought none).
-         * Returns the number of category rows this inserted beyond the payload (0 or 1)
-         * so the import summary counts them.
+         * Restores the one invariant a payload may violate (pre-existing exports or edited files):
+         * some category is the default. Prefers the payload's Inbox; seeds a new Inbox only when the
+         * payload has neither a default nor an Inbox. Nothing references the Inbox by a reserved id
+         * any more (#326), so a payload that brings its own default gets no extra Inbox.
+         * Returns the number of category rows this inserted beyond the payload (0 or 1) so the
+         * import summary counts them.
          */
         private suspend fun ensureDefaultCategory(categories: List<Category>): Int {
-            val hasDefault = categories.any { it.isDefault }
-            val inboxId = DEFAULT_INBOX_CATEGORY_ENTITY.id
-            return if (categories.none { it.id == inboxId }) {
-                database.categoryDao().insertCategory(
-                    CategoryEntity(
-                        id = inboxId,
-                        name = context.getString(R.string.category_inbox),
-                        icon = "inbox",
-                        isDefault = !hasDefault,
-                        sortOrder = -1,
-                    ),
-                )
-                1
-            } else {
-                if (!hasDefault) {
-                    database.categoryDao().setDefault(inboxId)
+            val inbox = categories.firstOrNull { it.uid == DEFAULT_INBOX_UID }
+            return when {
+                categories.any { it.isDefault } -> 0
+                inbox != null -> {
+                    database.categoryDao().setDefault(inbox.id)
+                    0
                 }
-                0
+                else -> {
+                    database.categoryDao().insertCategory(
+                        DEFAULT_INBOX_CATEGORY_ENTITY.copy(
+                            name = context.getString(R.string.category_inbox),
+                            isDefault = true,
+                        ),
+                    )
+                    1
+                }
             }
         }
 
@@ -455,3 +457,30 @@ private fun decodeData(
     } catch (_: IllegalArgumentException) {
         null
     }
+
+/**
+ * Version-1 files carry no uids and identify the seeded Inbox by the id it had before #326, so the
+ * restored Inbox keeps the well-known uid (#30) and stays the same record.
+ */
+private fun Category.withLegacyInboxIdentity(): Category =
+    if (id == EntityIdentitySchema.LEGACY_INBOX_ID && uid == UNSET_UID) copy(uid = DEFAULT_INBOX_UID) else this
+
+/**
+ * Version-1 files carry no uids and identify the seeded Inbox by the legacy id `-1`, which is how
+ * import recognises it ([withLegacyInboxIdentity]). Since #326 a fresh install's Inbox has an
+ * ordinary id, so the export writes it, and every reference to it, under `-1`: ids are only
+ * meaningful inside the file, and this keeps an export-then-restore from losing the Inbox's
+ * identity. Nothing changes when the Inbox already is `-1`, or when another category holds `-1`.
+ */
+private fun BackupData.withInboxAtLegacyId(): BackupData {
+    val legacyId = EntityIdentitySchema.LEGACY_INBOX_ID
+    val inbox = categories.firstOrNull { it.uid == DEFAULT_INBOX_UID }
+    if (inbox == null || inbox.id == legacyId || categories.any { it.id == legacyId }) return this
+
+    fun Long.remapped() = if (this == inbox.id) legacyId else this
+    return copy(
+        categories = categories.map { it.copy(id = it.id.remapped()) },
+        sections = sections.map { it.copy(categoryId = it.categoryId.remapped()) },
+        tasks = tasks.map { it.copy(categoryId = it.categoryId.remapped()) },
+    )
+}

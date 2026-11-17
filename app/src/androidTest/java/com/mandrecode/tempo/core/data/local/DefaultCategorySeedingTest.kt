@@ -10,6 +10,7 @@ import com.mandrecode.tempo.R
 import com.mandrecode.tempo.core.data.entity.CategoryEntity
 import com.mandrecode.tempo.core.data.entity.TaskEntity
 import com.mandrecode.tempo.core.data.local.security.DbKdfIterMarker
+import com.mandrecode.tempo.core.domain.model.DEFAULT_INBOX_UID
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertThrows
@@ -51,7 +52,8 @@ class DefaultCategorySeedingTest {
 
             assertThat(categories).hasSize(1)
             val inbox = categories.single()
-            assertThat(inbox.id).isEqualTo(INBOX_ID)
+            assertThat(inbox.id).isGreaterThan(0L)
+            assertThat(inbox.uid).isEqualTo(DEFAULT_INBOX_UID)
             assertThat(inbox.name).isEqualTo(context.getString(R.string.category_inbox))
             assertThat(inbox.icon).isEqualTo("inbox")
             assertThat(inbox.isDefault).isTrue()
@@ -68,7 +70,7 @@ class DefaultCategorySeedingTest {
 
             val reopened = build()
 
-            val inbox = reopened.categoryDao().getCategoryById(INBOX_ID)
+            val inbox = inboxOrNull(reopened)
             assertThat(inbox).isNotNull()
             assertThat(inbox!!.isDefault).isTrue()
             assertThat(reopened.categoryDao().getAllCategoriesSync()).hasSize(1)
@@ -79,7 +81,7 @@ class DefaultCategorySeedingTest {
         runTest {
             val first = build()
             val edited =
-                first.categoryDao().getCategoryById(INBOX_ID)!!.copy(
+                inboxOf(first).copy(
                     name = "My things",
                     color = "#336699",
                     icon = "star",
@@ -88,7 +90,7 @@ class DefaultCategorySeedingTest {
                 )
             first.categoryDao().updateCategory(edited)
             // As stored: the update itself advances updatedAt (#30); reopening must change nothing.
-            val stored = first.categoryDao().getCategoryById(INBOX_ID)!!
+            val stored = inboxOf(first)
             first.close()
 
             val reopened = build()
@@ -101,9 +103,9 @@ class DefaultCategorySeedingTest {
     fun anInboxThatIsNotTheDefault_isNotRewrittenWhenNoCategoryIsDefault() =
         runTest {
             val first = build()
-            val notDefault = first.categoryDao().getCategoryById(INBOX_ID)!!.copy(isDefault = false)
+            val notDefault = inboxOf(first).copy(isDefault = false)
             first.categoryDao().updateCategory(notDefault)
-            val stored = first.categoryDao().getCategoryById(INBOX_ID)!!
+            val stored = inboxOf(first)
             first.close()
 
             val reopened = build()
@@ -118,7 +120,7 @@ class DefaultCategorySeedingTest {
             val first = build()
             val workId = first.categoryDao().insertCategory(CategoryEntity(name = "Work", sortOrder = 1))
             first.categoryDao().setDefaultCategory(workId)
-            first.categoryDao().deleteCategoryById(INBOX_ID)
+            first.categoryDao().deleteCategoryById(inboxOf(first).id)
             first.close()
 
             val reopened = build()
@@ -133,7 +135,7 @@ class DefaultCategorySeedingTest {
         runTest {
             val first = build()
             first.categoryDao().insertCategory(CategoryEntity(name = "Work", sortOrder = 1))
-            first.taskDao().insertTask(TaskEntity(title = "Lost in the reset", description = ""))
+            first.taskDao().insertTask(TaskEntity(title = "Lost in the reset", description = "", categoryId = 1))
             first.close()
             markAsWrittenByANewerBuild()
 
@@ -141,7 +143,7 @@ class DefaultCategorySeedingTest {
 
             assertThat(rowCount(reopened, "tasks")).isEqualTo(0)
             val categories = reopened.categoryDao().getAllCategoriesSync()
-            assertThat(categories.map { it.id }).containsExactly(INBOX_ID)
+            assertThat(categories.map { it.uid }).containsExactly(DEFAULT_INBOX_UID)
             assertThat(categories.single().isDefault).isTrue()
         }
 
@@ -150,7 +152,7 @@ class DefaultCategorySeedingTest {
         runTest {
             val first = build()
             first.categoryDao().insertCategory(CategoryEntity(name = "Work", sortOrder = 1))
-            first.taskDao().insertTask(TaskEntity(title = "Must survive", description = ""))
+            first.taskDao().insertTask(TaskEntity(title = "Must survive", description = "", categoryId = 1))
             first.close()
             markAsWrittenByANewerBuild()
 
@@ -201,8 +203,13 @@ class DefaultCategorySeedingTest {
             it.getInt(0)
         }
 
+    /** The seeded Inbox, found by its well-known uid: no reserved local id identifies it (#326). */
+    private suspend fun inboxOrNull(database: TempoDatabase) =
+        database.categoryDao().getAllCategoriesSync().singleOrNull { it.uid == DEFAULT_INBOX_UID }
+
+    private suspend fun inboxOf(database: TempoDatabase) = inboxOrNull(database)!!
+
     private companion object {
-        const val INBOX_ID = -1L
         const val NEWER_VERSION = 99
     }
 }

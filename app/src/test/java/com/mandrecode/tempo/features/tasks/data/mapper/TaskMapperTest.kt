@@ -72,7 +72,7 @@ class TaskMapperTest {
 
     @Test
     fun `toDomain handles null priority and periodicity`() {
-        val entity = TaskEntity(id = 1, title = "T", description = "D")
+        val entity = TaskEntity(categoryId = 0, id = 1, title = "T", description = "D")
 
         val domain = entity.toDomain()
 
@@ -102,8 +102,8 @@ class TaskMapperTest {
     fun `list toDomain maps all elements`() {
         val entities =
             listOf(
-                TaskEntity(id = 1, title = "A", description = ""),
-                TaskEntity(id = 2, title = "B", description = ""),
+                TaskEntity(categoryId = 0, id = 1, title = "A", description = ""),
+                TaskEntity(categoryId = 0, id = 2, title = "B", description = ""),
             )
 
         val domains = entities.toDomain()
@@ -118,6 +118,7 @@ class TaskMapperTest {
         val days = setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY)
         val entity =
             TaskEntity(
+                categoryId = 0,
                 id = 1,
                 title = "Complex",
                 description = "",

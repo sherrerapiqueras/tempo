@@ -6,6 +6,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import com.mandrecode.tempo.core.domain.model.DEFAULT_INBOX_UID
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertNotNull
 import org.junit.Test
@@ -32,9 +33,13 @@ class DefaultCategoryCallbackTest {
                         .addMigrations(*TempoDatabase.MIGRATIONS)
                         .build()
                 try {
-                    val existingDefaultCategory = firstDatabase.categoryDao().getCategoryById(DEFAULT_CATEGORY_ID)
+                    val existingDefaultCategory =
+                        firstDatabase.categoryDao().getAllCategoriesSync().singleOrNull {
+                            it.uid ==
+                                DEFAULT_INBOX_UID
+                        }
                     assertNotNull(
-                        "Expected default category (id=$DEFAULT_CATEGORY_ID) to exist before renaming in test setup.",
+                        "Expected the seeded Inbox to exist before renaming in test setup.",
                         existingDefaultCategory,
                     )
                     firstDatabase.categoryDao().updateCategory(
@@ -51,7 +56,7 @@ class DefaultCategoryCallbackTest {
                         .addMigrations(*TempoDatabase.MIGRATIONS)
                         .build()
                 try {
-                    val category = reopenedDatabase.categoryDao().getCategoryById(DEFAULT_CATEGORY_ID)
+                    val category = reopenedDatabase.categoryDao().getAllCategoriesSync().singleOrNull { it.uid == DEFAULT_INBOX_UID }
                     val localizedCategoryName = spanishContext.getString(com.mandrecode.tempo.R.string.category_inbox)
 
                     assertThat(localizedCategoryName).isNotEqualTo(LEGACY_CATEGORY_NAME)
@@ -75,7 +80,6 @@ class DefaultCategoryCallbackTest {
     }
 
     private companion object {
-        const val DEFAULT_CATEGORY_ID = -1L
         const val LEGACY_CATEGORY_NAME = "Inbox"
     }
 }

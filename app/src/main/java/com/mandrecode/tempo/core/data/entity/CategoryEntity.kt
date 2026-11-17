@@ -41,9 +41,14 @@ data class CategoryEntity(
     val updatedAt: Long = UNSET_TIMESTAMP,
 )
 
+/**
+ * The seeded Inbox, as a template: the row the database creates when it has no default category.
+ * Its local id is whatever the database assigns; what identifies it is [DEFAULT_INBOX_UID], never a
+ * reserved id (#326). Installs seeded before then keep their Inbox at id -1, which nothing relies
+ * on any more.
+ */
 val DEFAULT_INBOX_CATEGORY_ENTITY =
     CategoryEntity(
-        id = -1,
         name = "Inbox",
         icon = "inbox",
         isDefault = true,

@@ -1,6 +1,7 @@
 package com.mandrecode.tempo.features.tasks.domain.usecase
 
 import com.google.common.truth.Truth.assertThat
+import com.mandrecode.tempo.features.tasks.TEST_INBOX_CATEGORY
 import com.mandrecode.tempo.features.tasks.domain.model.Category
 import com.mandrecode.tempo.features.tasks.domain.model.CategoryDeletionSnapshot
 import com.mandrecode.tempo.features.tasks.domain.repository.CategoryRepository
@@ -52,7 +53,7 @@ class DeleteCategoryUseCaseTest {
     @Test
     fun `returns CannotDeleteDefault when deleting Inbox as default`() =
         runTest {
-            val result = useCase(Category(id = -1L, name = "Inbox", isDefault = true))
+            val result = useCase(TEST_INBOX_CATEGORY)
 
             assertThat(result).isEqualTo(DeleteCategoryUseCase.Result.CannotDeleteDefault)
             coVerify(exactly = 0) { categoryRepository.deleteCategoryWithSnapshot(any()) }

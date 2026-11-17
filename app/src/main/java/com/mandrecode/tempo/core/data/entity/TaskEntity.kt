@@ -23,7 +23,7 @@ data class TaskEntity(
     val title: String,
     val description: String,
     val isCompleted: Boolean = false,
-    val categoryId: Long = DEFAULT_INBOX_CATEGORY_ENTITY.id,
+    val categoryId: Long,
     val priority: Priority? = null,
     val reminderDate: LocalDateTime? = null,
     val periodicity: Periodicity? = null,
