@@ -1,5 +1,8 @@
 package com.mandrecode.tempo.features.tasks.domain.model
 
+import com.mandrecode.tempo.core.domain.model.UNSET_TIMESTAMP
+import com.mandrecode.tempo.core.domain.model.UNSET_UID
+
 /**
  * A file attached to a task: a picture, a document, anything the user picked.
  *
@@ -15,7 +18,25 @@ data class TaskAttachment(
     val mimeType: String?,
     val sizeBytes: Long,
     val storedName: String,
+    /** Stable global identity (#30), assigned by the database on insert; [UNSET_UID] until stored. */
+    val uid: String = UNSET_UID,
+    /** Epoch millis UTC, stamped by the database; [UNSET_TIMESTAMP] until stored. */
+    val createdAt: Long = UNSET_TIMESTAMP,
+    /** Epoch millis UTC of the last stored change, stamped by the database. */
+    val updatedAt: Long = UNSET_TIMESTAMP,
 ) {
+    /**
+     * This record saved as a *new* one: no local id and no identity, so the database assigns both.
+     * Any copy that becomes another row must go through here — reusing the source's uid fails (#30).
+     */
+    fun asNew(): TaskAttachment =
+        copy(
+            id = 0,
+            uid = UNSET_UID,
+            createdAt = UNSET_TIMESTAMP,
+            updatedAt = UNSET_TIMESTAMP,
+        )
+
     val kind: Kind
         get() =
             when {

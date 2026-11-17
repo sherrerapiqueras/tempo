@@ -12,6 +12,9 @@ fun CategoryEntity.toDomain(): Category =
         isDefault = isDefault,
         sortOrder = sortOrder,
         sectionsEnabled = sectionsEnabled,
+        uid = uid,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
     )
 
 fun Category.toEntity(): CategoryEntity =
@@ -23,6 +26,9 @@ fun Category.toEntity(): CategoryEntity =
         isDefault = isDefault,
         sortOrder = sortOrder,
         sectionsEnabled = sectionsEnabled,
+        uid = uid,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
     )
 
 fun List<CategoryEntity>.toDomain(): List<Category> = map { it.toDomain() }

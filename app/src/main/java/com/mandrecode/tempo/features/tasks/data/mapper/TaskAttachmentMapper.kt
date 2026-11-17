@@ -11,6 +11,9 @@ fun TaskAttachmentEntity.toDomain(): TaskAttachment =
         mimeType = mimeType,
         sizeBytes = sizeBytes,
         storedName = storedName,
+        uid = uid,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
     )
 
 fun TaskAttachment.toEntity(): TaskAttachmentEntity =
@@ -21,6 +24,9 @@ fun TaskAttachment.toEntity(): TaskAttachmentEntity =
         mimeType = mimeType,
         sizeBytes = sizeBytes,
         storedName = storedName,
+        uid = uid,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
     )
 
 @JvmName("taskAttachmentEntitiesToDomain")

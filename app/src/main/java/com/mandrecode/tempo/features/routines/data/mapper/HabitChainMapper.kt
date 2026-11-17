@@ -17,6 +17,9 @@ fun HabitChainWithMembers.toDomain(): HabitChain =
         createdDate = chain.createdDate,
         completionHistory = chain.completionHistory,
         repeatDays = chain.repeatDays,
+        uid = chain.uid,
+        createdAt = chain.createdAt,
+        updatedAt = chain.updatedAt,
     )
 
 fun HabitChain.toEntity(): HabitChainEntity =
@@ -30,6 +33,9 @@ fun HabitChain.toEntity(): HabitChainEntity =
         createdDate = createdDate,
         completionHistory = completionHistory,
         repeatDays = repeatDays,
+        uid = uid,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
     )
 
 fun HabitChain.toMemberEntities(): List<HabitChainMemberEntity> =

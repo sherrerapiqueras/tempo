@@ -396,14 +396,13 @@ private fun memberTitles(
 }
 
 // Whether sections are on is a view preference, like the sort order, not content to conflict on.
-private fun Category.contentKey() = copy(id = 0, sortOrder = 0, isDefault = false, sectionsEnabled = false)
+private fun Category.contentKey() = asNew().copy(sortOrder = 0, isDefault = false, sectionsEnabled = false)
 
 // nextInstanceId values are database ids and meaningless across devices, but
 // *having* a next-occurrence link is content: a linked archived task must not
 // classify as an exact duplicate of an unlinked local task (or vice versa).
 private fun Task.contentKey() =
-    copy(
-        id = 0,
+    asNew().copy(
         sortOrder = 0,
         nextInstanceId = if (nextInstanceId == null) null else 0,
         categoryId = 0,
@@ -412,9 +411,9 @@ private fun Task.contentKey() =
         sectionId = null,
     )
 
-private fun Habit.contentKey() = copy(id = 0)
+private fun Habit.contentKey() = asNew()
 
-private fun HabitChain.contentKey() = copy(id = 0, habitIds = emptyList())
+private fun HabitChain.contentKey() = asNew().copy(habitIds = emptyList())
 
 private data class SectionPlan(
     val toInsert: List<TaskSection>,

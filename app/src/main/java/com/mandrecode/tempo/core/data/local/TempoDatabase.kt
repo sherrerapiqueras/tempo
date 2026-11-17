@@ -37,7 +37,9 @@ import com.mandrecode.tempo.core.data.local.security.DbPassphraseProvider
 import com.mandrecode.tempo.core.data.local.security.SqlCipherKdfIter
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.datetime.TimeZone
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
+import kotlin.time.Clock
 
 @Database(
     entities = [
@@ -51,7 +53,7 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         TaskSectionEntity::class,
         SavedSessionEntity::class,
     ],
-    version = 14,
+    version = 15,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -353,6 +355,18 @@ abstract class TempoDatabase : RoomDatabase() {
                 }
             }
 
+        /** Stable record identity (#30); see [EntityIdentitySchema]. */
+        val MIGRATION_14_15 =
+            object : Migration(14, 15) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    EntityIdentitySchema.migrate14To15(
+                        db,
+                        nowMillis = Clock.System.now().toEpochMilliseconds(),
+                        zone = TimeZone.currentSystemDefault(),
+                    )
+                }
+            }
+
         val MIGRATIONS =
             arrayOf(
                 MIGRATION_1_2,
@@ -368,6 +382,7 @@ abstract class TempoDatabase : RoomDatabase() {
                 MIGRATION_11_12,
                 MIGRATION_12_13,
                 MIGRATION_13_14,
+                MIGRATION_14_15,
             )
 
         suspend fun getDatabase(
@@ -431,6 +446,8 @@ abstract class TempoDatabase : RoomDatabase() {
         ): RoomDatabase.Builder<TempoDatabase> =
             builder
                 .addMigrations(*MIGRATIONS)
+                // Before the Inbox seed, so the seeded row is timestamped like any other insert.
+                .addCallback(EntityIdentitySchema.TriggersCallback)
                 .addCallback(inboxCallback(context))
                 .addCallback(OrphanedAttachmentRowsCallback)
                 .addCallback(DestructiveMigrationWarningCallback)
@@ -504,8 +521,8 @@ abstract class TempoDatabase : RoomDatabase() {
                 override fun onOpen(db: SupportSQLiteDatabase) {
                     db.execSQL(
                         """
-                        INSERT OR IGNORE INTO categories (id, name, icon, isDefault, sortOrder)
-                        SELECT ?, ?, ?, 1, ?
+                        INSERT OR IGNORE INTO categories (id, name, icon, isDefault, sortOrder, uid)
+                        SELECT ?, ?, ?, 1, ?, ?
                         WHERE NOT EXISTS (SELECT 1 FROM categories WHERE isDefault = 1)
                         """.trimIndent(),
                         arrayOf<Any?>(
@@ -513,6 +530,7 @@ abstract class TempoDatabase : RoomDatabase() {
                             context.getString(R.string.category_inbox),
                             DEFAULT_INBOX_CATEGORY_ENTITY.icon,
                             DEFAULT_INBOX_CATEGORY_ENTITY.sortOrder,
+                            DEFAULT_INBOX_CATEGORY_ENTITY.uid,
                         ),
                     )
                 }

@@ -105,6 +105,9 @@ class TaskRepositoryRoomIntegrationTest {
                     ),
                 )
 
+            val identityBefore = repository.getTaskById(childId)!!.let { Triple(it.uid, it.createdAt, it.updatedAt) }
+            assertThat(identityBefore.first).isNotEmpty()
+
             val snapshot = repository.deleteTaskWithSnapshot(parentId)
             assertThat(repository.getTaskById(parentId)).isNull()
             assertThat(repository.getTaskById(childId)).isNull()
@@ -118,6 +121,9 @@ class TaskRepositoryRoomIntegrationTest {
             assertThat(repository.getTaskById(childId)!!.sortOrder).isEqualTo(3)
             assertThat(repository.getTaskById(grandchildId)!!.parentTaskId).isEqualTo(childId)
             assertThat(repository.getTaskById(grandchildId)!!.sortOrder).isEqualTo(2)
+            // Undo brings back the same record, not a new one with the same content (#30).
+            assertThat(repository.getTaskById(childId)!!.let { Triple(it.uid, it.createdAt, it.updatedAt) })
+                .isEqualTo(identityBefore)
         }
 
     @Test

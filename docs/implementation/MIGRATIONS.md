@@ -14,6 +14,26 @@
 | 6 | `MIGRATION_5_6` | Adds task recurrence columns: `periodicityInterval INTEGER NOT NULL DEFAULT 1`, `repeatDays TEXT`, `monthDayOption TEXT` |
 | 7 | `MIGRATION_6_7` | Replaces the unused `isInverted` column with `habitType TEXT` via table rebuild (`isInverted = 1` → `QUIT`, else `BUILD`); prunes quit habits from chains and removes emptied chains |
 | 8 | `MIGRATION_7_8` | Adds `nextInstanceId INTEGER` to `tasks` to support periodic-completion rollback |
+| 9 | `MIGRATION_8_9` | Adds indices on `tasks.categoryId` and `tasks.parentTaskId` |
+| 10 | `MIGRATION_9_10` | Adds the `daily_focus_activity` table (per-day Focus statistics) |
+| 11 | `MIGRATION_10_11` | Adds the `task_attachments` table and its `taskId` / `storedName` indices |
+| 12 | `MIGRATION_11_12` | Adds the `task_sections` table and `categories.sectionsEnabled`, and `tasks.sectionId` (#61) |
+| 13 | `MIGRATION_12_13` | Adds `periodicityEndDate TEXT` to `tasks` (#509) |
+| 14 | `MIGRATION_13_14` | Adds the `focus_sessions` table for saved focus sessions (#517) |
+| 15 | `MIGRATION_14_15` | Stable record identity (#30): `uid`, `createdAt` and `updatedAt` on seven tables, unique `uid` indexes, backfill, and identity triggers (see [Identity triggers](#identity-triggers)) |
+
+### Identity triggers
+
+Since version 15, `categories`, `tasks`, `task_sections`, `habits`, `habit_chains`, `task_attachments` and `focus_sessions` each carry `uid`, `createdAt` and `updatedAt`. SQLite triggers maintain them, so no DAO has to:
+
+- **Insert:** an empty `uid` gets a random UUID, and `createdAt = 0` gets the current time. Explicit values are kept.
+- **Update:** `updatedAt` advances (strictly, even within one millisecond) unless the write supplies its own.
+- **Protect:** a write that sends `uid` / `createdAt` unset gets the stored values back.
+- **Immutable:** a write that changes them to a different value aborts.
+
+Room's schema JSON does not record triggers. `EntityIdentitySchema` drops and recreates them on every open (`TriggersCallback`, registered in `TempoDatabase.configure`) as well as in the migration, so fresh installs, upgrades and debug destructive resets all run this build's triggers. A test database built without `configure` must add `EntityIdentitySchema.TriggersCallback`, or rows inserted with an empty `uid` collide on its unique index.
+
+Code that saves a copy of a stored record as a new row must call the domain model's `asNew()`.
 
 ### Schema Exports
 

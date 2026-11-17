@@ -17,6 +17,9 @@ fun HabitEntity.toDomain(): Habit =
         createdDate = createdDate,
         completionHistory = completionHistory,
         repeatDays = repeatDays,
+        uid = uid,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
     )
 
 /**
@@ -41,6 +44,9 @@ fun Habit.toEntity(): HabitEntity =
         createdDate = createdDate,
         completionHistory = completionHistory,
         repeatDays = repeatDays,
+        uid = uid,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
     )
 
 fun List<HabitEntity>.toDomain(): List<Habit> = map { it.toDomain() }

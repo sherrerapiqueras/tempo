@@ -16,6 +16,9 @@ class InMemoryTempoDatabaseRule : TestWatcher() {
         database =
             Room
                 .inMemoryDatabaseBuilder(context, TempoDatabase::class.java)
+                // The identity triggers are part of the schema: without them rows inserted with an
+                // unset uid would collide on its unique index (#30).
+                .addCallback(EntityIdentitySchema.TriggersCallback)
                 .build()
     }
 

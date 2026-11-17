@@ -6,6 +6,8 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import com.mandrecode.tempo.core.data.entity.SavedSessionEntity
+import com.mandrecode.tempo.core.domain.model.UNSET_TIMESTAMP
+import com.mandrecode.tempo.core.domain.model.UNSET_UID
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -54,13 +56,16 @@ interface SavedSessionDao {
         session: SavedSessionEntity,
         keep: Int,
     ): Long {
+        // The row is chosen by title, not by the session's own id or uid, so neither may carry
+        // over: the database keeps the matched row's identity, or assigns a new one (#30).
+        val unidentified = session.copy(uid = UNSET_UID, createdAt = UNSET_TIMESTAMP, updatedAt = UNSET_TIMESTAMP)
         val existing = findByTitle(session.title)
         val id =
             if (existing != null) {
-                update(session.copy(id = existing.id))
+                update(unidentified.copy(id = existing.id))
                 existing.id
             } else {
-                insert(session.copy(id = 0))
+                insert(unidentified.copy(id = 0))
             }
         trimTo(keep)
         return id
