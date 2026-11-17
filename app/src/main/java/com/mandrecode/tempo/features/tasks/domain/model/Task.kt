@@ -4,6 +4,8 @@ import com.mandrecode.tempo.core.domain.model.DayOfWeek
 import com.mandrecode.tempo.core.domain.model.MonthDayOption
 import com.mandrecode.tempo.core.domain.model.Periodicity
 import com.mandrecode.tempo.core.domain.model.Priority
+import com.mandrecode.tempo.core.domain.model.UNSET_TIMESTAMP
+import com.mandrecode.tempo.core.domain.model.UNSET_UID
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 
@@ -43,11 +45,22 @@ data class Task(
      * meaningful for top-level tasks; a category change clears it.
      */
     val sectionId: Long? = null,
+    /** Stable global identity (#30), assigned by the database on insert; [UNSET_UID] until stored. */
+    val uid: String = UNSET_UID,
+    /** Epoch millis UTC, stamped by the database; [UNSET_TIMESTAMP] until stored. */
+    val createdAt: Long = UNSET_TIMESTAMP,
+    /** Epoch millis UTC of the last stored change, stamped by the database. */
+    val updatedAt: Long = UNSET_TIMESTAMP,
 ) {
+    /**
+     * This record saved as a *new* one: no local id and no identity, so the database assigns both.
+     * Any copy that becomes another row must go through here — reusing the source's uid fails (#30).
+     */
+    fun asNew(): Task = copy(id = 0, uid = UNSET_UID, createdAt = UNSET_TIMESTAMP, updatedAt = UNSET_TIMESTAMP)
+
     /** The next occurrence of this series, as a new task due on [reminderDate]. */
     fun asNextOccurrence(reminderDate: LocalDateTime): Task =
-        copy(
-            id = 0,
+        asNew().copy(
             isCompleted = false,
             completedAt = null,
             reminderDate = reminderDate,
@@ -65,11 +78,4 @@ data class Task(
         )
 }
 
-/**
- * Legacy constant for the seeded Inbox category (id = -1).
- * Only used in database seed/migration code. UI code should use
- * [Category.isDefault] instead of identity checks.
- */
-@Deprecated("Use Category.isDefault instead of identity checks")
-val DEFAULT_INBOX_CATEGORY = Category(id = -1, name = "Inbox", isDefault = true)
 val DEFAULT_ADD_CATEGORY = Category(id = -2, name = "Add Category")

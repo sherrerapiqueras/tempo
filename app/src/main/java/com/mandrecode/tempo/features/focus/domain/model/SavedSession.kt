@@ -1,5 +1,8 @@
 package com.mandrecode.tempo.features.focus.domain.model
 
+import com.mandrecode.tempo.core.domain.model.UNSET_TIMESTAMP
+import com.mandrecode.tempo.core.domain.model.UNSET_UID
+
 /**
  * A topic session the user has started before: "Study", 25 minutes, 5 of rest, four rounds (#517).
  *
@@ -17,7 +20,19 @@ data class SavedSession(
     val rounds: Int = 1,
     /** Epoch milliseconds of the last start. */
     val lastUsedAt: Long = 0,
+    /** Stable global identity (#30), assigned by the database on insert; [UNSET_UID] until stored. */
+    val uid: String = UNSET_UID,
+    /** Epoch millis UTC, stamped by the database; [UNSET_TIMESTAMP] until stored. */
+    val createdAt: Long = UNSET_TIMESTAMP,
+    /** Epoch millis UTC of the last stored change, stamped by the database. */
+    val updatedAt: Long = UNSET_TIMESTAMP,
 ) {
+    /**
+     * This record saved as a *new* one: no local id and no identity, so the database assigns both.
+     * Any copy that becomes another row must go through here — reusing the source's uid fails (#30).
+     */
+    fun asNew(): SavedSession = copy(id = 0, uid = UNSET_UID, createdAt = UNSET_TIMESTAMP, updatedAt = UNSET_TIMESTAMP)
+
     /** The same session with every number inside what a timer can run, and its name trimmed. */
     fun normalized(): SavedSession =
         copy(

@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 2,
+  "appVersion": "1.21.0",
+  "exportedAt": "2026-11-17T10:00",
+  "categories": [
+    {
+      "id": 4, "name": "Inbox", "icon": "inbox", "isDefault": true, "sortOrder": -1,
+      "uid": "00000000-0000-4000-8000-000000000001", "createdAt": 1767225600000, "updatedAt": 1767225600000
+    },
+    {
+      "id": 7, "name": "Work", "color": "red", "sortOrder": 0, "sectionsEnabled": true,
+      "uid": "0195a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b", "createdAt": 1767312000000, "updatedAt": 1767398400000
+    }
+  ],
+  "taskSections": [
+    {
+      "id": 3, "categoryId": 7, "name": "Soon", "sortOrder": 0,
+      "uid": "0195a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2c", "createdAt": 1767312000000, "updatedAt": 1767312000000
+    }
+  ],
+  "tasks": [
+    {
+      "id": 1, "title": "Report", "description": "Quarterly numbers", "categoryId": 7,
+      "priority": "HIGH", "periodicityInterval": 1, "sortOrder": 0, "sectionId": 3,
+      "uid": "0195a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2d", "createdAt": 1767312000000, "updatedAt": 1767484800000
+    },
+    {
+      "id": 2, "title": "Sub", "categoryId": 7, "parentTaskId": 1, "sortOrder": 0,
+      "uid": "0195a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2e", "createdAt": 1767312000000, "updatedAt": 1767312000000
+    }
+  ],
+  "habits": [
+    {
+      "id": 1, "title": "Run", "habitType": "BUILD", "createdDate": "2026-01-01T08:00",
+      "completionHistory": "2026-01-02",
+      "uid": "0195a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2f", "createdAt": 1767254400000, "updatedAt": 1767340800000
+    }
+  ],
+  "habitChains": [
+    {
+      "id": 1, "title": "Morning", "createdDate": "2026-01-01T08:00",
+      "uid": "0195a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a30", "createdAt": 1767254400000, "updatedAt": 1767254400000
+    }
+  ],
+  "habitChainMembers": [
+    { "chainId": 1, "habitId": 1, "sortOrder": 0 }
+  ],
+  "focusSessions": [
+    {
+      "id": 1, "title": "Deep work", "focusMinutes": 50, "breakMinutes": 10, "rounds": 2, "lastUsedAt": 1767484800000,
+      "uid": "0195a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a31", "createdAt": 1767312000000, "updatedAt": 1767484800000
+    }
+  ]
+}

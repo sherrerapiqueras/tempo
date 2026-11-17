@@ -1,5 +1,6 @@
 package com.mandrecode.tempo.features.backup.domain.util
 
+import com.mandrecode.tempo.core.domain.model.UNSET_UID
 import com.mandrecode.tempo.features.backup.domain.model.BackupData
 import com.mandrecode.tempo.features.backup.domain.model.BackupEntityKind
 import com.mandrecode.tempo.features.backup.domain.model.ConflictReason
@@ -19,6 +20,11 @@ import jakarta.inject.Inject
  * duplicate (skip, reuse local row) or conflict (skip, keep local row, report),
  * and produces the id-remapping plan the executor applies. Pure Kotlin — all
  * decisions are made against an in-memory snapshot of local data.
+ *
+ * Identity first (#283): an incoming record whose uid this device already has *is* that
+ * record. It maps onto the local row, which this device keeps as it is, and counts as skipped,
+ * never as a conflict, so its children are matched on their own. Only records without a known
+ * uid (every record of a version-1 file) fall back to natural keys.
  *
  * Natural keys: category → name; task → title within its resolved category and
  * parent; habit → title; habit chain → title. Content comparison ignores ids
@@ -76,6 +82,18 @@ class MergePlanner
 
             val counts: ImportCounts
                 get() = ImportCounts(imported = imported, skipped = skipped, conflicts = conflicted)
+
+            /** Maps [incomingId] onto the local record with the same identity, if any. */
+            fun matchedByIdentity(
+                incomingId: Long,
+                uid: String,
+                localIdByUid: Map<String, Long>,
+            ): Boolean {
+                val localId = uid.takeIf { it != UNSET_UID }?.let(localIdByUid::get) ?: return false
+                idMap[incomingId] = localId
+                skipped++
+                return true
+            }
         }
 
         private fun planCategories(
@@ -85,8 +103,10 @@ class MergePlanner
         ): EntityPlan<Category> {
             val plan = EntityPlan<Category>()
             val localByName = local.categories.associateBy { it.name }
+            val localIdByUid = local.categories.idByUid({ it.uid }) { it.id }
             var nextSortOrder = (local.categories.maxOfOrNull { it.sortOrder } ?: -1) + 1
             incoming.categories.sortedBy { it.sortOrder }.forEach { category ->
+                if (plan.matchedByIdentity(category.id, category.uid, localIdByUid)) return@forEach
                 val match = localByName[category.name]
                 when {
                     match == null -> {
@@ -132,9 +152,23 @@ class MergePlanner
             // Same-named incoming sections of one category are one section, like local ones.
             val firstByName = mutableMapOf<Pair<Long, String>, Long>()
             val localByCategory = local.sections.groupBy { it.categoryId }
+            val localByUid = local.sections.filter { it.uid != UNSET_UID }.associateBy { it.uid }
             val nextSortOrder =
                 localByCategory.mapValues { (_, sections) -> sections.maxOf { it.sortOrder } + 1 }.toMutableMap()
-            incoming.sections.sortedBy { it.sortOrder }.forEach { section ->
+            incoming.sections.sortedBy { it.sortOrder }.forEach { incomingSection ->
+                // Identity is only reused within the category this section resolves to: a section
+                // claiming the uid of another category's section (an edited file) would hand that
+                // other category's section to this category's tasks. It imports as a new section.
+                val sameRecord = localByUid[incomingSection.uid]
+                val section =
+                    when {
+                        sameRecord == null -> incomingSection
+                        sameRecord.categoryId == categories.idMap[incomingSection.categoryId] -> {
+                            idMap[incomingSection.id] = sameRecord.id
+                            return@forEach
+                        }
+                        else -> incomingSection.copy(uid = UNSET_UID)
+                    }
                 val canonical = firstByName.getOrPut(section.categoryId to section.name) { section.id }
                 if (canonical != section.id) {
                     aliases[section.id] = canonical
@@ -166,8 +200,10 @@ class MergePlanner
             // Grouped once so sibling lookup below is a map read instead of a full
             // scan of local.tasks per incoming task (avoids O(incoming × local)).
             val localByScope = local.tasks.groupBy { it.scope() }
+            val localIdByUid = local.tasks.idByUid({ it.uid }) { it.id }
             val nextSortOrders = mutableMapOf<TaskScope, Int>()
             forEachTaskParentsFirst(incoming.tasks) { task ->
+                if (plan.matchedByIdentity(task.id, task.uid, localIdByUid)) return@forEachTaskParentsFirst
                 // The local scope an incoming task would land in (matched local
                 // parent, or matched local category for top-level tasks). A null
                 // scope means the scope itself is newly inserted, so no local
@@ -309,7 +345,9 @@ class MergePlanner
         ): EntityPlan<Habit> {
             val plan = EntityPlan<Habit>()
             val localByTitle = local.habits.associateBy { it.title }
+            val localIdByUid = local.habits.idByUid({ it.uid }) { it.id }
             incoming.habits.forEach { habit ->
+                if (plan.matchedByIdentity(habit.id, habit.uid, localIdByUid)) return@forEach
                 val match = localByTitle[habit.title]
                 when {
                     match == null -> {
@@ -346,7 +384,9 @@ class MergePlanner
         ): EntityPlan<HabitChain> {
             val plan = EntityPlan<HabitChain>()
             val localByTitle = local.habitChains.associateBy { it.title }
+            val localIdByUid = local.habitChains.idByUid({ it.uid }) { it.id }
             incoming.habitChains.forEach { chain ->
+                if (plan.matchedByIdentity(chain.id, chain.uid, localIdByUid)) return@forEach
                 val match = localByTitle[chain.title]
                 when {
                     match == null -> {
@@ -383,6 +423,12 @@ class MergePlanner
         )
     }
 
+/** Local ids by uid, for records that have one. */
+private fun <T> List<T>.idByUid(
+    uid: (T) -> String,
+    id: (T) -> Long,
+): Map<String, Long> = filter { uid(it) != UNSET_UID }.associate { uid(it) to id(it) }
+
 /** Ordered habit titles of a chain's members — the id-independent membership fingerprint. */
 private fun memberTitles(
     data: BackupData,
@@ -396,14 +442,13 @@ private fun memberTitles(
 }
 
 // Whether sections are on is a view preference, like the sort order, not content to conflict on.
-private fun Category.contentKey() = copy(id = 0, sortOrder = 0, isDefault = false, sectionsEnabled = false)
+private fun Category.contentKey() = asNew().copy(sortOrder = 0, isDefault = false, sectionsEnabled = false)
 
 // nextInstanceId values are database ids and meaningless across devices, but
 // *having* a next-occurrence link is content: a linked archived task must not
 // classify as an exact duplicate of an unlinked local task (or vice versa).
 private fun Task.contentKey() =
-    copy(
-        id = 0,
+    asNew().copy(
         sortOrder = 0,
         nextInstanceId = if (nextInstanceId == null) null else 0,
         categoryId = 0,
@@ -412,9 +457,9 @@ private fun Task.contentKey() =
         sectionId = null,
     )
 
-private fun Habit.contentKey() = copy(id = 0)
+private fun Habit.contentKey() = asNew()
 
-private fun HabitChain.contentKey() = copy(id = 0, habitIds = emptyList())
+private fun HabitChain.contentKey() = asNew().copy(habitIds = emptyList())
 
 private data class SectionPlan(
     val toInsert: List<TaskSection>,

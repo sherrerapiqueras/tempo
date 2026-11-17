@@ -5,6 +5,8 @@ import com.mandrecode.tempo.core.domain.model.DayOfWeek
 import com.mandrecode.tempo.core.domain.model.MonthDayOption
 import com.mandrecode.tempo.core.domain.model.Periodicity
 import com.mandrecode.tempo.core.domain.model.Priority
+import com.mandrecode.tempo.core.domain.model.UNSET_TIMESTAMP
+import com.mandrecode.tempo.core.domain.model.UNSET_UID
 import com.mandrecode.tempo.features.backup.data.model.BackupFileDto
 import com.mandrecode.tempo.features.backup.data.model.CategoryBackupDto
 import com.mandrecode.tempo.features.backup.data.model.ChainMemberBackupDto
@@ -42,7 +44,18 @@ fun BackupData.toDto(
         appVersion = appVersion,
         exportedAt = exportedAt.toString(),
         categories = categories.map { it.toDto() },
-        taskSections = sections.map { TaskSectionBackupDto(it.id, it.categoryId, it.name, it.sortOrder) },
+        taskSections =
+            sections.map {
+                TaskSectionBackupDto(
+                    id = it.id,
+                    categoryId = it.categoryId,
+                    name = it.name,
+                    sortOrder = it.sortOrder,
+                    uid = it.uid.ifEmpty { null },
+                    createdAt = it.createdAt.takeIf { time -> time != UNSET_TIMESTAMP },
+                    updatedAt = it.updatedAt.takeIf { time -> time != UNSET_TIMESTAMP },
+                )
+            },
         tasks = tasks.map { it.toDto() },
         habits = habits.map { it.toDto() },
         habitChains = habitChains.map { it.toDto() },
@@ -66,6 +79,9 @@ fun BackupData.toDto(
                     breakMinutes = session.breakMinutes,
                     rounds = session.rounds,
                     lastUsedAt = session.lastUsedAt,
+                    uid = session.uid.ifEmpty { null },
+                    createdAt = session.createdAt.takeIf { it != UNSET_TIMESTAMP },
+                    updatedAt = session.updatedAt.takeIf { it != UNSET_TIMESTAMP },
                 )
             },
     )
@@ -73,7 +89,18 @@ fun BackupData.toDto(
 fun BackupFileDto.toDomain(): BackupData =
     BackupData(
         categories = categories.map { it.toDomain() },
-        sections = taskSections.map { TaskSection(it.id, it.categoryId, it.name, it.sortOrder) },
+        sections =
+            taskSections.map {
+                TaskSection(
+                    id = it.id,
+                    categoryId = it.categoryId,
+                    name = it.name,
+                    sortOrder = it.sortOrder,
+                    uid = it.uid ?: UNSET_UID,
+                    createdAt = it.createdAt ?: UNSET_TIMESTAMP,
+                    updatedAt = it.updatedAt ?: UNSET_TIMESTAMP,
+                )
+            },
         tasks = tasks.map { it.toDomain() },
         habits = habits.map { it.toDomain() },
         habitChains = habitChains.map { it.toDomain() },
@@ -101,6 +128,9 @@ fun BackupFileDto.toDomain(): BackupData =
                     breakMinutes = dto.breakMinutes,
                     rounds = dto.rounds,
                     lastUsedAt = dto.lastUsedAt,
+                    uid = dto.uid ?: UNSET_UID,
+                    createdAt = dto.createdAt ?: UNSET_TIMESTAMP,
+                    updatedAt = dto.updatedAt ?: UNSET_TIMESTAMP,
                 ).normalized()
             },
     )
@@ -114,6 +144,9 @@ private fun Category.toDto(): CategoryBackupDto =
         isDefault = isDefault,
         sortOrder = sortOrder,
         sectionsEnabled = sectionsEnabled,
+        uid = uid.ifEmpty { null },
+        createdAt = createdAt.takeIf { it != UNSET_TIMESTAMP },
+        updatedAt = updatedAt.takeIf { it != UNSET_TIMESTAMP },
     )
 
 private fun CategoryBackupDto.toDomain(): Category =
@@ -125,6 +158,9 @@ private fun CategoryBackupDto.toDomain(): Category =
         isDefault = isDefault,
         sortOrder = sortOrder,
         sectionsEnabled = sectionsEnabled,
+        uid = uid ?: UNSET_UID,
+        createdAt = createdAt ?: UNSET_TIMESTAMP,
+        updatedAt = updatedAt ?: UNSET_TIMESTAMP,
     )
 
 private fun Task.toDto(): TaskBackupDto =
@@ -146,6 +182,9 @@ private fun Task.toDto(): TaskBackupDto =
         completedAt = completedAt?.toString(),
         nextInstanceId = nextInstanceId,
         sectionId = sectionId,
+        uid = uid.ifEmpty { null },
+        createdAt = createdAt.takeIf { it != UNSET_TIMESTAMP },
+        updatedAt = updatedAt.takeIf { it != UNSET_TIMESTAMP },
     )
 
 private fun TaskBackupDto.toDomain(): Task =
@@ -167,6 +206,9 @@ private fun TaskBackupDto.toDomain(): Task =
         completedAt = completedAt?.let { LocalDateTime.parse(it) },
         nextInstanceId = nextInstanceId,
         sectionId = sectionId,
+        uid = uid ?: UNSET_UID,
+        createdAt = createdAt ?: UNSET_TIMESTAMP,
+        updatedAt = updatedAt ?: UNSET_TIMESTAMP,
     )
 
 private fun Habit.toDto(): HabitBackupDto =
@@ -182,6 +224,9 @@ private fun Habit.toDto(): HabitBackupDto =
         createdDate = createdDate.toString(),
         completionHistory = completionHistory,
         repeatDays = repeatDays?.map { it.value },
+        uid = uid.ifEmpty { null },
+        createdAt = createdAt.takeIf { it != UNSET_TIMESTAMP },
+        updatedAt = updatedAt.takeIf { it != UNSET_TIMESTAMP },
     )
 
 private fun HabitBackupDto.toDomain(): Habit =
@@ -197,6 +242,9 @@ private fun HabitBackupDto.toDomain(): Habit =
         createdDate = LocalDateTime.parse(createdDate),
         completionHistory = completionHistory,
         repeatDays = repeatDays?.toDayOfWeekSet(),
+        uid = uid ?: UNSET_UID,
+        createdAt = createdAt ?: UNSET_TIMESTAMP,
+        updatedAt = updatedAt ?: UNSET_TIMESTAMP,
     )
 
 private fun HabitChain.toDto(): HabitChainBackupDto =
@@ -210,6 +258,9 @@ private fun HabitChain.toDto(): HabitChainBackupDto =
         createdDate = createdDate.toString(),
         completionHistory = completionHistory,
         repeatDays = repeatDays?.map { it.value },
+        uid = uid.ifEmpty { null },
+        createdAt = createdAt.takeIf { it != UNSET_TIMESTAMP },
+        updatedAt = updatedAt.takeIf { it != UNSET_TIMESTAMP },
     )
 
 private fun HabitChainBackupDto.toDomain(): HabitChain =
@@ -223,6 +274,9 @@ private fun HabitChainBackupDto.toDomain(): HabitChain =
         createdDate = LocalDateTime.parse(createdDate),
         completionHistory = completionHistory,
         repeatDays = repeatDays?.toDayOfWeekSet(),
+        uid = uid ?: UNSET_UID,
+        createdAt = createdAt ?: UNSET_TIMESTAMP,
+        updatedAt = updatedAt ?: UNSET_TIMESTAMP,
     )
 
 private fun List<Int>.toDayOfWeekSet(): Set<DayOfWeek> =

@@ -54,8 +54,8 @@ class TaskRepositoryTest {
             every { taskDao.getAllTasks() } returns
                 flowOf(
                     listOf(
-                        TaskEntity(id = 1L, title = "Lease", description = ""),
-                        TaskEntity(id = 2L, title = "Groceries", description = ""),
+                        TaskEntity(categoryId = 0, id = 1L, title = "Lease", description = ""),
+                        TaskEntity(categoryId = 0, id = 2L, title = "Groceries", description = ""),
                     ),
                 )
             every { database.taskAttachmentDao().observeTaskIdsWithAttachments() } returns flowOf(listOf(1L))
@@ -68,9 +68,10 @@ class TaskRepositoryTest {
     @Test
     fun `deleteTaskWithSnapshot captures the full task tree before deleting`() =
         runTest {
-            val root = TaskEntity(id = 10L, title = "Root", description = "")
-            val child = TaskEntity(id = 11L, title = "Child", description = "", parentTaskId = 10L)
-            val grandchild = TaskEntity(id = 12L, title = "Grandchild", description = "", parentTaskId = 11L)
+            val root = TaskEntity(categoryId = 0, id = 10L, title = "Root", description = "")
+            val child = TaskEntity(categoryId = 0, id = 11L, title = "Child", description = "", parentTaskId = 10L)
+            val grandchild =
+                TaskEntity(id = 12L, title = "Grandchild", description = "", categoryId = 0, parentTaskId = 11L)
             coEvery { taskDao.getTaskTrees(listOf(10L)) } returns listOf(root, child, grandchild)
 
             val result = repository.deleteTaskWithSnapshot(10L)
@@ -141,7 +142,8 @@ class TaskRepositoryTest {
                     rootTaskId = 30L,
                     tasks = listOf(Task(id = 30L, title = "Deleted", description = "")),
                 )
-            coEvery { taskDao.getTaskById(30L) } returns TaskEntity(id = 30L, title = "Unrelated", description = "")
+            coEvery { taskDao.getTaskById(30L) } returns
+                TaskEntity(id = 30L, title = "Unrelated", description = "", categoryId = 0)
 
             val result = runCatching { repository.restoreDeletedTasks(snapshot) }
 

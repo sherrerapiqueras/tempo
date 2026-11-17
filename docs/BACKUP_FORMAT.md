@@ -43,7 +43,7 @@ the KDF/cipher logic lives in `infrastructure/security/BackupEncryptionService.k
 
 | Field | Type | Description |
 |:---|:---|:---|
-| `schemaVersion` | int | Format version. This document describes **version 1**. |
+| `schemaVersion` | int | Format version. This document describes **version 2**. Version 1 files still import (see [Version history](#version-history)). |
 | `appVersion` | string | `versionName` of the app that produced the export (provenance only). |
 | `exportedAt` | string | ISO-8601 local date-time of the export (provenance only). |
 | `categories` | array | See [Category](#category). |
@@ -58,6 +58,19 @@ the KDF/cipher logic lives in `infrastructure/security/BackupEncryptionService.k
 All collections default to empty. Original database ids are included on every record; they are
 required for referential integrity inside the file and are preserved verbatim by Replace
 imports (Merge imports assign fresh ids and remap references).
+
+### Identity fields (version 2)
+
+Every category, task section, task, habit, habit chain and focus session also carries:
+
+| Field | Type | Description |
+|:---|:---|:---|
+| `uid` | string? | The record's stable identity: a lowercase canonical UUID, the same on every device (#30). The seeded Inbox's is always `00000000-0000-4000-8000-000000000001`. |
+| `createdAt` | long? | Epoch milliseconds (UTC) of creation. |
+| `updatedAt` | long? | Epoch milliseconds (UTC) of the last change. |
+
+Local `id`s mean something only inside the file. `uid` is what identifies a record across
+devices and across imports. All three fields are absent from version-1 files.
 
 ## Value conventions
 
@@ -138,16 +151,34 @@ so a hand-edited file cannot install a contradictory pause history.
   at the same schema version still import.
 - The payload is validated (referential integrity, duplicate ids) before any database write;
   all writes happen in a single transaction.
-- **Replace** restores the file exactly (original ids preserved; Inbox re-seeded if the file
-  carries no default category). **Merge** adds records, skipping exact duplicates and
-  reporting conflicts by natural key (category name; task title within category/parent;
-  habit/chain title). Sections never conflict: an incoming section reuses a same-named section
+- **Replace** restores the file exactly: original ids, `uid`s and timestamps are preserved, and an
+  Inbox is seeded only if the file carries no default category. **Merge** matches by identity
+  first: an incoming record whose `uid` the device already has *is* that record. It maps onto
+  the local row, which the device keeps unchanged, and counts as skipped, never as a conflict, so
+  its children are matched by their own `uid`s. Records added by a merge keep their `uid`s, so
+  merging the same file again adds nothing. Records without a known `uid` (all of a version-1
+  file) fall back to natural keys, skipping exact duplicates and reporting conflicts (category
+  name; task title within category/parent; habit/chain title). In a version-1 file the
+  seeded Inbox is the category with id `-1`. A version-2 file identifies it by its well-known
+  `uid` instead, whatever its id. Sections never conflict: an incoming section reuses a same-named section
   of its resolved local category, otherwise it is appended to that category.
 - **Focus sessions** are restored with their ids on Replace. On Merge, a session whose name the
-  device already has (ignoring case) is skipped and any other is added. Either way only the five
+  device already has (ignoring case), or whose `uid` it already has, is skipped and any other is
+  added. Either way only the five
   most recently used remain.
 - **Older apps** reading a file that carries sections drop `taskSections` and `sectionId` as
   unknown fields, so every task imports unsectioned.
+
+- **Identity sanitising:** a malformed `uid`, or one already used by an earlier record of the same
+  kind in the file, is dropped, and that record imports as a new one. An edited file never fails
+  an import over identity.
+
+## Version history
+
+| Version | Change |
+|:---|:---|
+| 1 | Initial format. Records are keyed by local ids only. The seeded Inbox is the category with `id = -1`. |
+| 2 | Adds `uid`, `createdAt` and `updatedAt` to identity-bearing records, and merge matches by `uid` (#283). Importing a version-1 file gives each record a fresh `uid`, except the category with `id = -1`, which is the seeded Inbox and gets the well-known one. An app that only knows version 1 rejects version-2 files as too new. |
 
 ## Evolution rules
 

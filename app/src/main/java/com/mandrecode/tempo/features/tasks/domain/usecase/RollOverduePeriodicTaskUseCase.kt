@@ -203,8 +203,7 @@ class RollOverduePeriodicTaskUseCase
             val maxSortOrder = taskRepository.getMaxSubtaskSortOrder(newParentId)
             val clones =
                 subtasksBefore.mapIndexed { index, subtask ->
-                    subtask.copy(
-                        id = 0,
+                    subtask.asNew().copy(
                         isCompleted = false,
                         completedAt = null,
                         parentTaskId = newParentId,

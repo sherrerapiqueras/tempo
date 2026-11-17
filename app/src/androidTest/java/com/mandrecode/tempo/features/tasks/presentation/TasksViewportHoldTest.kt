@@ -11,7 +11,7 @@ import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.mandrecode.tempo.core.ui.theme.TempoTheme
-import com.mandrecode.tempo.features.tasks.domain.model.DEFAULT_INBOX_CATEGORY
+import com.mandrecode.tempo.features.tasks.TEST_INBOX_CATEGORY
 import com.mandrecode.tempo.features.tasks.domain.model.Task
 import com.mandrecode.tempo.features.tasks.presentation.model.ActiveGroupKey
 import com.mandrecode.tempo.features.tasks.presentation.model.CompletedGroupKey
@@ -54,7 +54,7 @@ class TasksViewportHoldTest {
                         TasksContract.UiState(
                             isLoading = false,
                             tasks = (active + completed).toPersistentList(),
-                            categories = persistentListOf(DEFAULT_INBOX_CATEGORY),
+                            categories = persistentListOf(TEST_INBOX_CATEGORY),
                             activeTasks = persistentMapOf(ActiveGroupKey.Flat to active.toPersistentList()),
                             completedTaskGroups =
                                 persistentMapOf(CompletedGroupKey.Flat to completed.toPersistentList()),

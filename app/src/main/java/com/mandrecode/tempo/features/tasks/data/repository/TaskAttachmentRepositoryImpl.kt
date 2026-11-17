@@ -1,6 +1,8 @@
 package com.mandrecode.tempo.features.tasks.data.repository
 
 import com.mandrecode.tempo.core.data.local.dao.TaskAttachmentDao
+import com.mandrecode.tempo.core.domain.model.UNSET_TIMESTAMP
+import com.mandrecode.tempo.core.domain.model.UNSET_UID
 import com.mandrecode.tempo.features.tasks.data.attachment.AttachmentFileStore
 import com.mandrecode.tempo.features.tasks.data.attachment.AttachmentTooLargeException
 import com.mandrecode.tempo.features.tasks.data.mapper.toDomain
@@ -49,7 +51,7 @@ class TaskAttachmentRepositoryImpl
             taskId: Long,
         ) {
             if (attachments.isEmpty()) return
-            dao.insertAll(attachments.map { it.copy(id = 0, taskId = taskId).toEntity() })
+            dao.insertAll(attachments.map { it.asNew().copy(taskId = taskId).toEntity() })
         }
 
         override suspend fun remove(attachment: TaskAttachment) {
@@ -71,7 +73,18 @@ class TaskAttachmentRepositoryImpl
         ) {
             val source = dao.getForTask(fromTaskId)
             if (source.isEmpty()) return
-            dao.insertAll(source.map { it.copy(id = 0, taskId = toTaskId) })
+            // Stored rows: a copy is a new record, so it must not keep the source's identity (#30).
+            dao.insertAll(
+                source.map {
+                    it.copy(
+                        id = 0,
+                        taskId = toTaskId,
+                        uid = UNSET_UID,
+                        createdAt = UNSET_TIMESTAMP,
+                        updatedAt = UNSET_TIMESTAMP,
+                    )
+                },
+            )
         }
 
         override suspend fun pruneOrphans(keepFilesFromEpochMillis: Long) {

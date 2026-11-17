@@ -22,6 +22,9 @@ fun TaskEntity.toDomain(): Task =
         completedAt = completedAt,
         nextInstanceId = nextInstanceId,
         sectionId = sectionId,
+        uid = uid,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
     )
 
 fun Task.toEntity(): TaskEntity =
@@ -43,6 +46,9 @@ fun Task.toEntity(): TaskEntity =
         completedAt = completedAt,
         nextInstanceId = nextInstanceId,
         sectionId = sectionId,
+        uid = uid,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
     )
 
 fun List<TaskEntity>.toDomain(): List<Task> = map { it.toDomain() }

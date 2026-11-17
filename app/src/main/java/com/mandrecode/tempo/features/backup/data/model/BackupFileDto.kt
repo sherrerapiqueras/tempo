@@ -40,6 +40,12 @@ data class FocusSessionBackupDto(
     val breakMinutes: Int = 5,
     val rounds: Int = 1,
     val lastUsedAt: Long = 0,
+    /** Stable identity (#30, schema v2); absent in version-1 files. */
+    val uid: String? = null,
+    /** Epoch millis UTC (#30, schema v2); absent in version-1 files. */
+    val createdAt: Long? = null,
+    /** Epoch millis UTC of the last change (#30, schema v2); absent in version-1 files. */
+    val updatedAt: Long? = null,
 )
 
 /** One recorded day of activity. The quiet/some/all state is derived, so it is not stored. */
@@ -112,6 +118,12 @@ data class CategoryBackupDto(
     val sortOrder: Int = 0,
     /** Whether the category uses sections (#61); absent (off) in files written before them. */
     val sectionsEnabled: Boolean = false,
+    /** Stable identity (#30, schema v2); absent in version-1 files. */
+    val uid: String? = null,
+    /** Epoch millis UTC (#30, schema v2); absent in version-1 files. */
+    val createdAt: Long? = null,
+    /** Epoch millis UTC of the last change (#30, schema v2); absent in version-1 files. */
+    val updatedAt: Long? = null,
 )
 
 @Serializable
@@ -135,6 +147,12 @@ data class TaskBackupDto(
     val nextInstanceId: Long? = null,
     /** The task's section (#61); absent (unsectioned) in files written before sections existed. */
     val sectionId: Long? = null,
+    /** Stable identity (#30, schema v2); absent in version-1 files. */
+    val uid: String? = null,
+    /** Epoch millis UTC (#30, schema v2); absent in version-1 files. */
+    val createdAt: Long? = null,
+    /** Epoch millis UTC of the last change (#30, schema v2); absent in version-1 files. */
+    val updatedAt: Long? = null,
 )
 
 @Serializable
@@ -143,6 +161,12 @@ data class TaskSectionBackupDto(
     val categoryId: Long,
     val name: String,
     val sortOrder: Int = 0,
+    /** Stable identity (#30, schema v2); absent in version-1 files. */
+    val uid: String? = null,
+    /** Epoch millis UTC (#30, schema v2); absent in version-1 files. */
+    val createdAt: Long? = null,
+    /** Epoch millis UTC of the last change (#30, schema v2); absent in version-1 files. */
+    val updatedAt: Long? = null,
 )
 
 @Serializable
@@ -158,6 +182,12 @@ data class HabitBackupDto(
     val createdDate: String,
     val completionHistory: String = "",
     val repeatDays: List<Int>? = null,
+    /** Stable identity (#30, schema v2); absent in version-1 files. */
+    val uid: String? = null,
+    /** Epoch millis UTC (#30, schema v2); absent in version-1 files. */
+    val createdAt: Long? = null,
+    /** Epoch millis UTC of the last change (#30, schema v2); absent in version-1 files. */
+    val updatedAt: Long? = null,
 )
 
 @Serializable
@@ -171,6 +201,12 @@ data class HabitChainBackupDto(
     val createdDate: String,
     val completionHistory: String = "",
     val repeatDays: List<Int>? = null,
+    /** Stable identity (#30, schema v2); absent in version-1 files. */
+    val uid: String? = null,
+    /** Epoch millis UTC (#30, schema v2); absent in version-1 files. */
+    val createdAt: Long? = null,
+    /** Epoch millis UTC of the last change (#30, schema v2); absent in version-1 files. */
+    val updatedAt: Long? = null,
 )
 
 @Serializable

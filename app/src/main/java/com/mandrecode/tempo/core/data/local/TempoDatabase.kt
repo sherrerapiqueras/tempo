@@ -18,26 +18,32 @@ import com.mandrecode.tempo.core.data.entity.DailyFocusActivityEntity
 import com.mandrecode.tempo.core.data.entity.HabitChainEntity
 import com.mandrecode.tempo.core.data.entity.HabitChainMemberEntity
 import com.mandrecode.tempo.core.data.entity.HabitEntity
+import com.mandrecode.tempo.core.data.entity.PendingChangeEntity
 import com.mandrecode.tempo.core.data.entity.SavedSessionEntity
 import com.mandrecode.tempo.core.data.entity.TaskAttachmentEntity
 import com.mandrecode.tempo.core.data.entity.TaskEntity
 import com.mandrecode.tempo.core.data.entity.TaskSectionEntity
+import com.mandrecode.tempo.core.data.entity.TombstoneEntity
 import com.mandrecode.tempo.core.data.local.dao.CategoryDao
 import com.mandrecode.tempo.core.data.local.dao.DailyFocusActivityDao
 import com.mandrecode.tempo.core.data.local.dao.HabitChainDao
 import com.mandrecode.tempo.core.data.local.dao.HabitChainMemberDao
 import com.mandrecode.tempo.core.data.local.dao.HabitDao
+import com.mandrecode.tempo.core.data.local.dao.PendingChangeDao
 import com.mandrecode.tempo.core.data.local.dao.SavedSessionDao
 import com.mandrecode.tempo.core.data.local.dao.TaskAttachmentDao
 import com.mandrecode.tempo.core.data.local.dao.TaskDao
 import com.mandrecode.tempo.core.data.local.dao.TaskSectionDao
+import com.mandrecode.tempo.core.data.local.dao.TombstoneDao
 import com.mandrecode.tempo.core.data.local.security.DatabaseEncryptionMigrator
 import com.mandrecode.tempo.core.data.local.security.DbKdfIterMarker
 import com.mandrecode.tempo.core.data.local.security.DbPassphraseProvider
 import com.mandrecode.tempo.core.data.local.security.SqlCipherKdfIter
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.datetime.TimeZone
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
+import kotlin.time.Clock
 
 @Database(
     entities = [
@@ -50,8 +56,10 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         TaskAttachmentEntity::class,
         TaskSectionEntity::class,
         SavedSessionEntity::class,
+        TombstoneEntity::class,
+        PendingChangeEntity::class,
     ],
-    version = 14,
+    version = 17,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -71,6 +79,10 @@ abstract class TempoDatabase : RoomDatabase() {
     abstract fun taskAttachmentDao(): TaskAttachmentDao
 
     abstract fun taskSectionDao(): TaskSectionDao
+
+    abstract fun tombstoneDao(): TombstoneDao
+
+    abstract fun pendingChangeDao(): PendingChangeDao
 
     abstract fun savedSessionDao(): SavedSessionDao
 
@@ -109,7 +121,7 @@ abstract class TempoDatabase : RoomDatabase() {
                     db.execSQL(
                         """
                         INSERT OR IGNORE INTO categories (id, name, color, icon, isDefault, sortOrder)
-                        VALUES (-1, 'Inbox', NULL, 'inbox', 1, -1)
+                        VALUES (${EntityIdentitySchema.LEGACY_INBOX_ID}, 'Inbox', NULL, 'inbox', 1, -1)
                         """.trimIndent(),
                     )
                 }
@@ -119,7 +131,8 @@ abstract class TempoDatabase : RoomDatabase() {
             object : Migration(4, 5) {
                 override fun migrate(db: SupportSQLiteDatabase) {
                     db.execSQL(
-                        "UPDATE categories SET icon = 'inbox' WHERE id = -1 AND icon IS NULL",
+                        "UPDATE categories SET icon = 'inbox' " +
+                            "WHERE id = ${EntityIdentitySchema.LEGACY_INBOX_ID} AND icon IS NULL",
                     )
                 }
             }
@@ -353,6 +366,34 @@ abstract class TempoDatabase : RoomDatabase() {
                 }
             }
 
+        /** Stable record identity (#30); see [EntityIdentitySchema]. */
+        val MIGRATION_14_15 =
+            object : Migration(14, 15) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    EntityIdentitySchema.migrate14To15(
+                        db,
+                        nowMillis = Clock.System.now().toEpochMilliseconds(),
+                        zone = TimeZone.currentSystemDefault(),
+                    )
+                }
+            }
+
+        /** Deletion tombstones (#281); see [TombstoneSchema]. */
+        val MIGRATION_15_16 =
+            object : Migration(15, 16) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    TombstoneSchema.migrate15To16(db)
+                }
+            }
+
+        /** Pending-changes journal (#546); see [JournalSchema]. */
+        val MIGRATION_16_17 =
+            object : Migration(16, 17) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    JournalSchema.migrate16To17(db)
+                }
+            }
+
         val MIGRATIONS =
             arrayOf(
                 MIGRATION_1_2,
@@ -368,6 +409,9 @@ abstract class TempoDatabase : RoomDatabase() {
                 MIGRATION_11_12,
                 MIGRATION_12_13,
                 MIGRATION_13_14,
+                MIGRATION_14_15,
+                MIGRATION_15_16,
+                MIGRATION_16_17,
             )
 
         suspend fun getDatabase(
@@ -431,6 +475,9 @@ abstract class TempoDatabase : RoomDatabase() {
         ): RoomDatabase.Builder<TempoDatabase> =
             builder
                 .addMigrations(*MIGRATIONS)
+                // Before the Inbox seed, so the seeded row is timestamped like any other insert.
+                .addCallback(EntityIdentitySchema.TriggersCallback)
+                .addCallback(TombstoneSchema.TombstonePurgeCallback)
                 .addCallback(inboxCallback(context))
                 .addCallback(OrphanedAttachmentRowsCallback)
                 .addCallback(DestructiveMigrationWarningCallback)
@@ -504,15 +551,15 @@ abstract class TempoDatabase : RoomDatabase() {
                 override fun onOpen(db: SupportSQLiteDatabase) {
                     db.execSQL(
                         """
-                        INSERT OR IGNORE INTO categories (id, name, icon, isDefault, sortOrder)
-                        SELECT ?, ?, ?, 1, ?
+                        INSERT OR IGNORE INTO categories (name, icon, isDefault, sortOrder, uid)
+                        SELECT ?, ?, 1, ?, ?
                         WHERE NOT EXISTS (SELECT 1 FROM categories WHERE isDefault = 1)
                         """.trimIndent(),
                         arrayOf<Any?>(
-                            DEFAULT_INBOX_CATEGORY_ENTITY.id,
                             context.getString(R.string.category_inbox),
                             DEFAULT_INBOX_CATEGORY_ENTITY.icon,
                             DEFAULT_INBOX_CATEGORY_ENTITY.sortOrder,
+                            DEFAULT_INBOX_CATEGORY_ENTITY.uid,
                         ),
                     )
                 }

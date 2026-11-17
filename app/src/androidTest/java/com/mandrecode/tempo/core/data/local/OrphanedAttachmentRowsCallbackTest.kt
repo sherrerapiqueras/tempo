@@ -27,9 +27,13 @@ class OrphanedAttachmentRowsCallbackTest {
     @Test
     fun rowsOfTasksGoneBeforeTheAppStarted_areDroppedOnOpen_andTheRestStay() {
         context.deleteDatabase(DB_NAME)
-        val before = Room.databaseBuilder(context, TempoDatabase::class.java, DB_NAME).build()
+        val before =
+            Room
+                .databaseBuilder(context, TempoDatabase::class.java, DB_NAME)
+                .addCallback(EntityIdentitySchema.TriggersCallback)
+                .build()
         runBlocking {
-            before.taskDao().insertTask(TaskEntity(id = 1L, title = "Kept", description = ""))
+            before.taskDao().insertTask(TaskEntity(categoryId = 0, id = 1L, title = "Kept", description = ""))
             before.taskAttachmentDao().insertAll(
                 listOf(attachment(taskId = 1L, storedName = "kept"), attachment(taskId = 99L, storedName = "gone")),
             )
@@ -39,6 +43,7 @@ class OrphanedAttachmentRowsCallbackTest {
         val reopened =
             Room
                 .databaseBuilder(context, TempoDatabase::class.java, DB_NAME)
+                .addCallback(EntityIdentitySchema.TriggersCallback)
                 .addCallback(TempoDatabase.OrphanedAttachmentRowsCallback)
                 .build()
         try {

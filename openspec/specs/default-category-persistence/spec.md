@@ -63,3 +63,41 @@ The system SHALL NOT create a task without an existing category. When no categor
 #### Scenario: Selection is not invented
 - **WHEN** the Tasks screen loads with no categories
 - **THEN** the selected category keeps its previous value instead of becoming a placeholder, and nothing is stored as the selection
+
+### Requirement: Seeded Inbox has a well-known identifier
+The Inbox category that the app seeds SHALL carry the same fixed identifier on every install, whether it was seeded on a fresh database, restored because no default existed, or present before the upgrade that introduced identifiers. Renaming the Inbox or making another category the default SHALL NOT change any category's identifier.
+
+#### Scenario: Two installs
+- **WHEN** two separate installs each have their seeded Inbox
+- **THEN** both Inboxes have the same identifier
+
+#### Scenario: Restored after going missing
+- **WHEN** the default category is recreated because none existed
+- **THEN** it has the well-known identifier
+
+#### Scenario: Default moved to another category
+- **WHEN** the user makes another category the default
+- **THEN** the Inbox keeps the well-known identifier and the new default keeps its own
+
+#### Scenario: Renamed default category
+- **WHEN** the user renames the default category
+- **THEN** its identifier is still the well-known one
+
+### Requirement: Default category is not identified by a reserved id
+The system SHALL NOT resolve the default category, or the seeded Inbox, by a reserved or negative local id. The default category SHALL be found by its default flag, and the seeded Inbox by its well-known identifier. A freshly seeded Inbox SHALL get an ordinary local id.
+
+#### Scenario: Fresh install
+- **WHEN** the database is created and the Inbox is seeded
+- **THEN** the Inbox has a positive local id, the well-known identifier, and is the default category
+
+#### Scenario: Existing install keeps working
+- **WHEN** an install whose Inbox was seeded under the old reserved id starts
+- **THEN** that Inbox is still found as the default category and nothing is re-seeded
+
+#### Scenario: Restoring a legacy backup
+- **WHEN** a version-1 backup whose Inbox carries the legacy reserved id is restored
+- **THEN** the restored Inbox carries the well-known identifier
+
+#### Scenario: Restoring a backup that already has a default
+- **WHEN** a restored backup has a default category but no Inbox
+- **THEN** no extra Inbox is created and the backup's default stays default
