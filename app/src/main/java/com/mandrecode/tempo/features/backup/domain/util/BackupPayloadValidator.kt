@@ -1,5 +1,6 @@
 package com.mandrecode.tempo.features.backup.domain.util
 
+import com.mandrecode.tempo.core.domain.model.UNSET_UID
 import com.mandrecode.tempo.features.backup.domain.model.BackupData
 import com.mandrecode.tempo.features.backup.domain.model.ValidationIssue
 import com.mandrecode.tempo.features.backup.domain.model.ValidationIssueKind
@@ -62,8 +63,18 @@ class BackupPayloadValidator
                 data.focusSessions
                     .filter { it.title.isNotBlank() }
                     .distinctBy { it.id }
+            // Identity (#30, schema v2) is sanitized too: a malformed uid, or one a record of the same
+            // kind already used, is dropped, so that record imports as a new one instead of failing
+            // the import or claiming another record's identity.
             return Result.Valid(
-                data.copy(tasks = sanitizedTasks, sections = sanitizedSections, focusSessions = sanitizedSessions),
+                data.copy(
+                    categories = data.categories.withUsableUids({ it.uid }) { it.copy(uid = UNSET_UID) },
+                    tasks = sanitizedTasks.withUsableUids({ it.uid }) { it.copy(uid = UNSET_UID) },
+                    sections = sanitizedSections.withUsableUids({ it.uid }) { it.copy(uid = UNSET_UID) },
+                    habits = data.habits.withUsableUids({ it.uid }) { it.copy(uid = UNSET_UID) },
+                    habitChains = data.habitChains.withUsableUids({ it.uid }) { it.copy(uid = UNSET_UID) },
+                    focusSessions = sanitizedSessions.withUsableUids({ it.uid }) { it.copy(uid = UNSET_UID) },
+                ),
             )
         }
 
@@ -131,3 +142,21 @@ class BackupPayloadValidator
             }
         }
     }
+
+private val CANONICAL_UUID = Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+
+/** Keeps each well-formed uid the first time it appears in this list and unsets the rest. */
+private fun <T> List<T>.withUsableUids(
+    uid: (T) -> String,
+    unset: (T) -> T,
+): List<T> {
+    val seen = mutableSetOf<String>()
+    return map { record ->
+        val value = uid(record)
+        when {
+            value == UNSET_UID -> record
+            CANONICAL_UUID.matches(value) && seen.add(value) -> record
+            else -> unset(record)
+        }
+    }
+}

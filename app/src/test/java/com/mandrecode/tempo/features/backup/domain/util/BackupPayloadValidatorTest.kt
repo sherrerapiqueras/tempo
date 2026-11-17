@@ -33,6 +33,25 @@ class BackupPayloadValidatorTest {
     }
 
     @Test
+    fun `malformed and repeated uids are dropped so those records import as new`() {
+        val uid = "0195a1b2-c3d4-7e5f-8a6b-000000000001"
+        val data =
+            backupData(
+                categories =
+                    listOf(
+                        category(id = 1).copy(uid = uid),
+                        category(id = 2).copy(uid = uid),
+                        category(id = 3).copy(uid = "not-a-uuid"),
+                        category(id = 4),
+                    ),
+            )
+
+        val result = validator.validate(data) as BackupPayloadValidator.Result.Valid
+
+        assertThat(result.sanitized.categories.map { it.uid }).containsExactly(uid, "", "", "").inOrder()
+    }
+
+    @Test
     fun `dangling nextInstanceId is nulled not fatal`() {
         val data =
             backupData(

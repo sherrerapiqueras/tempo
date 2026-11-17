@@ -56,7 +56,7 @@ import javax.inject.Inject
 import kotlin.time.Clock
 
 /** Highest backup schema version this app can read and the version it writes. */
-const val BACKUP_SCHEMA_VERSION = 1
+const val BACKUP_SCHEMA_VERSION = 2
 
 class BackupRepositoryImpl
     @Inject
@@ -79,7 +79,6 @@ class BackupRepositoryImpl
             val data =
                 database
                     .withTransaction { readAll() }
-                    .withInboxAtLegacyId()
                     .copy(settings = settingsDataSource.snapshot())
             val exportedAt = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
             val plaintextJson =
@@ -124,15 +123,19 @@ class BackupRepositoryImpl
                         maxSupported = BACKUP_SCHEMA_VERSION,
                     )
 
-                else -> validateAndApply(plaintextJson, mode)
+                else -> validateAndApply(plaintextJson, mode, fileVersion)
             }
         }
 
         private suspend fun validateAndApply(
             json: String,
             mode: ImportMode,
+            fileVersion: Int,
         ): ImportOutcome {
-            val data = decodeData(json, jsonFormat) ?: return ImportOutcome.CorruptFile
+            val decoded = decodeData(json, jsonFormat) ?: return ImportOutcome.CorruptFile
+            // Only a version-1 file identifies its Inbox by the legacy id. Mapped before validation,
+            // so the result is sanitized like any other uid; a v2 record is never rewritten.
+            val data = if (fileVersion == 1) decoded.withLegacyInboxIdentity() else decoded
             return when (val result = validator.validate(data)) {
                 is BackupPayloadValidator.Result.Invalid ->
                     ImportOutcome.ValidationFailed(result.issues)
@@ -187,9 +190,8 @@ class BackupRepositoryImpl
                 database.taskSectionDao().deleteAll()
                 database.savedSessionDao().deleteAll()
 
-                val categories = data.categories.map { it.withLegacyInboxIdentity() }
-                categories.forEach { database.categoryDao().insertCategory(it.toEntity()) }
-                val seededInboxCount = ensureDefaultCategory(categories)
+                data.categories.forEach { database.categoryDao().insertCategory(it.toEntity()) }
+                val seededInboxCount = ensureDefaultCategory(data.categories)
                 data.sections.forEach { database.taskSectionDao().insertSection(it.toEntity()) }
                 data.tasks.forEach { database.taskDao().insertTask(it.toEntity()) }
                 // Already sanitized by the validator: unique ids and named. Trimmed afterwards, in
@@ -245,6 +247,11 @@ class BackupRepositoryImpl
          * references. The plan is computed (reading current data and running the
          * CPU-bound classification) before opening the write transaction, so the
          * transaction itself only performs mutations.
+         *
+         * Merged-in records keep the identity they had in the file (#283): they are the same
+         * records, so importing the file again matches them instead of adding them twice.
+         * MergePlanner never inserts a uid this device already has; a version-1 file has none, and
+         * the database assigns one.
          */
         private suspend fun merge(data: BackupData): ImportSummary {
             val plan = mergePlanner.plan(incoming = data, local = readAll())
@@ -252,13 +259,13 @@ class BackupRepositoryImpl
                 val categoryIds = plan.categoryIdMap.toMutableMap()
                 plan.categoriesToInsert.forEach { category ->
                     categoryIds[category.id] =
-                        database.categoryDao().insertCategory(category.asNew().toEntity())
+                        database.categoryDao().insertCategory(category.copy(id = 0).toEntity())
                 }
                 val sectionIds = plan.sectionIdMap.toMutableMap()
                 plan.sectionsToInsert.forEach { section ->
                     sectionIds[section.id] =
                         database.taskSectionDao().insertSection(
-                            section.asNew().copy(categoryId = categoryIds.getValue(section.categoryId)).toEntity(),
+                            section.copy(id = 0, categoryId = categoryIds.getValue(section.categoryId)).toEntity(),
                         )
                 }
                 plan.sectionAliases.forEach { (alias, canonical) ->
@@ -268,12 +275,12 @@ class BackupRepositoryImpl
                 database.savedSessionDao().insertMerged(data.focusSessions)
                 val habitIds = plan.habitIdMap.toMutableMap()
                 plan.habitsToInsert.forEach { habit ->
-                    habitIds[habit.id] = database.habitDao().insertHabit(habit.asNew().toEntity())
+                    habitIds[habit.id] = database.habitDao().insertHabit(habit.copy(id = 0).toEntity())
                 }
                 val chainIds = plan.chainIdMap.toMutableMap()
                 plan.chainsToInsert.forEach { chain ->
                     chainIds[chain.id] =
-                        database.habitChainDao().insertHabitChain(chain.asNew().toEntity())
+                        database.habitChainDao().insertHabitChain(chain.copy(id = 0).toEntity())
                 }
                 database.habitChainMemberDao().insertMembers(
                     plan.membershipsToInsert.map { membership ->
@@ -294,19 +301,31 @@ class BackupRepositoryImpl
             sectionIds: Map<Long, Long>,
         ): Map<Long, Long> {
             val taskIds = plan.taskIdMap.toMutableMap()
+            // Category of each inserted task, so a subtask can follow its parent without a lookup.
+            val insertedCategory = mutableMapOf<Long, Long>()
             plan.tasksToInsert.forEach { task ->
-                taskIds[task.id] =
+                val parentId = task.parentTaskId?.let(taskIds::getValue)
+                val fileCategory = categoryIds.getValue(task.categoryId)
+                // A subtask lives in its parent's category. A parent matched by identity (#283) may
+                // have moved to another category on this device since the backup was taken.
+                val categoryId =
+                    parentId?.let { insertedCategory[it] ?: database.taskDao().getTaskById(it)?.categoryId }
+                        ?: fileCategory
+                val newId =
                     database.taskDao().insertTask(
                         task
-                            .asNew()
                             .copy(
-                                categoryId = categoryIds.getValue(task.categoryId),
-                                parentTaskId = task.parentTaskId?.let(taskIds::getValue),
+                                id = 0,
+                                categoryId = categoryId,
+                                parentTaskId = parentId,
                                 nextInstanceId = null,
-                                // A task whose section did not come across lands unsectioned.
-                                sectionId = task.sectionId?.let(sectionIds::get),
+                                // A task whose section did not come across, or that followed its
+                                // parent into another category, lands unsectioned.
+                                sectionId = task.sectionId?.let(sectionIds::get)?.takeIf { categoryId == fileCategory },
                             ).toEntity(),
                     )
+                taskIds[task.id] = newId
+                insertedCategory[newId] = categoryId
             }
             // Second pass: next-instance links may point at tasks inserted later.
             plan.tasksToInsert
@@ -325,13 +344,14 @@ class BackupRepositoryImpl
  * only as many as the app ever keeps.
  *
  * The name is the session: importing the same file twice must not double a topic, and a topic both
- * sides have keeps this device's lengths.
+ * sides have keeps this device's lengths. A session this device already has by identity (#283) is
+ * skipped too, even if renamed since.
  */
 private suspend fun SavedSessionDao.insertMerged(incoming: List<SavedSession>) {
     val known = getAllSync().map { it.toDomain() }.toMutableList()
     incoming.forEach { session ->
-        if (known.any { it.hasSameNameAs(session) }) return@forEach
-        insert(session.asNew().toEntity())
+        if (known.any { it.hasSameNameAs(session) || it.isSameRecordAs(session) }) return@forEach
+        insert(session.copy(id = 0).toEntity())
         known += session
     }
     trimTo(SavedSession.RECENT_LIMIT)
@@ -369,6 +389,10 @@ private fun HabitChainEntity.toDomainChain(): HabitChain =
         createdDate = createdDate,
         completionHistory = completionHistory,
         repeatDays = repeatDays,
+        // Identity too (#283): without it an export loses the chain's uid and a merge cannot match it.
+        uid = uid,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
     )
 
 /** Outcome of resolving a picked file's content down to plaintext backup JSON. */
@@ -460,27 +484,16 @@ private fun decodeData(
 
 /**
  * Version-1 files carry no uids and identify the seeded Inbox by the id it had before #326, so the
- * restored Inbox keeps the well-known uid (#30) and stays the same record.
+ * imported Inbox keeps the well-known uid (#30) and stays the same record. Applies to version-1
+ * files only; see validateAndApply.
  */
-private fun Category.withLegacyInboxIdentity(): Category =
-    if (id == EntityIdentitySchema.LEGACY_INBOX_ID && uid == UNSET_UID) copy(uid = DEFAULT_INBOX_UID) else this
-
-/**
- * Version-1 files carry no uids and identify the seeded Inbox by the legacy id `-1`, which is how
- * import recognises it ([withLegacyInboxIdentity]). Since #326 a fresh install's Inbox has an
- * ordinary id, so the export writes it, and every reference to it, under `-1`: ids are only
- * meaningful inside the file, and this keeps an export-then-restore from losing the Inbox's
- * identity. Nothing changes when the Inbox already is `-1`, or when another category holds `-1`.
- */
-private fun BackupData.withInboxAtLegacyId(): BackupData {
-    val legacyId = EntityIdentitySchema.LEGACY_INBOX_ID
-    val inbox = categories.firstOrNull { it.uid == DEFAULT_INBOX_UID }
-    if (inbox == null || inbox.id == legacyId || categories.any { it.id == legacyId }) return this
-
-    fun Long.remapped() = if (this == inbox.id) legacyId else this
-    return copy(
-        categories = categories.map { it.copy(id = it.id.remapped()) },
-        sections = sections.map { it.copy(categoryId = it.categoryId.remapped()) },
-        tasks = tasks.map { it.copy(categoryId = it.categoryId.remapped()) },
+private fun BackupData.withLegacyInboxIdentity(): BackupData =
+    copy(
+        categories =
+            categories.map {
+                val isLegacyInbox = it.id == EntityIdentitySchema.LEGACY_INBOX_ID && it.uid == UNSET_UID
+                if (isLegacyInbox) it.copy(uid = DEFAULT_INBOX_UID) else it
+            },
     )
-}
+
+private fun SavedSession.isSameRecordAs(other: SavedSession) = uid != UNSET_UID && uid == other.uid
