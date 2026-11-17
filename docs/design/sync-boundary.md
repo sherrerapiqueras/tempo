@@ -22,7 +22,7 @@ the server unless the user has explicitly shared the category it belongs to.
 | `categories` | **Syncs in 2.0** (shared ones only) | A shared category *is* the shared list. Unshared categories never leave. |
 | `tasks` | **Syncs in 2.0** (in shared categories only) | The content of a shared list. This includes subtasks, completed tasks and archived occurrences (see [Sharing an existing category](#sharing-an-existing-category)). |
 | `task_sections` | **Syncs in 2.0** (in shared categories only) | Structure inside a shared list. Members would otherwise see tasks that point at sections they don't have. |
-| tombstones of the three above (#281) | **Syncs in 2.0** | A deletion in a shared list has to reach the other members, or the row comes back on their next push. |
+| `tombstones` (#281) | **Never leaves the device**, but entries for rows the server already knows sync in 2.0 | The table records deletions from all seven identity tables, including deferred and local-only ones. Only a tombstone whose `uid` the server has already seen is uploaded (see [Tombstone provenance](#tombstone-provenance)), so a deletion in a shared list reaches the other members while nothing else does. |
 | `task_attachments` and their files | **Deferred to 3.0** | The files are binary and can be large (storage, quota and cost on the server), and nothing in sharing needs them. A shared task shows only the attachments its own device holds. |
 | `habits`, `habit_chains`, `habit_chain_members` | **Deferred to 3.0** | Personal routines aren't shareable. `completionHistory` isn't mergeable yet (3.0 design work). |
 | `focus_sessions` (saved sessions) | **Deferred to 3.0** | User data with no sharing purpose. |
@@ -80,10 +80,32 @@ nothing to propagate. Rows the completed-task retention setting has already remo
 don't upload either.
 
 ### Are tombstones synced, and for how long?
-Yes, for rows in shared categories, once the server has seen the row. A tombstone stays on device
-and server until the purge window in #281 ends. That window has to outlast the longest plausible
-offline period of a member device. After the purge, a device that was offline longer than the window
-may push the row back. #281 documents the window and why it was chosen.
+Yes, but only for rows the server has already seen (see [Tombstone provenance](#tombstone-provenance)).
+A tombstone records a deleted row's `uid`, its kind and the deletion time, and is kept for **180
+days** on the device (#281). The server must keep it at least as long.
+
+The window has to outlast the longest plausible gap between a member device's syncs.
+
+### Tombstone provenance
+A tombstone records only `uid`, kind and time, not which category the row was in. After a delete,
+that category can't be recovered on the device, so the device can't decide from the tombstone alone
+whether it belongs to a shared list. **The server's knowledge is the provenance instead.** The sync
+engine must keep a record of every `uid` it has exchanged with the server, uploaded or received,
+and push a tombstone only for a `uid` in that record. That rule:
+
+- never leaks a deletion from an unshared category, or one from before a share, because the server
+  never saw those rows;
+- always propagates a deletion of a row the server knows, whatever caused it. Cascades are covered
+  because each cascaded row gets its own tombstone, and its `uid` is in the record if the row was
+  shared.
+
+### Beyond the purge window
+**The server must refuse an incremental sync from a device whose last successful sync is older
+than the tombstone window.** It rejects the stale cursor, and any writes sent with it, and forces
+a full resync. In a full resync the server's state wins for shared rows: a shared row the server
+no longer has is dropped on the device, not uploaded again. Otherwise a device that was offline
+past the window would bring back rows other members deleted after it last synced. The API
+contract (#275) has to enforce this; it can't be left to clients.
 
 ### Unsharing
 Unsharing stops future sync. The owner keeps their rows. What members keep is a sharing-design
