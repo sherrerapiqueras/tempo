@@ -68,7 +68,7 @@ class BackupIdentityImportTest : BackupRepositoryTestBase() {
         }
 
     @Test
-    fun `a fresh install's Inbox survives a v1 export and replace-import with its identity`() =
+    fun `a fresh install's Inbox survives an export and replace-import with its identity`() =
         runTest {
             stubLocalData()
             // Since #326 a freshly seeded Inbox has an ordinary id; only its uid marks it.
@@ -150,6 +150,37 @@ class BackupIdentityImportTest : BackupRepositoryTestBase() {
             assertThat(inserted.single { it.name == "Edited" }.uid).isEmpty()
             assertThat(inserted.single { it.name == "Inbox" }.uid).isEqualTo(DEFAULT_INBOX_UID)
         }
+
+    @Test
+    fun `a merged subtask follows a parent that moved to another category on the device`() =
+        runTest {
+            stubLocalData()
+            val movedParent = TaskEntity(id = 50, title = "Plan", description = "", categoryId = 2, uid = PARENT_UID)
+            coEvery { categoryDao.getAllCategoriesSync() } returns
+                listOf(CategoryEntity(id = 1, name = "Work", uid = WORK_UID), CategoryEntity(id = 2, name = "Home"))
+            coEvery { taskDao.getAllTasksSync() } returns listOf(movedParent)
+            coEvery { taskDao.getTaskById(50) } returns movedParent
+            val inserted = mutableListOf<TaskEntity>()
+            coEvery { taskDao.insertTask(capture(inserted)) } returns 77
+            val json =
+                """
+                {"schemaVersion":2,
+                 "categories":[{"id":1,"name":"Work","uid":"$WORK_UID"}],
+                 "tasks":[
+                   {"id":10,"title":"Plan","categoryId":1,"uid":"$PARENT_UID"},
+                   {"id":11,"title":"New step","categoryId":1,"parentTaskId":10,"uid":"$STEP_UID"}
+                 ]}
+                """.trimIndent()
+
+            repository.importFromJson(encryptedJsonOf(json), ImportMode.MERGE, testPassphrase)
+
+            val step = inserted.single()
+            assertThat(step.parentTaskId).isEqualTo(50L)
+            assertThat(step.categoryId).isEqualTo(2L)
+        }
 }
 
 private const val CHAIN_UID = "0195a1b2-c3d4-7e5f-8a6b-0000000000cc"
+private const val WORK_UID = "0195a1b2-c3d4-7e5f-8a6b-0000000000d1"
+private const val PARENT_UID = "0195a1b2-c3d4-7e5f-8a6b-0000000000d2"
+private const val STEP_UID = "0195a1b2-c3d4-7e5f-8a6b-0000000000d3"

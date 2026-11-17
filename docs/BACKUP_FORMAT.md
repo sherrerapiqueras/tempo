@@ -158,9 +158,9 @@ so a hand-edited file cannot install a contradictory pause history.
   its children are matched by their own `uid`s. Records added by a merge keep their `uid`s, so
   merging the same file again adds nothing. Records without a known `uid` (all of a version-1
   file) fall back to natural keys, skipping exact duplicates and reporting conflicts (category
-  name; task title within category/parent; habit/chain title). The seeded Inbox is always
-  written under id `-1`, which is how a version-1 file identifies it, even though since #326 the
-  app gives a fresh Inbox an ordinary local id. Sections never conflict: an incoming section reuses a same-named section
+  name; task title within category/parent; habit/chain title). In a version-1 file the
+  seeded Inbox is the category with id `-1`. A version-2 file identifies it by its well-known
+  `uid` instead, whatever its id. Sections never conflict: an incoming section reuses a same-named section
   of its resolved local category, otherwise it is appended to that category.
 - **Focus sessions** are restored with their ids on Replace. On Merge, a session whose name the
   device already has (ignoring case), or whose `uid` it already has, is skipped and any other is
