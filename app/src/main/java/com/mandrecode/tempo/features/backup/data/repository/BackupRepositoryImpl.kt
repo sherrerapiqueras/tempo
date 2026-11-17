@@ -79,6 +79,7 @@ class BackupRepositoryImpl
             val data =
                 database
                     .withTransaction { readAll() }
+                    .withInboxAtLegacyId()
                     .copy(settings = settingsDataSource.snapshot())
             val exportedAt = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
             val plaintextJson =
@@ -471,3 +472,23 @@ private fun Category.withLegacyInboxIdentity(): Category =
     if (id == EntityIdentitySchema.LEGACY_INBOX_ID && uid == UNSET_UID) copy(uid = DEFAULT_INBOX_UID) else this
 
 private fun SavedSession.isSameRecordAs(other: SavedSession) = uid != UNSET_UID && uid == other.uid
+
+/**
+ * Version-1 files carry no uids and identify the seeded Inbox by the legacy id `-1`, which is how
+ * import recognises it ([withLegacyInboxIdentity]). Since #326 a fresh install's Inbox has an
+ * ordinary id, so the export writes it, and every reference to it, under `-1`: ids are only
+ * meaningful inside the file, and this keeps an export-then-restore from losing the Inbox's
+ * identity. Nothing changes when the Inbox already is `-1`, or when another category holds `-1`.
+ */
+private fun BackupData.withInboxAtLegacyId(): BackupData {
+    val legacyId = EntityIdentitySchema.LEGACY_INBOX_ID
+    val inbox = categories.firstOrNull { it.uid == DEFAULT_INBOX_UID }
+    if (inbox == null || inbox.id == legacyId || categories.any { it.id == legacyId }) return this
+
+    fun Long.remapped() = if (this == inbox.id) legacyId else this
+    return copy(
+        categories = categories.map { it.copy(id = it.id.remapped()) },
+        sections = sections.map { it.copy(categoryId = it.categoryId.remapped()) },
+        tasks = tasks.map { it.copy(categoryId = it.categoryId.remapped()) },
+    )
+}

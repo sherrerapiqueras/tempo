@@ -2,7 +2,6 @@ package com.mandrecode.tempo.core.data.entity
 
 import androidx.room.Entity
 import androidx.room.Index
-import androidx.room.PrimaryKey
 
 /**
  * The record that a row with a stable identity was deleted (#281): its [uid], which table it lived
@@ -11,10 +10,11 @@ import androidx.room.PrimaryKey
  */
 @Entity(
     tableName = "tombstones",
+    // uid is unique per table, not across tables, so the kind is part of the key.
+    primaryKeys = ["uid", "entityType"],
     indices = [Index("deletedAt")],
 )
 data class TombstoneEntity(
-    @PrimaryKey
     val uid: String,
     /** The table the record was deleted from, e.g. `tasks`. */
     val entityType: String,

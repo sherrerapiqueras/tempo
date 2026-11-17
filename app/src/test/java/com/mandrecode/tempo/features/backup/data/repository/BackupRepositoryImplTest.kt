@@ -299,6 +299,32 @@ class BackupRepositoryImplTest {
         }
 
     @Test
+    fun `a fresh install's Inbox survives a v1 export and replace-import with its identity`() =
+        runTest {
+            stubLocalData()
+            // Since #326 a freshly seeded Inbox has an ordinary id; only its uid marks it.
+            coEvery { categoryDao.getAllCategoriesSync() } returns
+                listOf(
+                    CategoryEntity(id = 7, name = "Inbox", icon = "inbox", isDefault = true, uid = DEFAULT_INBOX_UID),
+                    CategoryEntity(id = 1, name = "Work"),
+                )
+            coEvery { taskDao.getAllTasksSync() } returns
+                listOf(TaskEntity(id = 3, title = "T", description = "", categoryId = 7))
+            coEvery { sectionDao.getAllSectionsSync() } returns emptyList()
+            val json = repository.exportEncrypted(testPassphrase)
+            val categories = mutableListOf<CategoryEntity>()
+            val tasks = mutableListOf<TaskEntity>()
+            coEvery { categoryDao.insertCategory(capture(categories)) } returns 0
+            coEvery { taskDao.insertTask(capture(tasks)) } returns 0
+
+            repository.importFromJson(json, ImportMode.REPLACE, testPassphrase)
+
+            val inbox = categories.single { it.isDefault }
+            assertThat(inbox.uid).isEqualTo(DEFAULT_INBOX_UID)
+            assertThat(tasks.single().categoryId).isEqualTo(inbox.id)
+        }
+
+    @Test
     fun `frozen v1 fixture still imports correctly once wrapped in an encrypted envelope`() =
         runTest {
             val plaintextJson = readFixture("/backup/v1-backup.json")

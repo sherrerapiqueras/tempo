@@ -20,13 +20,16 @@ internal object TombstoneSchema {
     fun triggers(table: String): List<String> =
         listOf(
             // Every delete, from any code path or cascade, leaves a tombstone (#281): live tables
-            // keep only live rows, so no query can show a deleted record.
+            // keep only live rows, so no query can show a deleted record. Keyed by uid and table,
+            // since a uid is only unique within its table. Delete-then-insert rather than
+            // INSERT OR REPLACE: inside a trigger the outer statement's conflict policy wins.
             """
             CREATE TRIGGER `${tombstoneTriggerName(table)}`
             AFTER DELETE ON `$table`
             WHEN OLD.uid != ''
             BEGIN
-                INSERT OR REPLACE INTO tombstones (uid, entityType, deletedAt)
+                DELETE FROM tombstones WHERE uid = OLD.uid AND entityType = '$table';
+                INSERT INTO tombstones (uid, entityType, deletedAt)
                 VALUES (OLD.uid, '$table', ${EntityIdentitySchema.NOW_MILLIS});
             END
             """.trimIndent(),
@@ -36,7 +39,7 @@ internal object TombstoneSchema {
             AFTER INSERT ON `$table`
             WHEN NEW.uid != ''
             BEGIN
-                DELETE FROM tombstones WHERE uid = NEW.uid;
+                DELETE FROM tombstones WHERE uid = NEW.uid AND entityType = '$table';
             END
             """.trimIndent(),
         )
@@ -65,7 +68,7 @@ internal object TombstoneSchema {
     fun migrate15To16(db: SupportSQLiteDatabase) {
         db.execSQL(
             "CREATE TABLE IF NOT EXISTS `tombstones` (`uid` TEXT NOT NULL, `entityType` TEXT NOT NULL, " +
-                "`deletedAt` INTEGER NOT NULL, PRIMARY KEY(`uid`))",
+                "`deletedAt` INTEGER NOT NULL, PRIMARY KEY(`uid`, `entityType`))",
         )
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_tombstones_deletedAt` ON `tombstones` (`deletedAt`)")
     }
