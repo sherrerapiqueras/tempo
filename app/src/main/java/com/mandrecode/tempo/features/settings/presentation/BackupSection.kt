@@ -40,15 +40,7 @@ internal fun BackupSection(
     onOpenDriveBackup: () -> Unit = {},
 ) {
     SettingsSection(title = stringResource(R.string.settings_backup)) {
-        item {
-            SettingsItem(
-                icon = R.drawable.ic_file_upload,
-                title = stringResource(R.string.backup_export_title),
-                subtitle = stringResource(R.string.backup_export_description),
-                trailingIcon = R.drawable.ic_chevron_right,
-                onClick = { onEvent(SettingsContract.UiEvent.ExportClicked) },
-            )
-        }
+        driveBackupEntry(drive = uiState.driveBackup, onEvent = onEvent, onOpen = onOpenDriveBackup)
         item {
             SettingsItem(
                 icon = R.drawable.ic_file_download,
@@ -58,7 +50,15 @@ internal fun BackupSection(
                 onClick = { onEvent(SettingsContract.UiEvent.ImportClicked) },
             )
         }
-        driveBackupEntry(drive = uiState.driveBackup, onEvent = onEvent, onOpen = onOpenDriveBackup)
+        item {
+            SettingsItem(
+                icon = R.drawable.ic_file_upload,
+                title = stringResource(R.string.backup_export_title),
+                subtitle = stringResource(R.string.backup_export_description),
+                trailingIcon = R.drawable.ic_chevron_right,
+                onClick = { onEvent(SettingsContract.UiEvent.ExportClicked) },
+            )
+        }
     }
     BackupDialogs(uiState = uiState, onEvent = onEvent)
 }
