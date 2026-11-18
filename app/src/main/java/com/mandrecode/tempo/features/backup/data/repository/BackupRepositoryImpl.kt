@@ -168,8 +168,12 @@ class BackupRepositoryImpl
          * applied only after the database restore commits.
          */
         private suspend fun replace(data: BackupData): ImportSummary {
-            val summary = replaceDatabase(data)
-            dailyFocusActivityRepository.replaceAll(data.dailyFocusActivity)
+            // Daily focus history lives in the same database: replacing it inside the same transaction
+            // means a failure there rolls everything back, so "nothing was changed" stays true.
+            val summary =
+                database.withTransaction {
+                    replaceDatabase(data).also { dailyFocusActivityRepository.replaceAll(data.dailyFocusActivity) }
+                }
             applySettingsBestEffort(settingsDataSource, data.settings)
             return summary
         }
