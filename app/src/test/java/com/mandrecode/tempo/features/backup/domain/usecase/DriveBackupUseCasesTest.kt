@@ -199,6 +199,32 @@ class DriveBackupUseCasesTest {
         }
 
     @Test
+    fun `a check that failed offline is tried again on the next look`() =
+        runTest {
+            enabled()
+            preferences.recordSuccess(500)
+            cloud.failListWith = IOException("offline")
+            refresh()
+
+            cloud.failListWith = null
+            refresh()
+
+            assertThat(preferences.status.value.lastSuccessAt).isNull()
+        }
+
+    @Test
+    fun `a token Drive rejects while listing is reported as lost access`() =
+        runTest {
+            enabled()
+            preferences.recordSuccess(500)
+            cloud.failListWith = CloudBackupException(DriveBackupFailure.AUTHORIZATION_NEEDED)
+
+            refresh()
+
+            assertThat(preferences.status.failure).isEqualTo(DriveBackupFailure.AUTHORIZATION_NEEDED)
+        }
+
+    @Test
     fun `only the newest backups are kept`() =
         runTest {
             store.stored = "secret"

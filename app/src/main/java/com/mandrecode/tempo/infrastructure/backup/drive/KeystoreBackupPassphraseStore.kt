@@ -34,18 +34,44 @@ class KeystoreBackupPassphraseStore
     ) : BackupPassphraseStore {
         private val prefs get() = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)
 
+        /**
+         * Installs the new passphrase under the alias not in use, and retires the old key only once the
+         * new blob is committed. A change that fails part-way (key generation, encryption, the write)
+         * leaves the old passphrase readable, so "backup wasn't changed" stays true.
+         */
         @Synchronized
         override fun save(passphrase: CharArray) {
-            val key = freshKey()
+            val current = aliasInUse()
+            val next = if (current == KEY_ALIAS) KEY_ALIAS_ALTERNATE else KEY_ALIAS
             val plain = encode(passphrase)
             try {
+                val key = freshKey(next)
                 val cipher = Cipher.getInstance(TRANSFORMATION).apply { init(Cipher.ENCRYPT_MODE, key) }
                 val blob =
                     Base64.Default.encode(cipher.iv) + SEPARATOR + Base64.Default.encode(cipher.doFinal(plain))
-                check(prefs.edit().putString(KEY_BLOB, blob).commit()) { "Failed to persist the backup passphrase" }
+                val saved =
+                    prefs
+                        .edit()
+                        .putString(KEY_BLOB, blob)
+                        .putString(KEY_ALIAS_IN_USE, next)
+                        .commit()
+                check(saved) { "Failed to persist the backup passphrase" }
+            } catch (e: GeneralSecurityException) {
+                discard(next)
+                throw e
+            } catch (e: IllegalStateException) {
+                discard(next)
+                throw e
             } finally {
                 plain.fill(0)
             }
+            discard(current)
+        }
+
+        private fun aliasInUse(): String = prefs.getString(KEY_ALIAS_IN_USE, null) ?: KEY_ALIAS
+
+        private fun discard(alias: String) {
+            runCatching { keyStore().deleteEntry(alias) }
         }
 
         @Synchronized
@@ -55,7 +81,7 @@ class KeystoreBackupPassphraseStore
             // as "no passphrase", which a backup run reports as PASSPHRASE_UNAVAILABLE.
             val key =
                 try {
-                    keyStore().getKey(KEY_ALIAS, null) as? SecretKey
+                    keyStore().getKey(aliasInUse(), null) as? SecretKey
                 } catch (_: GeneralSecurityException) {
                     null
                 }
@@ -90,18 +116,23 @@ class KeystoreBackupPassphraseStore
 
         @Synchronized
         override fun clear() {
-            prefs.edit().remove(KEY_BLOB).commit()
-            runCatching { keyStore().deleteEntry(KEY_ALIAS) }
+            prefs
+                .edit()
+                .remove(KEY_BLOB)
+                .remove(KEY_ALIAS_IN_USE)
+                .commit()
+            discard(KEY_ALIAS)
+            discard(KEY_ALIAS_ALTERNATE)
         }
 
         private fun keyStore(): KeyStore = KeyStore.getInstance(ANDROID_KEY_STORE).apply { load(null) }
 
         /** A new key per passphrase, so a replaced passphrase cannot be read back by any old blob. */
-        private fun freshKey(): SecretKey {
-            keyStore().takeIf { it.containsAlias(KEY_ALIAS) }?.deleteEntry(KEY_ALIAS)
+        private fun freshKey(alias: String): SecretKey {
+            keyStore().takeIf { it.containsAlias(alias) }?.deleteEntry(alias)
             val spec =
                 KeyGenParameterSpec
-                    .Builder(KEY_ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+                    .Builder(alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
                     .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                     .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                     .setKeySize(KEY_SIZE_BITS)
@@ -125,7 +156,11 @@ class KeystoreBackupPassphraseStore
         companion object {
             const val PREFS_FILE = "tempo_backup_secret_prefs"
             private const val KEY_BLOB = "backup_passphrase_blob"
+            private const val KEY_ALIAS_IN_USE = "backup_passphrase_key_alias"
+
+            /** The two aliases a change alternates between; installs from before keep the first. */
             private const val KEY_ALIAS = "tempo_backup_passphrase_key"
+            private const val KEY_ALIAS_ALTERNATE = "tempo_backup_passphrase_key_b"
             private const val ANDROID_KEY_STORE = "AndroidKeyStore"
             private const val TRANSFORMATION = "AES/GCM/NoPadding"
             private const val SEPARATOR = "."

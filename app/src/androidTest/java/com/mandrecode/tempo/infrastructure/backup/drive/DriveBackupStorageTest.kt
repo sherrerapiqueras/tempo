@@ -60,13 +60,37 @@ class DriveBackupStorageTest {
     @Test
     fun aBlobWhoseKeyIsGoneReadsAsNoPassphrase() {
         store.save("secret".toCharArray())
-        java.security.KeyStore
-            .getInstance("AndroidKeyStore")
-            .apply { load(null) }
-            .deleteEntry("tempo_backup_passphrase_key")
+        ALIASES.forEach { keyStore().deleteEntry(it) }
 
         assertThat(store.read()).isNull()
     }
+
+    @Test
+    fun aChangeRetiresTheOldKeyOnlyAfterTheNewOneWorks() {
+        store.save("first".toCharArray())
+        val firstAlias = ALIASES.single { keyStore().containsAlias(it) }
+
+        store.save("second".toCharArray())
+
+        assertThat(keyStore().containsAlias(firstAlias)).isFalse()
+        assertThat(ALIASES.count { keyStore().containsAlias(it) }).isEqualTo(1)
+        assertThat(store.read()?.let(::String)).isEqualTo("second")
+    }
+
+    @Test
+    fun clearingRemovesEveryKey() {
+        store.save("first".toCharArray())
+        store.save("second".toCharArray())
+
+        store.clear()
+
+        assertThat(ALIASES.none { keyStore().containsAlias(it) }).isTrue()
+    }
+
+    private fun keyStore() =
+        java.security.KeyStore
+            .getInstance("AndroidKeyStore")
+            .apply { load(null) }
 
     @Test
     fun settingsAndStatusSurviveANewInstance() {
@@ -82,5 +106,9 @@ class DriveBackupStorageTest {
             .isEqualTo(DriveBackupSettings(enabled = true, frequency = BackupFrequency.WEEKLY, unmeteredOnly = false))
         assertThat(reread.status.value.lastSuccessAt).isEqualTo(1_000)
         assertThat(reread.status.value.currentFailure).isEqualTo(DriveBackupFailure.STORAGE_FULL)
+    }
+
+    private companion object {
+        val ALIASES = listOf("tempo_backup_passphrase_key", "tempo_backup_passphrase_key_b")
     }
 }
