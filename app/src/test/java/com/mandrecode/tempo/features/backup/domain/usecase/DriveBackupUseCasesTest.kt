@@ -11,7 +11,9 @@ import com.mandrecode.tempo.features.backup.domain.repository.CloudBackupExcepti
 import io.mockk.coEvery
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.yield
 import org.junit.Test
 import java.io.IOException
 
@@ -222,6 +224,30 @@ class DriveBackupUseCasesTest {
             refresh()
 
             assertThat(preferences.status.failure).isEqualTo(DriveBackupFailure.AUTHORIZATION_NEEDED)
+        }
+
+    @Test
+    fun `two runs started together take turns instead of overlapping`() =
+        runTest {
+            store.stored = "secret"
+            enabled()
+            var inFlight = 0
+            var overlapped = false
+            coEvery { backupRepository.exportEncrypted(any()) } coAnswers {
+                inFlight++
+                if (inFlight > 1) overlapped = true
+                yield()
+                inFlight--
+                "encrypted"
+            }
+
+            val first = async { run() }
+            val second = async { run() }
+            first.await()
+            second.await()
+
+            assertThat(overlapped).isFalse()
+            assertThat(cloud.files).hasSize(2)
         }
 
     @Test
