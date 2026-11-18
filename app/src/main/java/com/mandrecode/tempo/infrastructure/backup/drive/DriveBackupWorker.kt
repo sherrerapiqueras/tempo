@@ -24,13 +24,8 @@ class DriveBackupWorker
         private val notifier: DriveBackupNotifier,
     ) : CoroutineWorker(appContext, workerParams) {
         override suspend fun doWork(): Result {
-            notifier.showProgress()
             val outcome =
-                try {
-                    runDriveBackup()
-                } finally {
-                    notifier.hideProgress()
-                }
+                runDriveBackup { running -> if (running) notifier.showProgress() else notifier.hideProgress() }
             return when (outcome) {
                 is RunDriveBackupUseCase.Result.Failed ->
                     when {

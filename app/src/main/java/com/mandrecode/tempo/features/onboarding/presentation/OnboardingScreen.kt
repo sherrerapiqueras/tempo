@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mandrecode.tempo.core.ui.components.HoldSplashWhileFirstLoad
+import com.mandrecode.tempo.core.ui.components.rememberNotificationPermissionRequest
 import com.mandrecode.tempo.features.backup.presentation.DriveRestoreDialogs
 import com.mandrecode.tempo.features.backup.presentation.DriveRestoreEvent
 
@@ -29,11 +30,13 @@ fun OnboardingScreen(
         rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
             viewModel.onEvent(OnboardingContract.UiEvent.DriveRestore(DriveRestoreEvent.ConsentFinished(result.data)))
         }
+    val requestNotificationPermission = rememberNotificationPermissionRequest()
 
     LaunchedEffect(viewModel) {
         viewModel.uiEffect.collect { effect ->
             when (effect) {
                 is OnboardingContract.UiEffect.Exit -> currentOnExit()
+                OnboardingContract.UiEffect.RequestNotificationPermission -> requestNotificationPermission()
                 is OnboardingContract.UiEffect.LaunchDriveConsent ->
                     driveConsentLauncher.launch(IntentSenderRequest.Builder(effect.intent).build())
             }
