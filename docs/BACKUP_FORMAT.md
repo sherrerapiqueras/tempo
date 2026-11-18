@@ -14,6 +14,13 @@ Every export is encrypted — there is no plaintext export option. At export tim
 a passphrase (with a confirmation field, since it cannot be recovered if forgotten); at import
 time, they re-enter it. The passphrase is never stored by the app.
 
+**Scheduled Google Drive backups** (#306) write the same file with the same envelope. The only
+difference is where the passphrase comes from: the user sets a *backup passphrase* once, when
+turning Drive backup on. Tempo stores it on the device, wrapped by an Android Keystore key and
+excluded from device transfer, so backups can run unattended. Restoring on a new phone needs it
+typed again. A Drive backup downloaded by hand imports through the normal Import with that
+passphrase. See [`docs/design/drive-backup-key-model.md`](design/drive-backup-key-model.md).
+
 The written file is a JSON **envelope** distinct from the record schema below, marked by an
 `encryptionVersion` field. This document describes **encryption version 1**:
 
