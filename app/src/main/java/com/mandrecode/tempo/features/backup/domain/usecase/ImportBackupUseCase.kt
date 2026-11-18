@@ -46,7 +46,7 @@ class ImportBackupUseCase
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
-                // Alarms stay as they are until reminders are next scheduled; the data is right.
+                // The data is right; every alarm is rebuilt on the next reboot or clock/time-zone change.
             }
         }
     }
