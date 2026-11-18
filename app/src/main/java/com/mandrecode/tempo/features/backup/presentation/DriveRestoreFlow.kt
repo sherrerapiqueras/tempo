@@ -14,6 +14,7 @@ import com.mandrecode.tempo.features.backup.domain.usecase.ListDriveBackupsUseCa
 import com.mandrecode.tempo.features.backup.domain.usecase.RestoreDriveBackupUseCase
 import com.mandrecode.tempo.features.backup.domain.usecase.RestoreOutcome
 import com.mandrecode.tempo.infrastructure.backup.drive.GoogleDriveAuthorization
+import com.mandrecode.tempo.infrastructure.backup.drive.GoogleDriveAuthorization.ConsentOutcome
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -150,12 +151,7 @@ class DriveRestoreFlow
         ) {
             val current = step
             when (event) {
-                is DriveRestoreEvent.ConsentFinished ->
-                    if (authorization.isGranted(event.data)) {
-                        host.scope.launch { findBackups(host) }
-                    } else {
-                        show(null, host)
-                    }
+                is DriveRestoreEvent.ConsentFinished -> onConsentFinished(event, host)
                 DriveRestoreEvent.RestoreClicked ->
                     if (current is DriveRestoreStep.Offer) {
                         host.scope.launch {
@@ -220,6 +216,18 @@ class DriveRestoreFlow
                     restoredWith = null
                 }
                 show(null, host)
+            }
+        }
+
+        private fun onConsentFinished(
+            event: DriveRestoreEvent.ConsentFinished,
+            host: Host,
+        ) {
+            when (authorization.consentOutcome(event.data)) {
+                ConsentOutcome.GRANTED -> host.scope.launch { findBackups(host) }
+                ConsentOutcome.CANCELLED -> show(null, host)
+                // An account was picked but Google refused: a terminal answer, not silence.
+                ConsentOutcome.FAILED -> show(DriveRestoreStep.Failed(DriveRestoreFailure.Unavailable), host)
             }
         }
 

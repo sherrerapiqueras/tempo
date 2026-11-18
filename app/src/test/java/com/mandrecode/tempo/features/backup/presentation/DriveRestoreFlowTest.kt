@@ -71,7 +71,7 @@ class DriveRestoreFlowTest {
         runTest(UnconfinedTestDispatcher()) {
             val intent = mockk<PendingIntent>()
             coEvery { consent.consentIntent() } returns intent
-            every { consent.isGranted(null) } returns false
+            every { consent.consentOutcome(null) } returns GoogleDriveAuthorization.ConsentOutcome.CANCELLED
             val host = host()
 
             flow.start(host)
@@ -87,13 +87,27 @@ class DriveRestoreFlowTest {
         runTest(UnconfinedTestDispatcher()) {
             coEvery { consent.consentIntent() } returns mockk()
             val granted = mockk<Intent>()
-            every { consent.isGranted(granted) } returns true
+            every { consent.consentOutcome(granted) } returns GoogleDriveAuthorization.ConsentOutcome.GRANTED
             val host = host()
 
             flow.start(host)
             flow.onEvent(DriveRestoreEvent.ConsentFinished(granted), host)
 
             assertThat(step).isEqualTo(DriveRestoreStep.NoBackups)
+        }
+
+    @Test
+    fun `when Google refuses after an account is picked, it says so`() =
+        runTest(UnconfinedTestDispatcher()) {
+            coEvery { consent.consentIntent() } returns mockk()
+            val refused = mockk<Intent>()
+            every { consent.consentOutcome(refused) } returns GoogleDriveAuthorization.ConsentOutcome.FAILED
+            val host = host()
+
+            flow.start(host)
+            flow.onEvent(DriveRestoreEvent.ConsentFinished(refused), host)
+
+            assertThat(step).isEqualTo(DriveRestoreStep.Failed(DriveRestoreFailure.Unavailable))
         }
 
     @Test
