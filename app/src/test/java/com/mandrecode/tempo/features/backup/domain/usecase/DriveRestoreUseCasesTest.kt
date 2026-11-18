@@ -11,6 +11,10 @@ import com.mandrecode.tempo.features.backup.domain.repository.CloudAuthorization
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.io.IOException
@@ -80,6 +84,25 @@ class DriveRestoreUseCasesTest {
             assertThat(outcomeFor(ImportOutcome.CorruptFile)).isEqualTo(RestoreOutcome.Corrupt)
             assertThat(outcomeFor(ImportOutcome.UnsupportedVersion(3, 2))).isEqualTo(RestoreOutcome.NewerVersion(3, 2))
             assertThat(outcomeFor(ImportOutcome.ValidationFailed(emptyList()))).isEqualTo(RestoreOutcome.Invalid)
+        }
+
+    @Test
+    fun `a restore waits for a running backup before it writes`() =
+        runTest {
+            val lock = DriveBackupLock()
+            val waiting = RestoreDriveBackupUseCase(auth, cloud, importBackup, lock)
+            val file = cloud.upload("t", "tempo-backup-x-1.tempo", "encrypted")
+            coEvery { importBackup(any(), any(), any()) } returns ImportOutcome.Success(ImportSummary())
+            val backupDone = CompletableDeferred<Unit>()
+            launch { lock.withLock { backupDone.await() } }
+            runCurrent()
+
+            val restoring = async { waiting(file, ImportMode.REPLACE, "pw".toCharArray()) }
+            runCurrent()
+            coVerify(exactly = 0) { importBackup(any(), any(), any()) }
+
+            backupDone.complete(Unit)
+            assertThat(restoring.await()).isInstanceOf(RestoreOutcome.Restored::class.java)
         }
 
     @Test
