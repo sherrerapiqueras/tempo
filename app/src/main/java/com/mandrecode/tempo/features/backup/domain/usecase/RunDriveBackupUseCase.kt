@@ -10,7 +10,6 @@ import com.mandrecode.tempo.features.backup.domain.repository.CloudBackupExcepti
 import com.mandrecode.tempo.features.backup.domain.repository.CloudBackupStore
 import com.mandrecode.tempo.features.backup.domain.repository.DriveBackupPreferences
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.IOException
 import javax.inject.Inject
@@ -25,7 +24,7 @@ import kotlin.time.Clock
  *
  * One run at a time: the periodic and "back up now" work are separate WorkManager jobs that can
  * start together, and two runs would upload twice and prune each other's view of the folder.
- * WorkManager runs both in this process, so a process-wide lock is enough.
+ * [DriveBackupLock] serialises them, and a restore with them.
  */
 @Singleton
 class RunDriveBackupUseCase
@@ -37,6 +36,7 @@ class RunDriveBackupUseCase
         private val cloudStore: CloudBackupStore,
         private val authorization: CloudAuthorization,
         private val clock: Clock,
+        private val lock: DriveBackupLock = DriveBackupLock(),
     ) {
         sealed interface Result {
             data object Succeeded : Result
@@ -49,15 +49,13 @@ class RunDriveBackupUseCase
             ) : Result
         }
 
-        private val oneAtATime = Mutex()
-
         /**
          * [onRunning] hears true when this run really starts backing up, after any run ahead of it
          * and only if backup is on, and false when it stops. Both inside the lock, so whatever it
          * shows (a progress notification) belongs to the run doing the work, never to one waiting.
          */
         suspend operator fun invoke(onRunning: (Boolean) -> Unit = {}): Result =
-            oneAtATime.withLock {
+            lock.withLock {
                 if (!preferences.settings.value.enabled) return@withLock Result.Skipped
                 onRunning(true)
                 try {
