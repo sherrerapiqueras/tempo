@@ -4,6 +4,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -12,6 +14,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.google.common.truth.Truth.assertThat
 import com.mandrecode.tempo.R
 import com.mandrecode.tempo.core.ui.theme.TempoTheme
+import com.mandrecode.tempo.features.backup.domain.model.BackupFrequency
 import com.mandrecode.tempo.features.backup.domain.model.DriveBackupFailure
 import org.junit.Rule
 import org.junit.Test
@@ -96,6 +99,26 @@ class DriveBackupScreenTest {
         composeTestRule.onNodeWithTag(DRIVE_BACKUP_MAIN_SWITCH_TEST_TAG).assertIsOn()
         composeTestRule.onNodeWithText(text(R.string.drive_backup_last_backup)).assertIsDisplayed()
         composeTestRule.onNodeWithText(text(R.string.drive_backup_never)).assertIsDisplayed()
+    }
+
+    @Test
+    fun frequencyIsChosenInPlaceWithChips() {
+        showScreen(on)
+
+        composeTestRule.onNodeWithText(text(R.string.drive_backup_frequency_weekly)).performClick()
+
+        assertThat(events).containsExactly(Event.FrequencySelected(BackupFrequency.WEEKLY))
+    }
+
+    @Test
+    fun aRunningBackupShowsProgressAndCantBeStartedAgain() {
+        showScreen(on.copy(driveBackup = on.driveBackup.copy(running = true)))
+
+        composeTestRule.onNodeWithTag(DRIVE_BACKUP_PROGRESS_TEST_TAG).assertIsDisplayed()
+        composeTestRule.onAllNodesWithText(text(R.string.drive_backup_running)).onFirst().assertIsDisplayed()
+        composeTestRule.onNodeWithText(text(R.string.drive_backup_now)).performClick()
+
+        assertThat(events).isEmpty()
     }
 
     @Test
