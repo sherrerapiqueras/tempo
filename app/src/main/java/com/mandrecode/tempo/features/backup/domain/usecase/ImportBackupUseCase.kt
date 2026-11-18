@@ -5,6 +5,7 @@ import com.mandrecode.tempo.features.backup.domain.model.ImportOutcome
 import com.mandrecode.tempo.features.backup.domain.repository.BackupRepository
 import com.mandrecode.tempo.features.backup.domain.scheduler.BackupReminderScheduler
 import jakarta.inject.Inject
+import kotlinx.coroutines.CancellationException
 
 class ImportBackupUseCase
     @Inject
@@ -31,6 +32,21 @@ class ImportBackupUseCase
             } finally {
                 // Runs even when cancellation fails part-way: rescheduling reads
                 // whatever the database now holds, restoring a consistent alarm set.
-                reminderScheduler.rescheduleAllReminders()
+                rescheduleAfterImport()
             }
+
+        /**
+         * The import's own outcome is what the caller must hear: by now its transaction has committed
+         * or rolled back. A scheduling failure here must not turn a committed import into a reported
+         * failure ("nothing was changed") or replace the import's own error.
+         */
+        private suspend fun rescheduleAfterImport() {
+            try {
+                reminderScheduler.rescheduleAllReminders()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // Alarms stay as they are until reminders are next scheduled; the data is right.
+            }
+        }
     }

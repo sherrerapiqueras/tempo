@@ -46,6 +46,14 @@ class DriveRestoreUseCasesTest {
         }
 
     @Test
+    fun `a response that cannot be read still ends in a failure`() =
+        runTest {
+            cloud.failListWith = IllegalStateException("malformed JSON")
+
+            assertThat(list()).isEqualTo(ListDriveBackupsUseCase.Result.Failed(DriveBackupFailure.UNEXPECTED))
+        }
+
+    @Test
     fun `restoring imports the downloaded file with the passphrase and mode`() =
         runTest {
             val file = cloud.upload("t", "tempo-backup-5.tempo", "encrypted")
