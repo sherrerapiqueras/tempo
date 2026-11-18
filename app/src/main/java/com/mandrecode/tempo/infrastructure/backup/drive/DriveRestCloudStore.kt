@@ -35,8 +35,9 @@ class DriveRestCloudStore
             var pageToken: String? = null
             do {
                 val url = pageToken?.let { "$base&pageToken=${encode(it)}" } ?: base
-                val page = json.decodeFromString<FileList>(call(HttpRequest("GET", url, auth(accessToken))).body)
-                files += page.files.map { it.toDomain() }
+                val body = call(HttpRequest("GET", url, auth(accessToken))).body
+                val page = read { json.decodeFromString<FileList>(body) }
+                files += read { page.files.map { it.toDomain() } }
                 pageToken = page.nextPageToken
             } while (pageToken != null)
             return files
@@ -60,7 +61,7 @@ class DriveRestCloudStore
             val url = "$UPLOAD_API/files?uploadType=multipart&fields=${encode(FIELDS)}"
             val headers = auth(accessToken) + ("Content-Type" to "multipart/related; boundary=$boundary")
             val response = call(HttpRequest("POST", url, headers, body))
-            return json.decodeFromString<DriveFile>(response.body).toDomain()
+            return read { json.decodeFromString<DriveFile>(response.body).toDomain() }
         }
 
         override suspend fun download(
@@ -76,6 +77,19 @@ class DriveRestCloudStore
             // Already gone is as good as deleted.
             if (response.code != HTTP_NOT_FOUND) response.requireSuccess()
         }
+
+        /**
+         * A response Drive sent but this client can't read (malformed JSON, a timestamp that doesn't
+         * parse) is a cloud failure like any other, so every caller's handling of
+         * [CloudBackupException] covers it, rather than an exception nobody expects.
+         */
+        private inline fun <T> read(block: () -> T): T =
+            try {
+                block()
+            } catch (e: IllegalArgumentException) {
+                // SerializationException and Instant.parse failures are both IllegalArgumentExceptions.
+                throw CloudBackupException(DriveBackupFailure.UNEXPECTED, e)
+            }
 
         private suspend fun call(request: HttpRequest): HttpResponse {
             val response = transport.execute(request)

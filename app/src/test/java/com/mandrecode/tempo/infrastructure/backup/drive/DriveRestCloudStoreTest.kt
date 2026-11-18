@@ -125,6 +125,18 @@ class DriveRestCloudStoreTest {
     }
 
     @Test
+    fun `a response that can't be read is an unexpected cloud failure`() {
+        fun failureFor(body: String): DriveBackupFailure {
+            response = HttpResponse(200, body)
+            return assertThrows(CloudBackupException::class.java) { runTest { store.list("tok") } }.failure
+        }
+
+        assertThat(failureFor("not json")).isEqualTo(DriveBackupFailure.UNEXPECTED)
+        assertThat(failureFor("""{"files":[{"id":"a","createdTime":"yesterday"}]}"""))
+            .isEqualTo(DriveBackupFailure.UNEXPECTED)
+    }
+
+    @Test
     fun `no response at all surfaces as an IOException`() {
         failWith = IOException("offline")
 
