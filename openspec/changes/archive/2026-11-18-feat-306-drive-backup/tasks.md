@@ -19,7 +19,7 @@
 
 - [x] 4.1 Update `sync-boundary.md` (new prefs and secret file) and the README/backup docs. Verify by review.
 - [x] 4.2 Run ktlint, detekt, unit tests, kover, `lintDebug`, the instrumented suite and `openspec validate --strict`. Verify: green.
-- [ ] 4.3 Run a real-Drive end-to-end backup once the OAuth client exists. This needs the user's Google Cloud setup; it stays open until done.
+- [x] 4.3 Run a real-Drive end-to-end backup once the OAuth client exists. Verified on a Pixel 7 with the Google Cloud OAuth client: consent, passphrase setup and backups in Drive's app folder.
 
 ## Workflow follow-up
 
