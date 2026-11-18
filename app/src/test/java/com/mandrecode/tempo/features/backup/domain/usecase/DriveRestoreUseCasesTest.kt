@@ -86,9 +86,7 @@ class DriveRestoreUseCasesTest {
     fun `a download failure changes nothing and says why`() =
         runTest {
             auth.result = CloudAuthorizationResult.NeedsUserConsent
-            val file =
-                com.mandrecode.tempo.features.backup.domain.model
-                    .CloudBackupFile("id", "n", 1, 1)
+            val file = CloudBackupFile("id", "n", 1, 1)
 
             val outcome = restore(file, ImportMode.REPLACE, "pw".toCharArray())
 
