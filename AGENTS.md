@@ -126,10 +126,9 @@ Extract ID from branch name. If no ID in branch, look up with `gh`. If none foun
 - Title matches commit format above. Base branch: `main`.
 - Body: summary of changes + `Closes #[ID]` if applicable.
 
-### Copilot Review Conversations
-- When handling Copilot feedback on a PR, respond in every Copilot thread and resolve every Copilot conversation before requesting another pass.
-- After all Copilot conversations are resolved, re-request Copilot review via GitHub's Reviewers request API first (for example via `gh api` against `POST /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers`).
-- Use `@Copilot` comment pings only as a fallback when reviewer-request API flow is not available (for example due to permission or reviewer-type limitations), and state the reason in the PR activity.
+### Copilot Review
+- Don't request Copilot reviews on PRs: not through the reviewers API, not with `@Copilot` comment pings, and not by enabling the repository's Copilot review ruleset. This project doesn't use them.
+- If a Copilot review already exists on a PR, a real finding in it is fixed like any other feedback; reply in its thread and resolve it. Never request another pass.
 
 ### Pre-Commit
 Always run `./gradlew ktlintFormat` explicitly before committing. A git hook exists (`bash scripts/install-hooks.sh`) but do not rely on it.
