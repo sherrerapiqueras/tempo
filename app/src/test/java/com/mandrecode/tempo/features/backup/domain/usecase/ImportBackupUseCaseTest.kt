@@ -69,6 +69,27 @@ class ImportBackupUseCaseTest {
         }
 
     @Test
+    fun `a rescheduling failure after a committed import keeps the import's outcome`() =
+        runTest {
+            val outcome = ImportOutcome.Success(ImportSummary())
+            coEvery { backupRepository.importFromJson(any(), any(), any()) } returns outcome
+            coEvery { reminderScheduler.rescheduleAllReminders() } throws IllegalStateException("work manager")
+
+            assertThat(useCase("{}", ImportMode.REPLACE)).isEqualTo(outcome)
+        }
+
+    @Test
+    fun `a rescheduling failure doesn't hide the import's own error`() =
+        runTest {
+            coEvery { backupRepository.importFromJson(any(), any(), any()) } throws IllegalStateException("import")
+            coEvery { reminderScheduler.rescheduleAllReminders() } throws IllegalArgumentException("work manager")
+
+            val thrown = runCatching { useCase("{}", ImportMode.REPLACE) }.exceptionOrNull()
+
+            assertThat(thrown).hasMessageThat().isEqualTo("import")
+        }
+
+    @Test
     fun `returns the repository outcome`() =
         runTest {
             val outcome = ImportOutcome.UnsupportedVersion(fileVersion = 9, maxSupported = 1)

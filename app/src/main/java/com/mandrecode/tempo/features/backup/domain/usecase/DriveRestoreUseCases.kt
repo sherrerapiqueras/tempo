@@ -21,7 +21,11 @@ private suspend fun CloudAuthorization.requireToken(): String =
         CloudAuthorizationResult.NeedsUserConsent -> throw CloudBackupException(DriveBackupFailure.AUTHORIZATION_NEEDED)
     }
 
-/** Runs [block], turning cloud and network failures into the cause a user can act on. */
+/**
+ * Runs [block], turning every failure but cancellation into a [CloudBackupException] with its cause.
+ * Deliberately broad: whatever goes wrong, a restore must reach a terminal answer.
+ */
+@Suppress("TooGenericExceptionCaught")
 private suspend fun <T> cloudCall(block: suspend () -> T): Result<T> =
     try {
         Result.success(block())
@@ -31,6 +35,9 @@ private suspend fun <T> cloudCall(block: suspend () -> T): Result<T> =
         Result.failure(e)
     } catch (e: IOException) {
         Result.failure(CloudBackupException(DriveBackupFailure.NETWORK, e))
+    } catch (e: Exception) {
+        // Anything else, such as a response that doesn't parse: still a terminal answer, never a hang.
+        Result.failure(CloudBackupException(DriveBackupFailure.UNEXPECTED, e))
     }
 
 /** The backups this Google account has in Drive (#307), newest first. */
