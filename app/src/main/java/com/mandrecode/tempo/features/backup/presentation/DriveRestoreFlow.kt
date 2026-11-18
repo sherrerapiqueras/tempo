@@ -127,6 +127,9 @@ class DriveRestoreFlow
         /** The passphrase that just restored, kept only until the user answers the keep-backing-up offer. */
         private var restoredWith: CharArray? = null
 
+        /** True while "Keep backing up" is storing the passphrase; the flow must not close under it. */
+        private var keeping = false
+
         fun start(host: Host) {
             show(DriveRestoreStep.Searching, host)
             host.scope.launch {
@@ -177,7 +180,8 @@ class DriveRestoreFlow
                         event.passphrase.fill('\u0000')
                     }
                 is DriveRestoreEvent.KeepBackingUpChosen -> keepBackingUp(event.keep, host)
-                DriveRestoreEvent.Dismissed -> show(null, host)
+                // Closing mid-save could end the host (onboarding finishes when the flow closes) and cancel it.
+                DriveRestoreEvent.Dismissed -> if (!keeping) show(null, host)
             }
         }
 
@@ -191,20 +195,26 @@ class DriveRestoreFlow
             keep: Boolean,
             host: Host,
         ) {
+            if (keeping) return
             val passphrase = restoredWith
             if (!keep || passphrase == null) {
                 show(null, host)
                 return
             }
+            keeping = true
             host.scope.launch {
-                withContext(ioDispatcher) {
-                    try {
-                        enableBackup(passphrase.copyOf(), passphrase.copyOf())
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (_: Exception) {
-                        // Backup stays off; see above.
+                try {
+                    withContext(ioDispatcher) {
+                        try {
+                            enableBackup(passphrase.copyOf(), passphrase.copyOf())
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (_: Exception) {
+                            // Backup stays off; see above.
+                        }
                     }
+                } finally {
+                    keeping = false
                 }
                 show(null, host)
             }

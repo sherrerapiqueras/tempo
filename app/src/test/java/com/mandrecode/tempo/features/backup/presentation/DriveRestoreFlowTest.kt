@@ -27,8 +27,10 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
@@ -181,6 +183,29 @@ class DriveRestoreFlowTest {
             flow.onEvent(DriveRestoreEvent.KeepBackingUpChosen(true), host)
 
             assertThat(preferences.settings.value.enabled).isFalse()
+            assertThat(step).isNull()
+        }
+
+    @Test
+    fun `closing while the passphrase is being stored waits for it`() =
+        runTest(UnconfinedTestDispatcher()) {
+            backup()
+            coEvery { importBackup(any(), any(), any()) } returns ImportOutcome.Success(ImportSummary())
+            val io = StandardTestDispatcher(testScheduler)
+            val slowFlow =
+                driveRestoreFlow(consent, auth, cloud, importBackup, repository, store, preferences, scheduler, io)
+            val host = host()
+            slowFlow.start(host)
+            slowFlow.onEvent(DriveRestoreEvent.RestoreClicked, host)
+            slowFlow.onEvent(DriveRestoreEvent.PassphraseEntered("right".toCharArray()), host)
+
+            slowFlow.onEvent(DriveRestoreEvent.KeepBackingUpChosen(true), host)
+            slowFlow.onEvent(DriveRestoreEvent.Dismissed, host)
+            assertThat(step).isInstanceOf(DriveRestoreStep.Restored::class.java)
+
+            // The flow runs in backgroundScope, which advanceUntilIdle leaves alone.
+            runCurrent()
+            assertThat(store.stored).isEqualTo("right")
             assertThat(step).isNull()
         }
 
