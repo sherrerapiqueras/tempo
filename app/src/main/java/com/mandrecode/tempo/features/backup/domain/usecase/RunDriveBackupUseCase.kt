@@ -10,8 +10,11 @@ import com.mandrecode.tempo.features.backup.domain.repository.CloudBackupExcepti
 import com.mandrecode.tempo.features.backup.domain.repository.CloudBackupStore
 import com.mandrecode.tempo.features.backup.domain.repository.DriveBackupPreferences
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.IOException
 import javax.inject.Inject
+import javax.inject.Singleton
 import kotlin.time.Clock
 
 /**
@@ -19,7 +22,12 @@ import kotlin.time.Clock
  * passphrase (#305), uploaded to the app's Drive folder, then older backups past [RETENTION]
  * pruned. Every outcome is recorded, so Settings can say honestly when the last backup worked and
  * why the last one did not.
+ *
+ * One run at a time: the periodic and "back up now" work are separate WorkManager jobs that can
+ * start together, and two runs would upload twice and prune each other's view of the folder.
+ * WorkManager runs both in this process, so a process-wide lock is enough.
  */
+@Singleton
 class RunDriveBackupUseCase
     @Inject
     constructor(
@@ -41,7 +49,11 @@ class RunDriveBackupUseCase
             ) : Result
         }
 
-        suspend operator fun invoke(): Result {
+        private val oneAtATime = Mutex()
+
+        suspend operator fun invoke(): Result = oneAtATime.withLock { runOnce() }
+
+        private suspend fun runOnce(): Result {
             if (!preferences.settings.value.enabled) return Result.Skipped
             val result: Result =
                 try {
