@@ -26,6 +26,7 @@ class RefreshDriveBackupStatusUseCase
         private val authorization: CloudAuthorization,
         private val cloudStore: CloudBackupStore,
         private val clock: Clock,
+        private val lock: DriveBackupLock = DriveBackupLock(),
     ) {
         /** When the last check ran, so opening Settings repeatedly does not hit the network each time. */
         @Volatile
@@ -36,18 +37,9 @@ class RefreshDriveBackupStatusUseCase
             val now = clock.now().toEpochMilliseconds()
             lastCheckedAt?.let { if (now - it < MIN_INTERVAL_MILLIS) return }
             try {
-                when (val auth = authorization.authorize()) {
-                    CloudAuthorizationResult.NeedsUserConsent -> lostAccess()
-                    is CloudAuthorizationResult.Authorized -> {
-                        // This install's own backups: another device's must not read as this one's.
-                        val newest =
-                            cloudStore
-                                .list(auth.accessToken)
-                                .filter { it.isFrom(preferences.installId) }
-                                .maxOfOrNull { it.createdAt }
-                        if (newest != preferences.status.value.lastSuccessAt) preferences.replaceLastSuccess(newest)
-                    }
-                }
+                // Under the backups' lock: a backup finishing between the listing and the write below
+                // would otherwise have its newer success overwritten by this older view of Drive.
+                lock.withLock { check() }
                 // Only a check that got an answer counts; a failed one is tried again on the next look.
                 lastCheckedAt = now
             } catch (e: CancellationException) {
@@ -61,6 +53,21 @@ class RefreshDriveBackupStatusUseCase
                 }
             } catch (_: IOException) {
                 // Offline: keep what is known.
+            }
+        }
+
+        private suspend fun check() {
+            when (val auth = authorization.authorize()) {
+                CloudAuthorizationResult.NeedsUserConsent -> lostAccess()
+                is CloudAuthorizationResult.Authorized -> {
+                    // This install's own backups: another device's must not read as this one's.
+                    val newest =
+                        cloudStore
+                            .list(auth.accessToken)
+                            .filter { it.isFrom(preferences.installId) }
+                            .maxOfOrNull { it.createdAt }
+                    if (newest != preferences.status.value.lastSuccessAt) preferences.replaceLastSuccess(newest)
+                }
             }
         }
 
