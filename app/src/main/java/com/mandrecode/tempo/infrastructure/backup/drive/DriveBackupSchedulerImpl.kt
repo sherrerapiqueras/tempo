@@ -18,11 +18,14 @@ class DriveBackupSchedulerImpl
     @Inject
     constructor(
         private val workManager: WorkManager,
+        private val notifier: DriveBackupNotifier,
     ) : DriveBackupScheduler {
         override fun sync(settings: DriveBackupSettings) {
             if (!settings.enabled) {
                 workManager.cancelUniqueWork(PERIODIC_WORK)
                 workManager.cancelUniqueWork(ONE_TIME_WORK)
+                // No run will clear an earlier "backup stopped" notification now: it's about backups that are off.
+                notifier.clear()
                 return
             }
             val request =
