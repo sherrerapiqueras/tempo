@@ -13,6 +13,7 @@ import com.mandrecode.tempo.features.backup.domain.usecase.RunDriveBackupNowUseC
 import com.mandrecode.tempo.features.backup.domain.usecase.UpdateDriveBackupScheduleUseCase
 import com.mandrecode.tempo.features.backup.presentation.DriveRestoreFlow
 import com.mandrecode.tempo.infrastructure.backup.drive.GoogleDriveAuthorization
+import com.mandrecode.tempo.infrastructure.backup.drive.GoogleDriveAuthorization.ConsentOutcome
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.combine
@@ -81,8 +82,7 @@ class SettingsDriveBackupDelegate
             when (event) {
                 Event.TurnOnClicked -> requestConsent(ConsentPurpose.TURN_ON, host)
                 Event.ReconnectClicked -> requestConsent(ConsentPurpose.RECONNECT, host)
-                is Event.ConsentFinished ->
-                    if (authorization.isGranted(event.data)) onConsentGranted(host) else pendingConsent = null
+                is Event.ConsentFinished -> onConsentFinished(event, host)
                 is Event.PassphraseConfirmed -> confirmPassphrase(event, host)
                 Event.FrequencyClicked, is Event.FrequencySelected, is Event.WifiOnlyToggled ->
                     onScheduleEvent(event, host)
@@ -153,6 +153,22 @@ class SettingsDriveBackupDelegate
                 } catch (e: CancellationException) {
                     throw e
                 } catch (_: CloudBackupException) {
+                    pendingConsent = null
+                    showDialog(Dialog.Unavailable, host)
+                }
+            }
+        }
+
+        private fun onConsentFinished(
+            event: Event.ConsentFinished,
+            host: SettingsBackupDelegate.Host,
+        ) {
+            when (authorization.consentOutcome(event.data)) {
+                ConsentOutcome.GRANTED -> onConsentGranted(host)
+                ConsentOutcome.CANCELLED -> pendingConsent = null
+                // An account was picked but Google refused (for instance, no OAuth client for this
+                // build): say so, rather than returning to Settings as if nothing had been asked.
+                ConsentOutcome.FAILED -> {
                     pendingConsent = null
                     showDialog(Dialog.Unavailable, host)
                 }
