@@ -17,8 +17,8 @@ import javax.inject.Inject
 
 /**
  * Tells the user when Drive backup has stopped for a reason only they can fix (#306): a backup
- * that silently fails for weeks is the failure that matters. Tapping opens Settings, where the
- * status line offers the fix.
+ * that silently fails for weeks is the failure that matters. Tapping opens the Google Drive backup
+ * page in Settings, where the status offers the fix.
  */
 class DriveBackupNotifier
     @Inject
