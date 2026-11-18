@@ -31,5 +31,6 @@ internal fun SettingsContract.UiEvent.toOnboardingEvent(): OnboardingContract.Ui
         is SettingsContract.UiEvent.ImportPassphraseEntered,
         is SettingsContract.UiEvent.ImportModeChosen,
         is SettingsContract.UiEvent.BackupDialogDismissed,
+        is SettingsContract.UiEvent.DriveBackup,
         -> null
     }

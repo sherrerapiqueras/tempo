@@ -10,10 +10,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -25,6 +27,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -33,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -160,13 +164,16 @@ internal fun SettingsItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     trailingIcon: Int? = null,
+    /** False while the action can't run (one already under way): dimmed and not clickable. */
+    enabled: Boolean = true,
 ) {
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
                 .heightIn(min = SettingsRowMinHeight)
-                .clickable(onClick = onClick)
+                .clickable(enabled = enabled, onClick = onClick)
+                .alpha(if (enabled) 1f else DISABLED_ROW_ALPHA)
                 .padding(SettingsItemPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -232,11 +239,70 @@ internal fun SettingsSwitchItem(
 }
 
 /**
+ * A row that does two things, the way Android's own Settings does it: the switch turns the
+ * feature on or off, and the rest of the row opens its own screen. The divider shows where one
+ * target ends and the other begins.
+ */
+@Composable
+internal fun SettingsSplitSwitchItem(
+    icon: Int,
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    subtitleColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth().height(IntrinsicSize.Min),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .heightIn(min = SettingsRowMinHeight)
+                    .clickable(onClick = onClick)
+                    .padding(SettingsItemPadding),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SettingsIcon(icon = icon)
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = subtitleColor,
+                )
+            }
+        }
+        VerticalDivider(
+            modifier = Modifier.padding(vertical = 20.dp),
+            color = MaterialTheme.colorScheme.outlineVariant,
+        )
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.padding(horizontal = 16.dp).semantics { contentDescription = title },
+        )
+    }
+}
+
+/**
  * Rows sized like Android's own Settings: at least [SettingsRowMinHeight] tall, whether they hold
  * one line beside a switch or a title over a summary, with room above and below rather than around.
  */
 internal val SettingsItemPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
 internal val SettingsRowMinHeight = 72.dp
+
+/** Material's disabled-content opacity. */
+private const val DISABLED_ROW_ALPHA = 0.38f
 internal val SettingsSectionContentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp)
 
 @Composable

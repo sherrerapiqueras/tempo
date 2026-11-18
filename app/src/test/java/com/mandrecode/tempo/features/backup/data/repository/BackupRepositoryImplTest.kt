@@ -1,5 +1,6 @@
 package com.mandrecode.tempo.features.backup.data.repository
 
+import androidx.room.withTransaction
 import com.google.common.truth.Truth.assertThat
 import com.mandrecode.tempo.core.data.entity.CategoryEntity
 import com.mandrecode.tempo.core.data.entity.HabitChainEntity
@@ -225,6 +226,31 @@ class BackupRepositoryImplTest : BackupRepositoryTestBase() {
             assertThat(repository.isEncryptedBackup(json)).isFalse()
             val outcome = repository.importFromJson(json, ImportMode.MERGE, testPassphrase)
             assertThat(outcome).isEqualTo(ImportOutcome.CorruptFile)
+        }
+
+    @Test
+    fun `replace writes daily focus history inside the same transaction as the rest`() =
+        runTest {
+            var depth = 0
+            var historyWrittenInTransaction = false
+            @Suppress("UNCHECKED_CAST")
+            coEvery { database.withTransaction(any<suspend () -> Any?>()) } coAnswers {
+                depth++
+                try {
+                    (args[1] as (suspend () -> Any?)).invoke()
+                } finally {
+                    depth--
+                }
+            }
+            coEvery { dailyFocusActivityRepository.replaceAll(any()) } coAnswers {
+                historyWrittenInTransaction = depth > 0
+            }
+
+            val json = encryptedJsonOf("""{"schemaVersion":1,"categories":[]}""")
+
+            repository.importFromJson(json, ImportMode.REPLACE, testPassphrase)
+
+            assertThat(historyWrittenInTransaction).isTrue()
         }
 
     @Test
