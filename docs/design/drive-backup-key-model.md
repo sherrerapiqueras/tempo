@@ -38,6 +38,9 @@ convenience, not a replacement, and the passphrase would still restore on its ow
   (`tempo_backup_passphrase_key`). The result lives in its own SharedPreferences file,
   `tempo_backup_secret_prefs`, the same pattern as the database passphrase
   (`KeystoreDbPassphraseProvider`).
+- A new passphrase gets a new key under the other of two aliases (`tempo_backup_passphrase_key`
+  and `tempo_backup_passphrase_key_b`), and the old key is deleted only after the new blob is
+  committed. A change that fails part-way leaves the previous passphrase working.
 - That file is **excluded from Auto Backup and device transfer** (`backup_rules.xml`,
   `data_extraction_rules.xml`), like `tempo_secure_prefs`. A wrapped blob is useless without its
   hardware-bound key, so carrying it would only make a new phone think it has a passphrase it

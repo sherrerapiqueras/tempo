@@ -51,6 +51,8 @@ describes this install and never syncs. Neither kind syncs in 2.0.
 | `focus_session_prefs` → running timer, session counts for today, default lengths | Device | Never | A running timer belongs to the device it runs on. Today's counts feed `daily_focus_activity`. |
 | `active_live_activity_prefs` → `active_chain_ids` | Device | Never | Which ongoing notifications this device is showing. |
 | Backup settings and reminders (`BackupSettingsDataSource`) | Device | Never | Each device backs itself up. Drive backup (#12) is per install. |
+| `drive_backup_prefs` → Drive backup on/off, frequency, Wi-Fi only, last success/failure (#306) | Device | Never | Each device decides whether and how it backs itself up. Excluded from Auto Backup and transfer as well. |
+| `tempo_backup_secret_prefs` → `backup_passphrase_blob` (#305) | Device | **Never, under any circumstances** | The Keystore-wrapped Drive backup passphrase. The user types it again on a new phone. |
 | `tempo_secure_prefs` → `db_passphrase_blob` | Device | **Never, under any circumstances** | The Keystore-wrapped database key. Moving it would defeat database encryption. #291 governs cloud secrets separately. |
 | `tempo_db_kdf_prefs` → `db_kdf_iter` | Device | Never | Describes how this file is keyed. |
 

@@ -684,6 +684,7 @@ class SettingsViewModelTest {
             missedReminderPreferences,
             missedReminderScheduler,
             SettingsBackupDelegate(exportBackup, importBackup, backupRepository, backupFileDataSource),
+            driveBackupDelegate(),
             vacationModeRepository,
             focusSessionRepository,
             appContext,
