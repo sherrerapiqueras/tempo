@@ -5,6 +5,17 @@ import com.google.common.truth.Truth.assertThat
 import com.mandrecode.tempo.core.data.preferences.OnboardingPreferencesRepository
 import com.mandrecode.tempo.core.data.preferences.ThemePreferencesRepository
 import com.mandrecode.tempo.core.domain.model.ThemeMode
+import com.mandrecode.tempo.features.backup.domain.model.ImportOutcome
+import com.mandrecode.tempo.features.backup.domain.model.ImportSummary
+import com.mandrecode.tempo.features.backup.domain.repository.BackupRepository
+import com.mandrecode.tempo.features.backup.domain.usecase.FakeCloudStore
+import com.mandrecode.tempo.features.backup.domain.usecase.ImportBackupUseCase
+import com.mandrecode.tempo.features.backup.presentation.DriveRestoreEvent
+import com.mandrecode.tempo.features.backup.presentation.DriveRestoreFlow
+import com.mandrecode.tempo.features.backup.presentation.DriveRestoreStep
+import com.mandrecode.tempo.features.backup.presentation.driveRestoreFlow
+import com.mandrecode.tempo.infrastructure.backup.drive.GoogleDriveAuthorization
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -12,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -107,9 +119,65 @@ class OnboardingViewModelTest {
             verify { onboardingPreferencesRepository.setCompleted() }
         }
 
-    private fun createViewModel(): OnboardingViewModel =
+    @Test
+    fun givenARestoreFromDrive_whenItsLastDialogCloses_thenOnboardingIsComplete() =
+        runTest {
+            val viewModel = createViewModel(restoreFlowWithOneBackup())
+            restoreTheBackup(viewModel)
+            assertThat(viewModel.uiState.value.driveRestore).isInstanceOf(DriveRestoreStep.Restored::class.java)
+
+            viewModel.uiEffect.test {
+                viewModel.onEvent(OnboardingContract.UiEvent.DriveRestore(DriveRestoreEvent.KeepBackingUpChosen(false)))
+                advanceUntilIdle()
+
+                assertThat(awaitItem()).isEqualTo(OnboardingContract.UiEffect.Exit)
+                cancelAndIgnoreRemainingEvents()
+            }
+            verify { onboardingPreferencesRepository.setCompleted() }
+        }
+
+    @Test
+    fun givenARestoreOffer_whenDismissed_thenOnboardingCarriesOn() =
+        runTest {
+            val viewModel = createViewModel(restoreFlowWithOneBackup())
+            viewModel.onEvent(OnboardingContract.UiEvent.RestoreFromDriveClicked)
+            advanceUntilIdle()
+
+            viewModel.onEvent(OnboardingContract.UiEvent.DriveRestore(DriveRestoreEvent.Dismissed))
+            advanceUntilIdle()
+
+            assertThat(viewModel.uiState.value.driveRestore).isNull()
+            verify(exactly = 0) { onboardingPreferencesRepository.setCompleted() }
+        }
+
+    private suspend fun restoreFlowWithOneBackup(): DriveRestoreFlow {
+        val cloud = FakeCloudStore()
+        cloud.upload("t", "tempo-backup-42.tempo", "encrypted")
+        val importBackup = mockk<ImportBackupUseCase>()
+        coEvery { importBackup(any(), any(), any()) } returns ImportOutcome.Success(ImportSummary())
+        return driveRestoreFlow(
+            consent = mockk<GoogleDriveAuthorization> { coEvery { consentIntent() } returns null },
+            cloud = cloud,
+            importBackup = importBackup,
+            repository = mockk<BackupRepository> { coEvery { hasUserData() } returns false },
+        )
+    }
+
+    private fun TestScope.restoreTheBackup(viewModel: OnboardingViewModel) {
+        viewModel.onEvent(OnboardingContract.UiEvent.RestoreFromDriveClicked)
+        advanceUntilIdle()
+        viewModel.onEvent(OnboardingContract.UiEvent.DriveRestore(DriveRestoreEvent.RestoreClicked))
+        advanceUntilIdle()
+        viewModel.onEvent(
+            OnboardingContract.UiEvent.DriveRestore(DriveRestoreEvent.PassphraseEntered("pw".toCharArray())),
+        )
+        advanceUntilIdle()
+    }
+
+    private fun createViewModel(driveRestore: DriveRestoreFlow = driveRestoreFlow()): OnboardingViewModel =
         OnboardingViewModel(
             themePreferencesRepository = themePreferencesRepository,
             onboardingPreferencesRepository = onboardingPreferencesRepository,
+            driveRestore = driveRestore,
         )
 }

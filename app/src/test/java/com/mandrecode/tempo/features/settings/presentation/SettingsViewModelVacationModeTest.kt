@@ -184,6 +184,7 @@ class SettingsViewModelVacationModeTest {
                 mockk<BackupRepository>(relaxed = true),
                 mockk<BackupFileDataSource>(relaxed = true),
             ),
+            driveBackupDelegate(),
             vacationModeRepository,
             mockk<FocusSessionRepository>(relaxed = true) {
                 every { defaultLengthMinutes } returns MutableStateFlow(25)

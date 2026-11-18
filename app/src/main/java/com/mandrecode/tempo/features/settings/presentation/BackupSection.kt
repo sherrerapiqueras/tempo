@@ -37,17 +37,10 @@ import com.mandrecode.tempo.features.backup.domain.model.ValidationIssueKind
 internal fun BackupSection(
     uiState: SettingsContract.UiState,
     onEvent: (SettingsContract.UiEvent) -> Unit,
+    onOpenDriveBackup: () -> Unit = {},
 ) {
     SettingsSection(title = stringResource(R.string.settings_backup)) {
-        item {
-            SettingsItem(
-                icon = R.drawable.ic_file_upload,
-                title = stringResource(R.string.backup_export_title),
-                subtitle = stringResource(R.string.backup_export_description),
-                trailingIcon = R.drawable.ic_chevron_right,
-                onClick = { onEvent(SettingsContract.UiEvent.ExportClicked) },
-            )
-        }
+        driveBackupEntry(drive = uiState.driveBackup, onEvent = onEvent, onOpen = onOpenDriveBackup)
         item {
             SettingsItem(
                 icon = R.drawable.ic_file_download,
@@ -55,6 +48,15 @@ internal fun BackupSection(
                 subtitle = stringResource(R.string.backup_import_description),
                 trailingIcon = R.drawable.ic_chevron_right,
                 onClick = { onEvent(SettingsContract.UiEvent.ImportClicked) },
+            )
+        }
+        item {
+            SettingsItem(
+                icon = R.drawable.ic_file_upload,
+                title = stringResource(R.string.backup_export_title),
+                subtitle = stringResource(R.string.backup_export_description),
+                trailingIcon = R.drawable.ic_chevron_right,
+                onClick = { onEvent(SettingsContract.UiEvent.ExportClicked) },
             )
         }
     }

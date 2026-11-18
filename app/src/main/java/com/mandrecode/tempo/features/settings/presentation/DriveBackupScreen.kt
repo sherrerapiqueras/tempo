@@ -1,0 +1,328 @@
+package com.mandrecode.tempo.features.settings.presentation
+
+import android.text.format.DateUtils
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
+import com.mandrecode.tempo.R
+import com.mandrecode.tempo.core.ui.components.ExpressiveChip
+import com.mandrecode.tempo.core.ui.glass.glassCardColor
+import com.mandrecode.tempo.features.backup.domain.model.BackupFrequency
+import com.mandrecode.tempo.features.backup.domain.model.DriveBackupFailure
+import com.mandrecode.tempo.features.settings.presentation.SettingsContract.UiEvent.DriveBackup as Event
+
+internal const val DRIVE_BACKUP_STATUS_TEST_TAG = "drive_backup_status"
+internal const val DRIVE_BACKUP_ENTRY_TEST_TAG = "drive_backup_entry"
+internal const val DRIVE_BACKUP_MAIN_SWITCH_TEST_TAG = "drive_backup_main_switch"
+internal const val DRIVE_BACKUP_PROGRESS_TEST_TAG = "drive_backup_progress"
+
+/**
+ * Google Drive backup's row on the main Settings page (#306): its switch turns backup on or off,
+ * the rest opens [DriveBackupScreenContent]. The summary says whether the user is covered, so the
+ * one thing worth knowing is visible without opening the screen.
+ */
+internal fun SettingsGroupScope.driveBackupEntry(
+    drive: SettingsContract.DriveBackupUiState,
+    onEvent: (SettingsContract.UiEvent) -> Unit,
+    onOpen: () -> Unit,
+) {
+    item {
+        val needsAttention = drive.enabled && drive.failure != null
+        SettingsSplitSwitchItem(
+            icon = R.drawable.ic_sync,
+            title = stringResource(R.string.drive_backup_title),
+            subtitle = drive.summary(),
+            subtitleColor =
+                if (needsAttention) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+            checked = drive.enabled,
+            onCheckedChange = { onEvent(if (it) Event.TurnOnClicked else Event.TurnOffClicked) },
+            onClick = onOpen,
+            modifier = Modifier.testTag(DRIVE_BACKUP_ENTRY_TEST_TAG),
+        )
+    }
+}
+
+@Composable
+private fun SettingsContract.DriveBackupUiState.summary(): String =
+    when {
+        !enabled -> stringResource(R.string.drive_backup_turn_on_description)
+        running -> stringResource(R.string.drive_backup_running)
+        failure != null -> stringResource(R.string.drive_backup_entry_attention)
+        lastSuccessAt != null -> stringResource(R.string.drive_backup_entry_last_backup, relativeTime(lastSuccessAt))
+        else -> stringResource(R.string.drive_backup_entry_pending)
+    }
+
+private fun relativeTime(atMillis: Long): String =
+    DateUtils
+        .getRelativeTimeSpanString(atMillis, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS)
+        .toString()
+
+/**
+ * Google Drive backup's own Settings page (#306). The main switch leads; while backup is on, the
+ * status comes first, because whether the last backup worked, and when, is what tells a user
+ * they are actually covered. Everything after it is configuration.
+ */
+@Composable
+internal fun DriveBackupScreenContent(
+    uiState: SettingsContract.UiState,
+    onEvent: (SettingsContract.UiEvent) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val drive = uiState.driveBackup
+    Column(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(WindowInsets.navigationBars.asPaddingValues())
+                .padding(horizontal = 16.dp)
+                .padding(top = 24.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            DriveBackupMainSwitch(
+                checked = drive.enabled,
+                onCheckedChange = { onEvent(if (it) Event.TurnOnClicked else Event.TurnOffClicked) },
+            )
+            Text(
+                text = stringResource(R.string.drive_backup_screen_intro),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 4.dp),
+            )
+        }
+        AnimatedVisibility(
+            visible = drive.enabled,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically(),
+        ) {
+            DriveBackupOnSections(drive = drive, onEvent = onEvent)
+        }
+        // Available whether backup is on or not: a restore is often the first thing a new phone needs.
+        SettingsSection(title = stringResource(R.string.drive_backup_section_restore)) {
+            item {
+                SettingsItem(
+                    icon = R.drawable.ic_file_download,
+                    title = stringResource(R.string.drive_restore_title),
+                    subtitle = stringResource(R.string.drive_restore_description),
+                    trailingIcon = R.drawable.ic_chevron_right,
+                    onClick = { onEvent(Event.RestoreClicked) },
+                )
+            }
+        }
+    }
+}
+
+private val MainSwitchShape = RoundedCornerShape(28.dp)
+
+/** The big switch at the top of the page, styled like Android's own main switch. */
+@Composable
+private fun DriveBackupMainSwitch(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    val title = stringResource(R.string.drive_backup_main_switch)
+    Surface(
+        shape = MainSwitchShape,
+        color =
+            if (checked) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                glassCardColor(MaterialTheme.colorScheme.surfaceContainerHigh)
+            },
+        contentColor =
+            if (checked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                // The press ripple is drawn by toggleable, outside the Surface's own clip: clip it first
+                // so it keeps the rounded corners instead of spilling out as a rectangle.
+                .clip(MainSwitchShape)
+                // One control, not two: the whole surface is the switch, announced once with its role.
+                .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange)
+                .testTag(DRIVE_BACKUP_MAIN_SWITCH_TEST_TAG),
+    ) {
+        Row(
+            modifier = Modifier.heightIn(min = 80.dp).padding(horizontal = 24.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.weight(1f),
+            )
+            Switch(checked = checked, onCheckedChange = null)
+        }
+    }
+}
+
+@Composable
+private fun DriveBackupOnSections(
+    drive: SettingsContract.DriveBackupUiState,
+    onEvent: (SettingsContract.UiEvent) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+        SettingsSection(title = stringResource(R.string.drive_backup_section_backups)) {
+            item { DriveBackupStatusItem(drive = drive, onEvent = onEvent) }
+            item {
+                SettingsItem(
+                    icon = R.drawable.ic_file_upload,
+                    title = stringResource(R.string.drive_backup_now),
+                    subtitle = stringResource(R.string.drive_backup_now_description),
+                    onClick = { onEvent(Event.BackUpNowClicked) },
+                    enabled = !drive.running,
+                )
+            }
+        }
+        SettingsSection(title = stringResource(R.string.drive_backup_section_schedule)) {
+            item { FrequencyChips(selected = drive.frequency, onEvent = onEvent) }
+            item {
+                SettingsSwitchItem(
+                    icon = R.drawable.ic_wifi,
+                    title = stringResource(R.string.drive_backup_wifi_only),
+                    checked = drive.unmeteredOnly,
+                    onCheckedChange = { onEvent(Event.WifiOnlyToggled(it)) },
+                )
+            }
+        }
+        SettingsSection(title = stringResource(R.string.drive_backup_section_passphrase)) {
+            item {
+                SettingsItem(
+                    icon = R.drawable.ic_edit,
+                    title = stringResource(R.string.drive_backup_change_passphrase),
+                    subtitle = stringResource(R.string.drive_backup_change_passphrase_description),
+                    onClick = { onEvent(Event.ChangePassphraseClicked) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DriveBackupStatusItem(
+    drive: SettingsContract.DriveBackupUiState,
+    onEvent: (SettingsContract.UiEvent) -> Unit,
+) {
+    // While a backup runs, its progress is the status; an older failure may be what it is fixing.
+    val failure = drive.failure.takeUnless { drive.running }
+    val lastBackup =
+        when {
+            drive.running -> stringResource(R.string.drive_backup_running)
+            else -> drive.lastSuccessAt?.let(::relativeTime) ?: stringResource(R.string.drive_backup_never)
+        }
+    val action =
+        when (failure) {
+            DriveBackupFailure.AUTHORIZATION_NEEDED -> Event.ReconnectClicked
+            DriveBackupFailure.PASSPHRASE_UNAVAILABLE -> Event.ChangePassphraseClicked
+            DriveBackupFailure.STORAGE_FULL -> Event.ManageStorageClicked
+            else -> null
+        }
+    Column(modifier = Modifier.testTag(DRIVE_BACKUP_STATUS_TEST_TAG)) {
+        SettingsItem(
+            icon = if (failure == null) R.drawable.ic_history else R.drawable.ic_warning,
+            title = stringResource(R.string.drive_backup_last_backup),
+            subtitle = lastBackup,
+            onClick = { action?.let(onEvent) },
+        )
+        if (drive.running) {
+            LinearProgressIndicator(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = 72.dp, end = 16.dp, bottom = 16.dp)
+                        .testTag(DRIVE_BACKUP_PROGRESS_TEST_TAG),
+            )
+        }
+        if (failure != null) {
+            Text(
+                text = failure.message(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(start = 72.dp, end = 16.dp, bottom = 12.dp),
+            )
+            action?.let {
+                FilledTonalButton(
+                    onClick = { onEvent(it) },
+                    modifier = Modifier.padding(start = 72.dp, end = 16.dp, bottom = 16.dp),
+                ) {
+                    Text(stringResource(it.actionLabel()))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Daily or weekly, chosen in place with the segmented chips Settings uses for the theme, rather than
+ * a row that opens a dialog of radio buttons.
+ */
+@Composable
+private fun FrequencyChips(
+    selected: BackupFrequency,
+    onEvent: (SettingsContract.UiEvent) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(SettingsSectionContentPadding),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        BackupFrequency.entries.forEachIndexed { index, frequency ->
+            ExpressiveChip(
+                label = frequency.label(),
+                isSelected = frequency == selected,
+                onClick = { onEvent(Event.FrequencySelected(frequency)) },
+                isFirst = index == 0,
+                isLast = index == BackupFrequency.entries.lastIndex,
+                modifier = Modifier.weight(1f),
+                height = 48.dp,
+                horizontalPadding = 8.dp,
+                icon = {
+                    Icon(
+                        painter = painterResource(frequency.iconRes(selected = frequency == selected)),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                },
+            )
+        }
+    }
+}
+
+/** The selected chip's icon fills, the way Material marks the chosen option. */
+private fun BackupFrequency.iconRes(selected: Boolean): Int =
+    when (this) {
+        BackupFrequency.DAILY -> if (selected) R.drawable.ic_event_filled else R.drawable.ic_event
+        BackupFrequency.WEEKLY -> if (selected) R.drawable.ic_calendar_filled else R.drawable.ic_calendar
+    }
