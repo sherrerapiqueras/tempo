@@ -96,8 +96,8 @@ internal fun AnimatedOnboardingButton(
         // Tonal is a filled button too; only its colours differ.
         OnboardingButtonStyle.Primary, OnboardingButtonStyle.Tonal ->
             PrimaryOnboardingButton(label, onHapticClick, interactionSource, shape, colors, buttonModifier)
-        OnboardingButtonStyle.Outlined ->
-            OutlinedOnboardingButton(label, onHapticClick, interactionSource, shape, colors, buttonModifier)
+        OnboardingButtonStyle.Glass ->
+            GlassOnboardingButton(label, onHapticClick, interactionSource, shape, colors, buttonModifier)
         OnboardingButtonStyle.Text ->
             TextOnboardingButton(label, onHapticClick, interactionSource, shape, colors, buttonModifier)
     }
@@ -118,25 +118,21 @@ private fun onboardingButtonColors(style: OnboardingButtonStyle): OnboardingButt
             OnboardingButtonColors(
                 container = MaterialTheme.colorScheme.primary,
                 content = MaterialTheme.colorScheme.onPrimary,
-                border = Color.Transparent,
             )
         OnboardingButtonStyle.Tonal ->
             OnboardingButtonColors(
                 container = MaterialTheme.colorScheme.secondaryContainer,
                 content = MaterialTheme.colorScheme.onSecondaryContainer,
-                border = Color.Transparent,
             )
-        OnboardingButtonStyle.Outlined ->
+        OnboardingButtonStyle.Glass ->
             OnboardingButtonColors(
                 container = Color.Transparent,
                 content = MaterialTheme.colorScheme.primary,
-                border = MaterialTheme.colorScheme.outline,
             )
         OnboardingButtonStyle.Text ->
             OnboardingButtonColors(
                 container = Color.Transparent,
                 content = MaterialTheme.colorScheme.primary,
-                border = Color.Transparent,
             )
     }
 
@@ -161,7 +157,7 @@ private fun PrimaryOnboardingButton(
 }
 
 @Composable
-private fun OutlinedOnboardingButton(
+private fun GlassOnboardingButton(
     label: String,
     onClick: () -> Unit,
     interactionSource: MutableInteractionSource,
@@ -210,14 +206,18 @@ internal enum class OnboardingButtonStyle {
 
     /** A secondary action that should still read as a button, such as the Welcome page's restore offer. */
     Tonal,
-    Outlined,
+
+    /**
+     * A quiet action, such as Back, on the app's frosted glass container. It has no outline; it was
+     * once called Outlined, which is why a caller wanting a visible button reached for it in vain.
+     */
+    Glass,
     Text,
 }
 
 private data class OnboardingButtonColors(
     val container: Color,
     val content: Color,
-    val border: Color,
 )
 
 private const val PROGRESS_ANIMATION_DURATION = 260

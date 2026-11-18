@@ -259,7 +259,7 @@ private fun OnboardingFooter(
             AnimatedOnboardingButton(
                 label = stringResource(R.string.back),
                 onClick = { onEvent(OnboardingContract.UiEvent.BackClicked) },
-                style = OnboardingButtonStyle.Outlined,
+                style = OnboardingButtonStyle.Glass,
                 modifier = Modifier.weight(1f).testTag(OnboardingTestTags.BACK),
             )
         }
