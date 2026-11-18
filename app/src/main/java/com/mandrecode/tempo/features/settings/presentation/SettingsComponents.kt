@@ -36,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -163,13 +164,16 @@ internal fun SettingsItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     trailingIcon: Int? = null,
+    /** False while the action can't run (one already under way): dimmed and not clickable. */
+    enabled: Boolean = true,
 ) {
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
                 .heightIn(min = SettingsRowMinHeight)
-                .clickable(onClick = onClick)
+                .clickable(enabled = enabled, onClick = onClick)
+                .alpha(if (enabled) 1f else DISABLED_ROW_ALPHA)
                 .padding(SettingsItemPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -296,6 +300,9 @@ internal fun SettingsSplitSwitchItem(
  */
 internal val SettingsItemPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
 internal val SettingsRowMinHeight = 72.dp
+
+/** Material's disabled-content opacity. */
+private const val DISABLED_ROW_ALPHA = 0.38f
 internal val SettingsSectionContentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp)
 
 @Composable

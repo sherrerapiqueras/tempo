@@ -1,20 +1,16 @@
 package com.mandrecode.tempo.features.settings.presentation
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -39,10 +35,8 @@ internal fun DriveBackupDialogHost(
     uiState: SettingsContract.UiState,
     onEvent: (SettingsContract.UiEvent) -> Unit,
 ) {
-    val frequency = uiState.driveBackup.frequency
     when (val dialog = uiState.driveBackupDialog) {
         is Dialog.SetPassphrase -> DriveBackupPassphraseDialog(isChange = dialog.isChange, onEvent = onEvent)
-        Dialog.ChooseFrequency -> FrequencyDialog(selected = frequency, onEvent = onEvent)
         Dialog.ConfirmTurnOff ->
             TempoConfirmDialog(
                 title = stringResource(R.string.drive_backup_turn_off_title),
@@ -114,36 +108,6 @@ private fun DriveBackupPassphraseDialog(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-        }
-    }
-}
-
-@Composable
-private fun FrequencyDialog(
-    selected: BackupFrequency,
-    onEvent: (SettingsContract.UiEvent) -> Unit,
-) {
-    TempoMessageDialog(
-        title = stringResource(R.string.drive_backup_frequency),
-        onDismiss = { onEvent(Event.DialogDismissed) },
-    ) {
-        Column {
-            BackupFrequency.entries.forEach { frequency ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable { onEvent(Event.FrequencySelected(frequency)) }
-                            .padding(vertical = 4.dp),
-                ) {
-                    RadioButton(
-                        selected = frequency == selected,
-                        onClick = { onEvent(Event.FrequencySelected(frequency)) },
-                    )
-                    Text(frequency.label())
-                }
-            }
         }
     }
 }

@@ -23,8 +23,15 @@ class DriveBackupWorker
         private val runDriveBackup: RunDriveBackupUseCase,
         private val notifier: DriveBackupNotifier,
     ) : CoroutineWorker(appContext, workerParams) {
-        override suspend fun doWork(): Result =
-            when (val outcome = runDriveBackup()) {
+        override suspend fun doWork(): Result {
+            notifier.showProgress()
+            val outcome =
+                try {
+                    runDriveBackup()
+                } finally {
+                    notifier.hideProgress()
+                }
+            return when (outcome) {
                 is RunDriveBackupUseCase.Result.Failed ->
                     when {
                         outcome.failure == DriveBackupFailure.NETWORK && runAttemptCount < MAX_NETWORK_RETRIES ->
@@ -40,6 +47,7 @@ class DriveBackupWorker
                     Result.success()
                 }
             }
+        }
 
         private companion object {
             const val MAX_NETWORK_RETRIES = 5

@@ -1,6 +1,7 @@
 package com.mandrecode.tempo.features.backup.domain.scheduler
 
 import com.mandrecode.tempo.features.backup.domain.model.DriveBackupSettings
+import kotlinx.coroutines.flow.Flow
 
 /** Runs Drive backups in the background (#306). */
 interface DriveBackupScheduler {
@@ -9,4 +10,7 @@ interface DriveBackupScheduler {
 
     /** Runs one backup as soon as constraints allow. */
     fun runNow(settings: DriveBackupSettings)
+
+    /** True while a backup, scheduled or asked for, is actually running. */
+    val running: Flow<Boolean>
 }

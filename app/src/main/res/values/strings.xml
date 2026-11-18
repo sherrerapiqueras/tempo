@@ -799,6 +799,10 @@
     <string name="drive_backup_now">Back up now</string>
     <string name="drive_backup_now_description">Runs as soon as the network allows</string>
     <string name="drive_backup_now_started">Backup started</string>
+    <string name="drive_backup_running">Backing up…</string>
+    <string name="drive_backup_progress_title">Backing up to Google Drive</string>
+    <string name="drive_backup_progress_channel_name">Backup progress</string>
+    <string name="drive_backup_progress_channel_description">Shown while a Google Drive backup is running</string>
     <string name="drive_backup_frequency">Frequency</string>
     <string name="drive_backup_frequency_daily">Daily</string>
     <string name="drive_backup_frequency_weekly">Weekly</string>
