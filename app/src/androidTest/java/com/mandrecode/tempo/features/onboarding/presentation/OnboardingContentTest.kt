@@ -50,10 +50,31 @@ class OnboardingContentTest {
     }
 
     @Test
-    fun givenWelcomePage_whenRendered_thenSkipIsNotAvailable() {
+    fun givenLastPage_whenRendered_thenSkipIsNotAvailable() {
         setContent(OnboardingContract.UiState(currentPage = OnboardingContract.PAGE_COUNT - 1))
 
         composeTestRule.onAllNodesWithTag(OnboardingTestTags.SKIP).assertCountEquals(0)
+    }
+
+    @Test
+    fun givenWelcomePage_whenRestoreClicked_thenRestoreFromDriveIsRequested() {
+        var emittedEvent: OnboardingContract.UiEvent? = null
+        setContent(OnboardingContract.UiState(currentPage = OnboardingContract.Page.WELCOME), onEvent = { emittedEvent = it })
+
+        composeTestRule.onNodeWithTag(OnboardingTestTags.RESTORE).assertIsDisplayed().performClick()
+
+        assertThat(emittedEvent).isEqualTo(OnboardingContract.UiEvent.RestoreFromDriveClicked)
+    }
+
+    @Test
+    fun givenWelcomePage_whenRendered_thenItOpensOnboardingAndOffersGetStarted() {
+        setContent(OnboardingContract.UiState())
+
+        val getStarted =
+            InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.onboarding_get_started)
+        assertThat(OnboardingContract.Page.WELCOME).isEqualTo(0)
+        composeTestRule.onNodeWithTag(OnboardingTestTags.RESTORE).assertIsDisplayed()
+        composeTestRule.onNodeWithText(getStarted).assertIsDisplayed()
     }
 
     @Test
@@ -130,7 +151,7 @@ class OnboardingContentTest {
     }
 
     @Test
-    fun givenAppearancePage_whenForwardClicked_thenNextEventIsEmitted() {
+    fun givenAppearancePage_whenForwardClicked_thenOnboardingFinishes() {
         var emittedEvent: OnboardingContract.UiEvent? = null
         setContent(
             OnboardingContract.UiState(currentPage = OnboardingContract.Page.APPEARANCE),
@@ -139,11 +160,11 @@ class OnboardingContentTest {
 
         composeTestRule.onNodeWithTag(OnboardingTestTags.FORWARD).performClick()
 
-        assertThat(emittedEvent).isEqualTo(OnboardingContract.UiEvent.NextClicked)
+        assertThat(emittedEvent).isEqualTo(OnboardingContract.UiEvent.FinishClicked)
     }
 
     @Test
-    fun givenWelcomePage_whenForwardClicked_thenFinishEventIsEmitted() {
+    fun givenLastPage_whenForwardClicked_thenFinishEventIsEmitted() {
         var emittedEvent: OnboardingContract.UiEvent? = null
         setContent(
             OnboardingContract.UiState(currentPage = OnboardingContract.PAGE_COUNT - 1),
@@ -174,8 +195,8 @@ class OnboardingContentTest {
     }
 
     @Test
-    fun givenLastPage_whenRendered_thenCenteredTempoWelcomeIsDisplayed() {
-        setContent(OnboardingContract.UiState(currentPage = OnboardingContract.PAGE_COUNT - 1))
+    fun givenWelcomePage_whenRendered_thenCenteredTempoWelcomeIsDisplayed() {
+        setContent(OnboardingContract.UiState(currentPage = OnboardingContract.Page.WELCOME))
 
         val appName = InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.app_name)
         composeTestRule.onNodeWithTag(OnboardingTestTags.WELCOME_LOGO).assertIsDisplayed()

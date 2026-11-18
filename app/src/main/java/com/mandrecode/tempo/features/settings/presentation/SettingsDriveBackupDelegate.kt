@@ -12,6 +12,7 @@ import com.mandrecode.tempo.features.backup.domain.usecase.PassphraseCheck
 import com.mandrecode.tempo.features.backup.domain.usecase.RefreshDriveBackupStatusUseCase
 import com.mandrecode.tempo.features.backup.domain.usecase.RunDriveBackupNowUseCase
 import com.mandrecode.tempo.features.backup.domain.usecase.UpdateDriveBackupScheduleUseCase
+import com.mandrecode.tempo.features.backup.presentation.DriveRestoreFlow
 import com.mandrecode.tempo.infrastructure.backup.drive.GoogleDriveAuthorization
 import com.mandrecode.tempo.infrastructure.backup.drive.GoogleDriveAuthorization.ConsentOutcome
 import kotlinx.coroutines.CancellationException
@@ -40,6 +41,7 @@ class SettingsDriveBackupDelegate
         private val disable: DisableDriveBackupUseCase,
         private val updateSchedule: UpdateDriveBackupScheduleUseCase,
         private val backUpNow: RunDriveBackupNowUseCase,
+        private val restoreFlow: DriveRestoreFlow,
         private val refreshStatus: RefreshDriveBackupStatusUseCase,
         private val scheduler: DriveBackupScheduler,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
@@ -108,6 +110,7 @@ class SettingsDriveBackupDelegate
                     host.scope.launch { passphraseWork.withLock { withContext(ioDispatcher) { disable() } } }
                 }
                 Event.DialogDismissed -> showDialog(null, host)
+                Event.RestoreClicked, is Event.Restore -> onRestoreEvent(event, host)
                 Event.ManageStorageClicked -> host.sendEffect(SettingsContract.UiEffect.OpenGoogleStorage)
             }
         }
@@ -119,6 +122,25 @@ class SettingsDriveBackupDelegate
                 else -> Unit
             }
         }
+
+        /** Restoring from Drive (#307) is its own flow, shared with onboarding. */
+        private fun onRestoreEvent(
+            event: Event,
+            host: SettingsBackupDelegate.Host,
+        ) {
+            when (event) {
+                Event.RestoreClicked -> restoreFlow.start(restoreHost(host))
+                is Event.Restore -> restoreFlow.onEvent(event.event, restoreHost(host))
+                else -> Unit
+            }
+        }
+
+        private fun restoreHost(host: SettingsBackupDelegate.Host) =
+            DriveRestoreFlow.Host(
+                scope = host.scope,
+                showStep = { step -> host.updateState { it.copy(driveRestore = step) } },
+                launchConsent = { host.sendEffect(SettingsContract.UiEffect.LaunchDriveRestoreConsent(it)) },
+            )
 
         private fun requestConsent(
             purpose: ConsentPurpose,

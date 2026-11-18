@@ -10,6 +10,8 @@ import com.mandrecode.tempo.features.backup.domain.model.DriveBackupFailure
 import com.mandrecode.tempo.features.backup.domain.model.ImportConflict
 import com.mandrecode.tempo.features.backup.domain.model.ImportMode
 import com.mandrecode.tempo.features.backup.domain.model.ValidationIssue
+import com.mandrecode.tempo.features.backup.presentation.DriveRestoreEvent
+import com.mandrecode.tempo.features.backup.presentation.DriveRestoreStep
 import com.mandrecode.tempo.features.tasks.domain.repository.CompletedTaskRetentionPreferences
 import com.mandrecode.tempo.features.tasks.domain.repository.MissedReminderPreferences
 import kotlinx.collections.immutable.ImmutableList
@@ -47,6 +49,8 @@ object SettingsContract {
         val backupDialog: BackupDialog? = null,
         val driveBackup: DriveBackupUiState = DriveBackupUiState(),
         val driveBackupDialog: DriveBackupDialog? = null,
+        /** A restore from Google Drive under way (#307), null when none is. */
+        val driveRestore: DriveRestoreStep? = null,
     )
 
     /** Google Drive backup (#306): its configuration and what is known about recent backups. */
@@ -226,6 +230,14 @@ object SettingsContract {
 
             data object DialogDismissed : DriveBackup
 
+            /** Start restoring from Google Drive (#307). */
+            data object RestoreClicked : DriveBackup
+
+            /** An event of the restore flow under way (#307). */
+            data class Restore(
+                val event: DriveRestoreEvent,
+            ) : DriveBackup
+
             /** Drive is full: open Google's storage management. */
             data object ManageStorageClicked : DriveBackup
         }
@@ -243,6 +255,11 @@ object SettingsContract {
 
         /** Show Google's consent for Drive access (#306); the result comes back as ConsentFinished. */
         data class LaunchDriveConsent(
+            val intent: PendingIntent,
+        ) : UiEffect
+
+        /** Google's consent for a restore (#307); the result comes back as a Restore(ConsentFinished). */
+        data class LaunchDriveRestoreConsent(
             val intent: PendingIntent,
         ) : UiEffect
 

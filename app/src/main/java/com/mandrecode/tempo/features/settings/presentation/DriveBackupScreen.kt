@@ -131,6 +131,18 @@ internal fun DriveBackupScreenContent(
         ) {
             DriveBackupOnSections(drive = drive, onEvent = onEvent)
         }
+        // Available whether backup is on or not: a restore is often the first thing a new phone needs.
+        SettingsSection(title = stringResource(R.string.drive_backup_section_restore)) {
+            item {
+                SettingsItem(
+                    icon = R.drawable.ic_file_download,
+                    title = stringResource(R.string.drive_restore_title),
+                    subtitle = stringResource(R.string.drive_restore_description),
+                    trailingIcon = R.drawable.ic_chevron_right,
+                    onClick = { onEvent(Event.RestoreClicked) },
+                )
+            }
+        }
     }
 }
 

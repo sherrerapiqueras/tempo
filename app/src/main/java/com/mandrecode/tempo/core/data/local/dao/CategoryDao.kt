@@ -58,4 +58,14 @@ interface CategoryDao {
 
     @Query("DELETE FROM categories")
     suspend fun deleteAllCategories()
+
+    /**
+     * Whether the user has any data of their own (#307): a task, habit or chain, or a category
+     * other than the seeded Inbox ([inboxUid]). Existence checks only; nothing is loaded.
+     */
+    @Query(
+        "SELECT EXISTS(SELECT 1 FROM tasks) OR EXISTS(SELECT 1 FROM habits) " +
+            "OR EXISTS(SELECT 1 FROM habit_chains) OR EXISTS(SELECT 1 FROM categories WHERE uid != :inboxUid)",
+    )
+    suspend fun hasUserData(inboxUid: String): Boolean
 }

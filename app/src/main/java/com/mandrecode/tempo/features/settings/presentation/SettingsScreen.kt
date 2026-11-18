@@ -1,5 +1,6 @@
 package com.mandrecode.tempo.features.settings.presentation
 
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -56,6 +57,7 @@ import com.mandrecode.tempo.core.ui.navigation.floatingRailContentClearance
 import com.mandrecode.tempo.core.ui.navigation.isFloatingNavigationRailLayout
 import com.mandrecode.tempo.core.ui.theme.settingsTopBarTitleCollapsed
 import com.mandrecode.tempo.core.ui.theme.settingsTopBarTitleExpanded
+import com.mandrecode.tempo.features.backup.presentation.DriveRestoreEvent
 
 @Composable
 fun SettingsScreen(
@@ -88,24 +90,22 @@ fun SettingsScreen(
             uri?.let { viewModel.onEvent(SettingsContract.UiEvent.ImportFilePicked(it)) }
         }
 
-    val driveConsentLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
-            viewModel.onEvent(SettingsContract.UiEvent.DriveBackup.ConsentFinished(result.data))
-        }
+    val driveConsent = rememberDriveConsentLaunchers(viewModel::onEvent)
     val requestNotificationPermission = rememberNotificationPermissionRequest()
 
     LaunchedEffect(viewModel) {
         viewModel.uiEffect.collect { effect ->
             when (effect) {
+                is SettingsContract.UiEffect.LaunchDriveConsent -> driveConsent.forBackup(effect.intent)
+
+                is SettingsContract.UiEffect.LaunchDriveRestoreConsent -> driveConsent.forRestore(effect.intent)
+
                 SettingsContract.UiEffect.RequestNotificationPermission -> requestNotificationPermission()
 
                 is SettingsContract.UiEffect.OpenGoogleStorage ->
                     runCatching {
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(GOOGLE_STORAGE_URL)))
                     }
-
-                is SettingsContract.UiEffect.LaunchDriveConsent ->
-                    driveConsentLauncher.launch(IntentSenderRequest.Builder(effect.intent).build())
 
                 is SettingsContract.UiEffect.LaunchExportPicker ->
                     exportLauncher.launch(effect.suggestedFileName)
@@ -326,6 +326,28 @@ private fun SettingsTopBar(
             scrollBehavior = scrollBehavior,
         )
     }
+}
+
+/** Shows Google's Drive consent (#306, #307) and reports its result to the flow that asked. */
+private class DriveConsentLaunchers(
+    val forBackup: (PendingIntent) -> Unit,
+    val forRestore: (PendingIntent) -> Unit,
+)
+
+@Composable
+private fun rememberDriveConsentLaunchers(onEvent: (SettingsContract.UiEvent) -> Unit): DriveConsentLaunchers {
+    val backup =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
+            onEvent(SettingsContract.UiEvent.DriveBackup.ConsentFinished(result.data))
+        }
+    val restore =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
+            onEvent(SettingsContract.UiEvent.DriveBackup.Restore(DriveRestoreEvent.ConsentFinished(result.data)))
+        }
+    return DriveConsentLaunchers(
+        forBackup = { backup.launch(IntentSenderRequest.Builder(it).build()) },
+        forRestore = { restore.launch(IntentSenderRequest.Builder(it).build()) },
+    )
 }
 
 private fun showMessage(

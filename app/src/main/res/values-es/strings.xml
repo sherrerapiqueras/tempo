@@ -554,6 +554,8 @@
     <string name="view_onboarding_description">Aprende cómo Tempo te ayuda a crear hábitos y gestionar tareas</string>
     <string name="onboarding_skip">Saltar</string>
     <string name="onboarding_next">Siguiente</string>
+    <string name="onboarding_get_started">Empezar</string>
+    <string name="onboarding_welcome_tagline">Planifica tu día, mantén tus rutinas y céntrate en lo importante.</string>
     <string name="onboarding_start">Empezar a usar Tempo</string>
     <string name="onboarding_focus_title">Empieza con el día delante</string>
     <string name="onboarding_focus_description">Enfoque reúne las tareas para hoy y las tareas vencidas pendientes de todas tus categorías, con un temporizador para trabajar por sesiones.</string>
@@ -794,6 +796,7 @@
     <string name="drive_backup_section_backups">Copias</string>
     <string name="drive_backup_section_schedule">Programación</string>
     <string name="drive_backup_section_passphrase">Frase de la copia</string>
+    <string name="drive_backup_section_restore">Restaurar</string>
     <string name="drive_backup_turn_on_description">Automáticamente, cifrada con una frase que solo tú conoces</string>
     <string name="drive_backup_last_backup">Última copia</string>
     <string name="drive_backup_never">Nunca</string>
@@ -834,4 +837,35 @@
     <string name="drive_backup_notification_title">La copia en Google Drive se ha detenido</string>
     <string name="drive_backup_notification_channel_name">Copia de seguridad</string>
     <string name="drive_backup_notification_channel_description">Problemas con las copias automáticas en Google Drive</string>
+
+    <!-- Restore from Google Drive (#307) -->
+    <string name="onboarding_restore_title">¿Vienes de otro móvil?</string>
+    <string name="drive_restore_title">Restaurar desde Google Drive</string>
+    <string name="drive_restore_description">Recupera tus datos de una copia en Drive</string>
+    <string name="drive_restore_searching">Buscando tus copias…</string>
+    <string name="drive_restore_offer_title">Copia encontrada</string>
+    <string name="drive_restore_offer_message">Tu copia más reciente es del %1$s (%2$s).</string>
+    <string name="drive_restore_confirm">Restaurar</string>
+    <string name="drive_restore_none_title">Aún no hay copias</string>
+    <string name="drive_restore_none_message">Esta cuenta de Google no tiene copias de Tempo en Google Drive.</string>
+    <string name="drive_restore_mode_title">Este dispositivo ya tiene datos</string>
+    <string name="drive_restore_mode_message">Combinar añade lo que tiene la copia y no este dispositivo. Reemplazar deja este dispositivo exactamente como la copia.</string>
+    <string name="drive_restore_mode_merge">Combinar</string>
+    <string name="drive_restore_mode_replace">Reemplazar los datos de este dispositivo</string>
+    <string name="drive_restore_passphrase_title">Escribe la frase de la copia</string>
+    <string name="drive_restore_passphrase_message">La frase que elegiste al activar la copia en Google Drive.</string>
+    <string name="drive_restore_passphrase_wrong">Esa frase no abre esta copia. Vuelve a intentarlo.</string>
+    <string name="drive_restore_in_progress">Restaurando…</string>
+    <string name="drive_restore_done_title">Restaurado</string>
+    <string name="drive_restore_done_message">Tus datos han vuelto.</string>
+    <string name="drive_restore_keep_message">Tus datos han vuelto. ¿Seguir haciendo copias en Google Drive con la misma frase?</string>
+    <string name="drive_restore_keep_confirm">Seguir haciendo copias</string>
+    <string name="drive_restore_keep_decline">Ahora no</string>
+    <string name="drive_restore_failed_title">No se pudo restaurar</string>
+    <string name="drive_restore_failed_corrupt">Esta copia está dañada y no se puede leer. No se ha cambiado nada.</string>
+    <string name="drive_restore_failed_newer">Esta copia la hizo una versión más reciente de Tempo (formato %1$d; esta versión lee hasta el %2$d). Actualiza Tempo y vuelve a intentarlo.</string>
+    <string name="drive_restore_failed_invalid">El contenido de esta copia no encaja, así que no se ha cambiado nada.</string>
+    <string name="drive_restore_failed_network">No se pudo conectar con Google Drive. Comprueba la conexión y vuelve a intentarlo.</string>
+    <string name="drive_restore_failed_authorization">Tempo no tiene acceso a Google Drive. Vuelve a intentarlo y permite el acceso.</string>
+    <string name="drive_restore_failed_unexpected">Algo salió mal al leer tu copia. No se ha cambiado nada. Vuelve a intentarlo.</string>
 </resources>

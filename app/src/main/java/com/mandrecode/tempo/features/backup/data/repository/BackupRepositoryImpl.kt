@@ -96,6 +96,9 @@ class BackupRepositoryImpl
         // Also requires the base64 fields to decode, not just the JSON shape/version — a
         // malformed envelope would otherwise prompt for a passphrase before failing as
         // CorruptFile anyway, an unnecessary step for a file that can never succeed.
+        // Only the seeded Inbox is not the user's own: the default flag can move to any category.
+        override suspend fun hasUserData(): Boolean = database.categoryDao().hasUserData(DEFAULT_INBOX_UID)
+
         override fun isEncryptedBackup(content: String): Boolean =
             decodeEnvelopeOrNull(content, jsonFormat)?.let { toEncryptedEnvelopeOrNull(it) } != null
 
@@ -103,16 +106,12 @@ class BackupRepositoryImpl
             content: String,
             mode: ImportMode,
             passphrase: CharArray?,
-        ): ImportOutcome =
-            when (val resolution = resolvePlaintext(content, passphrase, jsonFormat, encryptionService)) {
-                is PlaintextResolution.Failed -> resolution.outcome
-                is PlaintextResolution.Ready -> importDecodedPlaintext(resolution.json, mode)
-            }
-
-        private suspend fun importDecodedPlaintext(
-            plaintextJson: String,
-            mode: ImportMode,
         ): ImportOutcome {
+            val plaintextJson =
+                when (val resolution = resolvePlaintext(content, passphrase, jsonFormat, encryptionService)) {
+                    is PlaintextResolution.Failed -> return resolution.outcome
+                    is PlaintextResolution.Ready -> resolution.json
+                }
             val fileVersion = decodeSchemaVersion(plaintextJson, jsonFormat)
             return when {
                 // Versions below 1 never existed; such a file is not a Tempo backup.

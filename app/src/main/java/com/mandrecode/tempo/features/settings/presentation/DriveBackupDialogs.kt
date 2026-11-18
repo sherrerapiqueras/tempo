@@ -21,12 +21,14 @@ import com.mandrecode.tempo.core.ui.components.TempoConfirmDialog
 import com.mandrecode.tempo.core.ui.components.TempoMessageDialog
 import com.mandrecode.tempo.features.backup.domain.model.BackupFrequency
 import com.mandrecode.tempo.features.backup.domain.model.DriveBackupFailure
+import com.mandrecode.tempo.features.backup.presentation.DriveRestoreDialogs
 import com.mandrecode.tempo.features.settings.presentation.SettingsContract.DriveBackupDialog as Dialog
 import com.mandrecode.tempo.features.settings.presentation.SettingsContract.UiEvent.DriveBackup as Event
 
 /**
  * The Drive backup dialogs, shown over whichever Settings page is open: the switch on the main
- * page starts the same setup and turn-off flows as the one on the Drive backup page.
+ * page starts the same setup and turn-off flows as the one on the Drive backup page, and a
+ * restore (#307) can start from that page too.
  */
 @Composable
 internal fun DriveBackupDialogHost(
@@ -54,6 +56,7 @@ internal fun DriveBackupDialogHost(
             }
         null -> Unit
     }
+    DriveRestoreDialogs(step = uiState.driveRestore, onEvent = { onEvent(Event.Restore(it)) })
 }
 
 /** Setting the passphrase states what the user must keep to restore (#305), before they confirm. */

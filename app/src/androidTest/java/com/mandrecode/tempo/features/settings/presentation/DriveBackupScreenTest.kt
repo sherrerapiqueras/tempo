@@ -158,6 +158,15 @@ class DriveBackupScreenTest {
     }
 
     @Test
+    fun restoreIsOfferedEvenWhileBackupIsOff() {
+        showScreen(SettingsContract.UiState())
+
+        composeTestRule.onNodeWithText(text(R.string.drive_restore_title)).performClick()
+
+        assertThat(events).containsExactly(Event.RestoreClicked)
+    }
+
+    @Test
     fun aRequestFromTheFailureNotificationOpensTheDriveBackupPageOnce() {
         var handedBack = false
         composeTestRule.setContent {

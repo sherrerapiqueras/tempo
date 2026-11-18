@@ -19,6 +19,7 @@ import com.mandrecode.tempo.features.backup.domain.usecase.RefreshDriveBackupSta
 import com.mandrecode.tempo.features.backup.domain.usecase.RunDriveBackupNowUseCase
 import com.mandrecode.tempo.features.backup.domain.usecase.SteppingClock
 import com.mandrecode.tempo.features.backup.domain.usecase.UpdateDriveBackupScheduleUseCase
+import com.mandrecode.tempo.features.backup.presentation.driveRestoreFlow
 import com.mandrecode.tempo.infrastructure.backup.drive.GoogleDriveAuthorization
 import io.mockk.coEvery
 import io.mockk.every
@@ -249,6 +250,7 @@ class SettingsDriveBackupDelegateTest {
                     disable = DisableDriveBackupUseCase(failingStore, preferences, scheduler),
                     updateSchedule = UpdateDriveBackupScheduleUseCase(preferences, scheduler),
                     backUpNow = RunDriveBackupNowUseCase(preferences, scheduler),
+                    restoreFlow = driveRestoreFlow(preferences = preferences, scheduler = scheduler),
                     refreshStatus = refreshStatus(preferences),
                     scheduler = scheduler,
                     ioDispatcher = UnconfinedTestDispatcher(testScheduler),
@@ -298,6 +300,7 @@ internal fun driveBackupDelegate(
     disable = DisableDriveBackupUseCase(store, preferences, scheduler),
     updateSchedule = UpdateDriveBackupScheduleUseCase(preferences, scheduler),
     backUpNow = RunDriveBackupNowUseCase(preferences, scheduler),
+    restoreFlow = driveRestoreFlow(store = store, preferences = preferences, scheduler = scheduler),
     refreshStatus = refreshStatus(preferences),
     scheduler = scheduler,
     ioDispatcher = UnconfinedTestDispatcher(),
