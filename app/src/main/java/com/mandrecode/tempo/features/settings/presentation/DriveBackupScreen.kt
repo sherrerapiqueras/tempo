@@ -310,7 +310,7 @@ private fun FrequencyChips(
                 horizontalPadding = 8.dp,
                 icon = {
                     Icon(
-                        painter = painterResource(frequency.iconRes()),
+                        painter = painterResource(frequency.iconRes(selected = frequency == selected)),
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
                     )
@@ -320,8 +320,9 @@ private fun FrequencyChips(
     }
 }
 
-private fun BackupFrequency.iconRes(): Int =
+/** The selected chip's icon fills, the way Material marks the chosen option. */
+private fun BackupFrequency.iconRes(selected: Boolean): Int =
     when (this) {
-        BackupFrequency.DAILY -> R.drawable.ic_event
-        BackupFrequency.WEEKLY -> R.drawable.ic_calendar
+        BackupFrequency.DAILY -> if (selected) R.drawable.ic_event_filled else R.drawable.ic_event
+        BackupFrequency.WEEKLY -> if (selected) R.drawable.ic_calendar_filled else R.drawable.ic_calendar
     }
