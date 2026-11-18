@@ -17,6 +17,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import com.mandrecode.tempo.features.settings.presentation.SettingsContract.DriveBackupDialog as Dialog
@@ -45,6 +47,13 @@ class SettingsDriveBackupDelegate
         private enum class ConsentPurpose { TURN_ON, RECONNECT }
 
         private var pendingConsent: ConsentPurpose? = null
+
+        /**
+         * Turning off, on, and changing the passphrase all touch the stored passphrase off the main
+         * thread. One at a time, in the order asked: a turn-off still running must not erase the
+         * passphrase a quick turn-on has just stored.
+         */
+        private val passphraseWork = Mutex()
 
         /** The dialog this delegate last showed; every change to it goes through [showDialog]. */
         private var dialog: Dialog? = null
@@ -86,7 +95,7 @@ class SettingsDriveBackupDelegate
                 Event.TurnOffConfirmed -> {
                     showDialog(null, host)
                     // Off the main thread: forgetting the passphrase deletes a Keystore key and commits to disk.
-                    host.scope.launch { withContext(ioDispatcher) { disable() } }
+                    host.scope.launch { passphraseWork.withLock { withContext(ioDispatcher) { disable() } } }
                 }
                 Event.DialogDismissed -> showDialog(null, host)
                 Event.RestoreClicked, is Event.Restore -> onRestoreEvent(event, host)
@@ -172,18 +181,20 @@ class SettingsDriveBackupDelegate
             host.scope.launch {
                 // Off the main thread: storing it generates a Keystore key and commits to disk.
                 val check =
-                    withContext(ioDispatcher) {
-                        try {
-                            if (setPassphrase.isChange) {
-                                changePassphrase(event.passphrase, event.confirmation)
-                            } else {
-                                enable(event.passphrase, event.confirmation)
+                    passphraseWork.withLock {
+                        withContext(ioDispatcher) {
+                            try {
+                                if (setPassphrase.isChange) {
+                                    changePassphrase(event.passphrase, event.confirmation)
+                                } else {
+                                    enable(event.passphrase, event.confirmation)
+                                }
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (_: Exception) {
+                                // A Keystore that cannot create or use a key, or a failed write.
+                                null
                             }
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (_: Exception) {
-                            // A Keystore that cannot create or use a key, or a failed write.
-                            null
                         }
                     }
                 when (check) {
