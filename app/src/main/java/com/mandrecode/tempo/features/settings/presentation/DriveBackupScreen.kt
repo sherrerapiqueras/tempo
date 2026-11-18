@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -125,6 +126,8 @@ internal fun DriveBackupScreenContent(
     }
 }
 
+private val MainSwitchShape = RoundedCornerShape(28.dp)
+
 /** The big switch at the top of the page, styled like Android's own main switch. */
 @Composable
 private fun DriveBackupMainSwitch(
@@ -133,7 +136,7 @@ private fun DriveBackupMainSwitch(
 ) {
     val title = stringResource(R.string.drive_backup_main_switch)
     Surface(
-        shape = RoundedCornerShape(28.dp),
+        shape = MainSwitchShape,
         color =
             if (checked) {
                 MaterialTheme.colorScheme.primaryContainer
@@ -145,6 +148,9 @@ private fun DriveBackupMainSwitch(
         modifier =
             Modifier
                 .fillMaxWidth()
+                // The press ripple is drawn by toggleable, outside the Surface's own clip: clip it first
+                // so it keeps the rounded corners instead of spilling out as a rectangle.
+                .clip(MainSwitchShape)
                 // One control, not two: the whole surface is the switch, announced once with its role.
                 .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange)
                 .testTag(DRIVE_BACKUP_MAIN_SWITCH_TEST_TAG),

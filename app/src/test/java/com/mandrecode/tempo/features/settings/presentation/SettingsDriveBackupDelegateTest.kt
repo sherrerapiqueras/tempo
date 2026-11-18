@@ -75,15 +75,29 @@ class SettingsDriveBackupDelegateTest {
             delegate.onEvent(Event.TurnOnClicked, host)
             assertThat(effects.single()).isEqualTo(SettingsContract.UiEffect.LaunchDriveConsent(consent))
 
-            every { authorization.isGranted(null) } returns false
+            every { authorization.consentOutcome(null) } returns GoogleDriveAuthorization.ConsentOutcome.CANCELLED
             delegate.onEvent(Event.ConsentFinished(null), host)
             assertThat(state.driveBackupDialog).isNull()
 
             val granted = mockk<Intent>()
-            every { authorization.isGranted(granted) } returns true
+            every { authorization.consentOutcome(granted) } returns GoogleDriveAuthorization.ConsentOutcome.GRANTED
             delegate.onEvent(Event.TurnOnClicked, host)
             delegate.onEvent(Event.ConsentFinished(granted), host)
             assertThat(state.driveBackupDialog).isEqualTo(Dialog.SetPassphrase(isChange = false))
+        }
+
+    @Test
+    fun `when Google refuses after an account is picked, it says so`() =
+        runTest(UnconfinedTestDispatcher()) {
+            coEvery { authorization.consentIntent() } returns mockk()
+            val refused = mockk<Intent>()
+            every { authorization.consentOutcome(refused) } returns GoogleDriveAuthorization.ConsentOutcome.FAILED
+            val host = host()
+
+            delegate.onEvent(Event.TurnOnClicked, host)
+            delegate.onEvent(Event.ConsentFinished(refused), host)
+
+            assertThat(state.driveBackupDialog).isEqualTo(Dialog.Unavailable)
         }
 
     @Test

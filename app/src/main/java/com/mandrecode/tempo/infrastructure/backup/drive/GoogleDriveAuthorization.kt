@@ -43,11 +43,22 @@ class GoogleDriveAuthorization
          */
         suspend fun consentIntent(): PendingIntent? = request().takeIf { it.hasResolution() }?.pendingIntent
 
-        /** Whether the consent screen launched from [consentIntent] ended with access granted. */
-        fun isGranted(data: Intent?): Boolean =
-            runCatching {
-                Identity.getAuthorizationClient(context).getAuthorizationResultFromIntent(data).accessToken != null
-            }.getOrDefault(false)
+        /**
+         * How the consent screen launched from [consentIntent] ended. Backing out is [ConsentOutcome.CANCELLED];
+         * anything else that didn't grant access is [ConsentOutcome.FAILED], so the screen can say so
+         * instead of looking as if nothing happened. That includes an app with no OAuth client
+         * registered for its package and signature (UNREGISTERED_ON_API_CONSOLE), which fails only
+         * after an account is picked.
+         */
+        fun consentOutcome(data: Intent?): ConsentOutcome {
+            if (data == null) return ConsentOutcome.CANCELLED
+            return try {
+                val token = Identity.getAuthorizationClient(context).getAuthorizationResultFromIntent(data).accessToken
+                if (token != null) ConsentOutcome.GRANTED else ConsentOutcome.FAILED
+            } catch (e: ApiException) {
+                if (e.statusCode == CommonStatusCodes.CANCELED) ConsentOutcome.CANCELLED else ConsentOutcome.FAILED
+            }
+        }
 
         private suspend fun request(): AuthorizationResult =
             try {
@@ -65,6 +76,8 @@ class GoogleDriveAuthorization
                     }
                 throw CloudBackupException(failure, e)
             }
+
+        enum class ConsentOutcome { GRANTED, CANCELLED, FAILED }
 
         companion object {
             const val DRIVE_APPDATA = "https://www.googleapis.com/auth/drive.appdata"
