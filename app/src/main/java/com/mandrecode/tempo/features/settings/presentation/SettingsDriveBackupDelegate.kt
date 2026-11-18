@@ -4,6 +4,7 @@ import com.mandrecode.tempo.R
 import com.mandrecode.tempo.core.di.IoDispatcher
 import com.mandrecode.tempo.features.backup.domain.repository.CloudBackupException
 import com.mandrecode.tempo.features.backup.domain.repository.DriveBackupPreferences
+import com.mandrecode.tempo.features.backup.domain.scheduler.DriveBackupScheduler
 import com.mandrecode.tempo.features.backup.domain.usecase.ChangeBackupPassphraseUseCase
 import com.mandrecode.tempo.features.backup.domain.usecase.DisableDriveBackupUseCase
 import com.mandrecode.tempo.features.backup.domain.usecase.EnableDriveBackupUseCase
@@ -40,6 +41,7 @@ class SettingsDriveBackupDelegate
         private val updateSchedule: UpdateDriveBackupScheduleUseCase,
         private val backUpNow: RunDriveBackupNowUseCase,
         private val refreshStatus: RefreshDriveBackupStatusUseCase,
+        private val scheduler: DriveBackupScheduler,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
         /** What the consent being shown was asked for. */
@@ -60,13 +62,14 @@ class SettingsDriveBackupDelegate
         /** Keeps the section in step with the stored settings and backup status. */
         fun start(host: SettingsBackupDelegate.Host) {
             host.scope.launch {
-                combine(preferences.settings, preferences.status) { settings, status ->
+                combine(preferences.settings, preferences.status, scheduler.running) { settings, status, running ->
                     SettingsContract.DriveBackupUiState(
                         enabled = settings.enabled,
                         frequency = settings.frequency,
                         unmeteredOnly = settings.unmeteredOnly,
                         lastSuccessAt = status.lastSuccessAt,
                         failure = status.currentFailure,
+                        running = running,
                     )
                 }.collect { drive -> host.updateState { it.copy(driveBackup = drive) } }
             }
@@ -82,8 +85,8 @@ class SettingsDriveBackupDelegate
                 Event.ReconnectClicked -> requestConsent(ConsentPurpose.RECONNECT, host)
                 is Event.ConsentFinished -> onConsentFinished(event, host)
                 is Event.PassphraseConfirmed -> confirmPassphrase(event, host)
-                Event.FrequencyClicked, is Event.FrequencySelected, is Event.WifiOnlyToggled ->
-                    onScheduleEvent(event, host)
+                is Event.FrequencySelected, is Event.WifiOnlyToggled ->
+                    onScheduleEvent(event)
                 Event.BackUpNowClicked -> {
                     backUpNow()
                     host.sendEffect(SettingsContract.UiEffect.ShowMessage(R.string.drive_backup_now_started))
@@ -100,16 +103,9 @@ class SettingsDriveBackupDelegate
             }
         }
 
-        private fun onScheduleEvent(
-            event: Event,
-            host: SettingsBackupDelegate.Host,
-        ) {
+        private fun onScheduleEvent(event: Event) {
             when (event) {
-                Event.FrequencyClicked -> showDialog(Dialog.ChooseFrequency, host)
-                is Event.FrequencySelected -> {
-                    updateSchedule(frequency = event.frequency)
-                    showDialog(null, host)
-                }
+                is Event.FrequencySelected -> updateSchedule(frequency = event.frequency)
                 is Event.WifiOnlyToggled -> updateSchedule(unmeteredOnly = event.enabled)
                 else -> Unit
             }

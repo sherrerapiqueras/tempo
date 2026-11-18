@@ -58,6 +58,8 @@ object SettingsContract {
         val lastSuccessAt: Long? = null,
         /** The failure to report, only while it is newer than the last success. */
         val failure: DriveBackupFailure? = null,
+        /** A backup is running right now. */
+        val running: Boolean = false,
     )
 
     /** Modal state of the Google Drive backup section. */
@@ -66,8 +68,6 @@ object SettingsContract {
         data class SetPassphrase(
             val isChange: Boolean,
         ) : DriveBackupDialog
-
-        data object ChooseFrequency : DriveBackupDialog
 
         data object ConfirmTurnOff : DriveBackupDialog
 
@@ -207,8 +207,6 @@ object SettingsContract {
                 val passphrase: CharArray,
                 val confirmation: CharArray,
             ) : DriveBackup
-
-            data object FrequencyClicked : DriveBackup
 
             data class FrequencySelected(
                 val frequency: BackupFrequency,

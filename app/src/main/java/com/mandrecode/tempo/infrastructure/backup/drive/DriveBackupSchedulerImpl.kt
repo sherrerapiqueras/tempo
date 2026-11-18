@@ -7,9 +7,13 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.mandrecode.tempo.features.backup.domain.model.DriveBackupSettings
 import com.mandrecode.tempo.features.backup.domain.scheduler.DriveBackupScheduler
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -35,6 +39,13 @@ class DriveBackupSchedulerImpl
                     .build()
             workManager.enqueueUniquePeriodicWork(PERIODIC_WORK, ExistingPeriodicWorkPolicy.UPDATE, request)
         }
+
+        override val running: Flow<Boolean> =
+            combine(
+                workManager.getWorkInfosForUniqueWorkFlow(PERIODIC_WORK),
+                workManager.getWorkInfosForUniqueWorkFlow(ONE_TIME_WORK),
+            ) { periodic, oneTime -> (periodic + oneTime).any { it.state == WorkInfo.State.RUNNING } }
+                .distinctUntilChanged()
 
         override fun runNow(settings: DriveBackupSettings) {
             if (!settings.enabled) return

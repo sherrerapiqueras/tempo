@@ -800,6 +800,10 @@
     <string name="drive_backup_now">Hacer copia ahora</string>
     <string name="drive_backup_now_description">Se hace en cuanto la red lo permita</string>
     <string name="drive_backup_now_started">Copia iniciada</string>
+    <string name="drive_backup_running">Haciendo la copia…</string>
+    <string name="drive_backup_progress_title">Copiando en Google Drive</string>
+    <string name="drive_backup_progress_channel_name">Progreso de la copia</string>
+    <string name="drive_backup_progress_channel_description">Se muestra mientras se hace una copia en Google Drive</string>
     <string name="drive_backup_frequency">Frecuencia</string>
     <string name="drive_backup_frequency_daily">Diaria</string>
     <string name="drive_backup_frequency_weekly">Semanal</string>

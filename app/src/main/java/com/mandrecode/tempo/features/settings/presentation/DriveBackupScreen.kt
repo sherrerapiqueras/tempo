@@ -16,11 +16,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -30,17 +33,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.mandrecode.tempo.R
+import com.mandrecode.tempo.core.ui.components.ExpressiveChip
 import com.mandrecode.tempo.core.ui.glass.glassCardColor
+import com.mandrecode.tempo.features.backup.domain.model.BackupFrequency
 import com.mandrecode.tempo.features.backup.domain.model.DriveBackupFailure
 import com.mandrecode.tempo.features.settings.presentation.SettingsContract.UiEvent.DriveBackup as Event
 
 internal const val DRIVE_BACKUP_STATUS_TEST_TAG = "drive_backup_status"
 internal const val DRIVE_BACKUP_ENTRY_TEST_TAG = "drive_backup_entry"
 internal const val DRIVE_BACKUP_MAIN_SWITCH_TEST_TAG = "drive_backup_main_switch"
+internal const val DRIVE_BACKUP_PROGRESS_TEST_TAG = "drive_backup_progress"
 
 /**
  * Google Drive backup's row on the main Settings page (#306): its switch turns backup on or off,
@@ -72,6 +79,7 @@ internal fun SettingsGroupScope.driveBackupEntry(
 private fun SettingsContract.DriveBackupUiState.summary(): String =
     when {
         !enabled -> stringResource(R.string.drive_backup_turn_on_description)
+        running -> stringResource(R.string.drive_backup_running)
         failure != null -> stringResource(R.string.drive_backup_entry_attention)
         lastSuccessAt != null -> stringResource(R.string.drive_backup_entry_last_backup, relativeTime(lastSuccessAt))
         else -> stringResource(R.string.drive_backup_entry_pending)
@@ -183,19 +191,12 @@ private fun DriveBackupOnSections(
                     title = stringResource(R.string.drive_backup_now),
                     subtitle = stringResource(R.string.drive_backup_now_description),
                     onClick = { onEvent(Event.BackUpNowClicked) },
+                    enabled = !drive.running,
                 )
             }
         }
         SettingsSection(title = stringResource(R.string.drive_backup_section_schedule)) {
-            item {
-                SettingsItem(
-                    icon = R.drawable.ic_repeat,
-                    title = stringResource(R.string.drive_backup_frequency),
-                    subtitle = drive.frequency.label(),
-                    trailingIcon = R.drawable.ic_chevron_right,
-                    onClick = { onEvent(Event.FrequencyClicked) },
-                )
-            }
+            item { FrequencyChips(selected = drive.frequency, onEvent = onEvent) }
             item {
                 SettingsSwitchItem(
                     icon = R.drawable.ic_wifi,
@@ -223,8 +224,13 @@ private fun DriveBackupStatusItem(
     drive: SettingsContract.DriveBackupUiState,
     onEvent: (SettingsContract.UiEvent) -> Unit,
 ) {
-    val failure = drive.failure
-    val lastBackup = drive.lastSuccessAt?.let(::relativeTime) ?: stringResource(R.string.drive_backup_never)
+    // While a backup runs, its progress is the status; an older failure may be what it is fixing.
+    val failure = drive.failure.takeUnless { drive.running }
+    val lastBackup =
+        when {
+            drive.running -> stringResource(R.string.drive_backup_running)
+            else -> drive.lastSuccessAt?.let(::relativeTime) ?: stringResource(R.string.drive_backup_never)
+        }
     val action =
         when (failure) {
             DriveBackupFailure.AUTHORIZATION_NEEDED -> Event.ReconnectClicked
@@ -239,6 +245,15 @@ private fun DriveBackupStatusItem(
             subtitle = lastBackup,
             onClick = { action?.let(onEvent) },
         )
+        if (drive.running) {
+            LinearProgressIndicator(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = 72.dp, end = 16.dp, bottom = 16.dp)
+                        .testTag(DRIVE_BACKUP_PROGRESS_TEST_TAG),
+            )
+        }
         if (failure != null) {
             Text(
                 text = failure.message(),
@@ -257,3 +272,44 @@ private fun DriveBackupStatusItem(
         }
     }
 }
+
+/**
+ * Daily or weekly, chosen in place with the segmented chips Settings uses for the theme, rather than
+ * a row that opens a dialog of radio buttons.
+ */
+@Composable
+private fun FrequencyChips(
+    selected: BackupFrequency,
+    onEvent: (SettingsContract.UiEvent) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(SettingsSectionContentPadding),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        BackupFrequency.entries.forEachIndexed { index, frequency ->
+            ExpressiveChip(
+                label = frequency.label(),
+                isSelected = frequency == selected,
+                onClick = { onEvent(Event.FrequencySelected(frequency)) },
+                isFirst = index == 0,
+                isLast = index == BackupFrequency.entries.lastIndex,
+                modifier = Modifier.weight(1f),
+                height = 48.dp,
+                horizontalPadding = 8.dp,
+                icon = {
+                    Icon(
+                        painter = painterResource(frequency.iconRes()),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                },
+            )
+        }
+    }
+}
+
+private fun BackupFrequency.iconRes(): Int =
+    when (this) {
+        BackupFrequency.DAILY -> R.drawable.ic_event
+        BackupFrequency.WEEKLY -> R.drawable.ic_calendar
+    }

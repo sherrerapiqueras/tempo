@@ -60,6 +60,34 @@ class DriveBackupNotifier
             NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
         }
 
+        /**
+         * A quiet, ongoing "backing up" notification while a run is under way, in its own
+         * low-importance channel so it never sounds or pops up. Not a foreground service: a run is
+         * seconds of work, and WorkManager already keeps it alive.
+         */
+        fun showProgress() {
+            if (!NotificationChannelManager.canPostNotifications(context)) return
+            ensureProgressChannel()
+            val notification =
+                NotificationCompat
+                    .Builder(context, PROGRESS_CHANNEL_ID)
+                    .setSmallIcon(R.drawable.ic_file_upload)
+                    .setContentTitle(context.getString(R.string.drive_backup_progress_title))
+                    .setProgress(0, 0, true)
+                    .setOngoing(true)
+                    .setOnlyAlertOnce(true)
+                    .setSilent(true)
+                    .setPriority(NotificationCompat.PRIORITY_LOW)
+                    .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+                    .build()
+            @Suppress("MissingPermission") // checked by canPostNotifications above
+            NotificationManagerCompat.from(context).notify(PROGRESS_NOTIFICATION_ID, notification)
+        }
+
+        fun hideProgress() {
+            NotificationManagerCompat.from(context).cancel(PROGRESS_NOTIFICATION_ID)
+        }
+
         /** Withdraws the notice once backups work again. */
         fun clear() {
             NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
@@ -77,10 +105,24 @@ class DriveBackupNotifier
             )
         }
 
+        private fun ensureProgressChannel() {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+            val manager = context.getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(
+                NotificationChannel(
+                    PROGRESS_CHANNEL_ID,
+                    context.getString(R.string.drive_backup_progress_channel_name),
+                    NotificationManager.IMPORTANCE_LOW,
+                ).apply { description = context.getString(R.string.drive_backup_progress_channel_description) },
+            )
+        }
+
         companion object {
             const val CHANNEL_ID = "drive_backup_channel"
+            const val PROGRESS_CHANNEL_ID = "drive_backup_progress_channel"
             const val EXTRA_OPEN_SETTINGS = "extra_open_settings"
             private const val NOTIFICATION_ID = 0x0D51
+            private const val PROGRESS_NOTIFICATION_ID = 0x0D52
             private const val REQUEST_CODE = 0x0D51
         }
     }

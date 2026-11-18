@@ -112,6 +112,7 @@ class FakeAuthorization(
 }
 
 class FakeScheduler : DriveBackupScheduler {
+    override val running = MutableStateFlow(false)
     val synced = mutableListOf<DriveBackupSettings>()
     var runNowCalls = 0
 
