@@ -11,7 +11,10 @@ import com.mandrecode.tempo.features.backup.domain.repository.CloudBackupExcepti
 import io.mockk.coEvery
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 import org.junit.Test
@@ -335,6 +338,30 @@ class DriveBackupUseCasesTest {
             run.invoke { events += "skipped $it" }
 
             assertThat(events).containsExactly("first true", "first false", "second true", "second false").inOrder()
+        }
+
+    @Test
+    fun `a status check waits for a running backup instead of overwriting its result`() =
+        runTest {
+            enabled()
+            val lock = DriveBackupLock()
+            val check = RefreshDriveBackupStatusUseCase(preferences, auth, cloud, clock, lock)
+            val backupDone = CompletableDeferred<Unit>()
+            launch {
+                lock.withLock {
+                    backupDone.await()
+                    cloud.upload("t", backupFileName("this-install", 900), "x")
+                    preferences.recordSuccess(900)
+                }
+            }
+            runCurrent()
+
+            val checking = async { check() }
+            runCurrent()
+            backupDone.complete(Unit)
+            checking.await()
+
+            assertThat(preferences.status.value.lastSuccessAt).isEqualTo(900)
         }
 
     @Test
