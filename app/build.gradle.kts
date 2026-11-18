@@ -42,6 +42,9 @@ kover {
                     "com.mandrecode.tempo.features.settings.presentation.FocusSection*",
                     "com.mandrecode.tempo.features.settings.presentation.VacationModeSection*",
                     "com.mandrecode.tempo.features.settings.presentation.BackupSection*",
+                    "com.mandrecode.tempo.features.settings.presentation.DriveBackupScreen*",
+                    "com.mandrecode.tempo.features.settings.presentation.DriveBackupDialogs*",
+                    "com.mandrecode.tempo.features.backup.presentation.DriveRestoreDialogs*",
                     "com.mandrecode.tempo.features.settings.presentation.ImportModeDialog*",
                     "com.mandrecode.tempo.features.*.presentation.*ExternalActions*",
                     "com.mandrecode.tempo.features.focus.presentation.FocusEditors*",
@@ -97,6 +100,17 @@ kover {
                     // Notification builder: NotificationManager/PendingIntent only, was previously
                     // inlined in the (excluded) TaskReminderReceiver.
                     "com.mandrecode.tempo.infrastructure.notifications.TaskReminderNotifier*",
+                    // Google Drive backup (#306): Keystore, SharedPreferences, HttpURLConnection, Play
+                    // services AuthorizationClient, WorkManager and NotificationManager glue. The rules
+                    // (what runs, retention, failure causes, retry) live in the backup use cases and
+                    // DriveRestCloudStore, which are unit-tested against fakes.
+                    "com.mandrecode.tempo.infrastructure.backup.drive.KeystoreBackupPassphraseStore*",
+                    "com.mandrecode.tempo.infrastructure.backup.drive.SharedPrefsDriveBackupPreferences*",
+                    "com.mandrecode.tempo.infrastructure.backup.drive.UrlConnectionTransport*",
+                    "com.mandrecode.tempo.infrastructure.backup.drive.GoogleDriveAuthorization*",
+                    "com.mandrecode.tempo.infrastructure.backup.drive.DriveBackupNotifier*",
+                    "com.mandrecode.tempo.infrastructure.backup.drive.DriveBackupSchedulerImpl*",
+                    "com.mandrecode.tempo.infrastructure.backup.drive.DriveBackupWorker*",
                     "com.mandrecode.tempo.core.ui.util.AnimationUtils*",
                     "com.mandrecode.tempo.core.ui.util.FrozenState*",
                     "com.mandrecode.tempo.util.AppVersionProviderImpl",
@@ -304,6 +318,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
     implementation(libs.kotlinx.collections.immutable)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.coroutines.play.services)
+    implementation(libs.play.services.auth)
     implementation(libs.kotlinx.datetime)
     implementation(libs.kotlinx.serialization.json)
     ksp(libs.android.hilt.compiler)

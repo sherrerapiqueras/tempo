@@ -52,7 +52,7 @@ private fun OnboardingSetupPreview() {
     ComposeUiFlags.isMediaQueryIntegrationEnabled = true
     TempoTheme(useTempoColors = true) {
         OnboardingContent(
-            uiState = OnboardingContract.UiState(currentPage = 3),
+            uiState = OnboardingContract.UiState(currentPage = OnboardingContract.Page.APPEARANCE),
             onEvent = {},
         )
     }
@@ -70,7 +70,7 @@ private fun OnboardingWelcomePreview() {
     ComposeUiFlags.isMediaQueryIntegrationEnabled = true
     TempoTheme(useTempoColors = true) {
         OnboardingContent(
-            uiState = OnboardingContract.UiState(currentPage = OnboardingContract.PAGE_COUNT - 1),
+            uiState = OnboardingContract.UiState(currentPage = OnboardingContract.Page.WELCOME),
             onEvent = {},
         )
     }
@@ -113,7 +113,7 @@ private fun OnboardingAdaptiveSetupPreview() {
     ComposeUiFlags.isMediaQueryIntegrationEnabled = true
     TempoTheme(useTempoColors = true) {
         OnboardingContent(
-            uiState = OnboardingContract.UiState(currentPage = 3),
+            uiState = OnboardingContract.UiState(currentPage = OnboardingContract.Page.APPEARANCE),
             onEvent = {},
         )
     }

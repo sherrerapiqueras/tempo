@@ -48,6 +48,7 @@ fun SettingsContent(
     onEvent: (SettingsContract.UiEvent) -> Unit,
     onOnboardingClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onOpenDriveBackup: () -> Unit = {},
 ) {
     val navigationBarPadding = WindowInsets.navigationBars.asPaddingValues()
 
@@ -67,7 +68,7 @@ fun SettingsContent(
         VacationModeSection(uiState = uiState, onEvent = onEvent)
         CompletedTaskRetentionSection(uiState = uiState, onEvent = onEvent)
         FocusSection(uiState = uiState, onEvent = onEvent)
-        BackupSection(uiState = uiState, onEvent = onEvent)
+        BackupSection(uiState = uiState, onEvent = onEvent, onOpenDriveBackup = onOpenDriveBackup)
         NotificationsSection()
         LanguageSection()
         AboutSection(

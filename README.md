@@ -34,6 +34,7 @@ and Spanish — are in [`distribution/screenshots/`](distribution/screenshots/RE
   breaking streaks.
 - **Home-screen widget** — quick-add a task without opening the app.
 - **Backup & restore** — versioned export/import with conflict reporting and merge modes.
+- **Google Drive backup** — scheduled, encrypted with a passphrase only you know, kept in Drive's hidden app folder.
 - **Encrypted at rest** — local database (SQLCipher, Android Keystore-protected key) and
   backup exports (user passphrase) are both encrypted.
 - **Onboarding** — a first-run setup flow with notification-permission education.
