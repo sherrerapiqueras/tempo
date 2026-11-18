@@ -76,7 +76,7 @@ class DriveBackupScreenTest {
     fun offShowsOnlyTheMainSwitch() {
         showScreen(SettingsContract.UiState())
 
-        composeTestRule.onNodeWithContentDescription(text(R.string.drive_backup_main_switch)).assertIsOff()
+        composeTestRule.onNodeWithTag(DRIVE_BACKUP_MAIN_SWITCH_TEST_TAG).assertIsOff()
         composeTestRule.onNodeWithText(text(R.string.drive_backup_now)).assertDoesNotExist()
     }
 
@@ -93,7 +93,7 @@ class DriveBackupScreenTest {
     fun onWithNoBackupYetSaysNever() {
         showScreen(on)
 
-        composeTestRule.onNodeWithContentDescription(text(R.string.drive_backup_main_switch)).assertIsOn()
+        composeTestRule.onNodeWithTag(DRIVE_BACKUP_MAIN_SWITCH_TEST_TAG).assertIsOn()
         composeTestRule.onNodeWithText(text(R.string.drive_backup_last_backup)).assertIsDisplayed()
         composeTestRule.onNodeWithText(text(R.string.drive_backup_never)).assertIsDisplayed()
     }
@@ -141,5 +141,25 @@ class DriveBackupScreenTest {
         composeTestRule.onNodeWithText(text(R.string.drive_restore_title)).performClick()
 
         assertThat(events).containsExactly(Event.RestoreClicked)
+    }
+
+    @Test
+    fun aRequestFromTheFailureNotificationOpensTheDriveBackupPageOnce() {
+        var handedBack = false
+        composeTestRule.setContent {
+            TempoTheme {
+                SettingsScaffold(
+                    uiState = SettingsContract.UiState(),
+                    onEvent = {},
+                    onBackClick = {},
+                    onOnboardingClick = {},
+                    openDriveBackupPage = true,
+                    onDriveBackupPageOpen = { handedBack = true },
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag(DRIVE_BACKUP_MAIN_SWITCH_TEST_TAG).assertIsDisplayed()
+        assertThat(handedBack).isTrue()
     }
 }

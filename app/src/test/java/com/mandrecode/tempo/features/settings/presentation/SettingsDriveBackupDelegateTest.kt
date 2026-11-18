@@ -98,13 +98,15 @@ class SettingsDriveBackupDelegateTest {
         }
 
     @Test
-    fun `reconnecting backs up again once access is granted`() =
+    fun `reconnecting clears the lost-access failure and backs up again once access is granted`() =
         runTest(UnconfinedTestDispatcher()) {
             preferences.updateSettings(preferences.settings.value.copy(enabled = true))
+            preferences.recordFailure(DriveBackupFailure.AUTHORIZATION_NEEDED, atMillis = 5)
             coEvery { authorization.consentIntent() } returns null
 
             delegate.onEvent(Event.ReconnectClicked, host())
 
+            assertThat(preferences.status.value.currentFailure).isNull()
             assertThat(scheduler.runNowCalls).isEqualTo(1)
             assertThat(state.driveBackupDialog).isNull()
         }

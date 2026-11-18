@@ -116,6 +116,8 @@ fun TempoNavHost(
     routinesNavigationTrigger: Long = 0L,
     tasksNavigationTrigger: Long = 0L,
     settingsNavigationTrigger: Long = 0L,
+    driveBackupPageRequested: Boolean = false,
+    onDriveBackupPageOpen: () -> Unit = {},
     pendingNotificationAction: PendingNotificationAction? = null,
     onConsumePendingNotificationAction: () -> Unit = {},
     startDestination: NavKey = RoutinesRoute,
@@ -148,6 +150,8 @@ fun TempoNavHost(
     GlassChromeLayers(
         entries = activeEntries,
         navigator = navigator,
+        driveBackupPageRequested = driveBackupPageRequested,
+        onDriveBackupPageOpen = onDriveBackupPageOpen,
         modifier = modifier,
     ) {
         PersistentFloatingBar(
@@ -175,6 +179,8 @@ fun TempoNavHost(
 private fun GlassChromeLayers(
     entries: List<NavEntry<NavKey>>,
     navigator: TempoNavigator,
+    driveBackupPageRequested: Boolean,
+    onDriveBackupPageOpen: () -> Unit,
     modifier: Modifier = Modifier,
     chrome: @Composable () -> Unit,
 ) {
@@ -191,7 +197,11 @@ private fun GlassChromeLayers(
                     modifier = insetPaddingModifier,
                 )
 
-                SlideOverlays(navigator = navigator)
+                SlideOverlays(
+                    navigator = navigator,
+                    driveBackupPageRequested = driveBackupPageRequested,
+                    onDriveBackupPageOpen = onDriveBackupPageOpen,
+                )
             }
         }
         ProvideGlassBackdrop(glassBackdrop, chrome)
@@ -241,7 +251,11 @@ private fun BoxScope.HorizontalInsetMarginStrips() {
  * so it needs no overlay of its own — only the route to decide when it is showing.
  */
 @Composable
-private fun BoxScope.SlideOverlays(navigator: TempoNavigator) {
+private fun BoxScope.SlideOverlays(
+    navigator: TempoNavigator,
+    driveBackupPageRequested: Boolean,
+    onDriveBackupPageOpen: () -> Unit,
+) {
     // Computed here rather than passed in: two sibling overlays sharing one caller-supplied
     // modifier trips the "modifiers are used once, by the root layout" rule.
     val insetPadding =
@@ -252,7 +266,11 @@ private fun BoxScope.SlideOverlays(navigator: TempoNavigator) {
         onDismiss = { navigator.pop() },
         modifier = insetPadding,
     ) {
-        SettingsDestination(navigator = navigator)
+        SettingsDestination(
+            navigator = navigator,
+            openDriveBackupPage = driveBackupPageRequested,
+            onDriveBackupPageOpen = onDriveBackupPageOpen,
+        )
     }
 
     // On a large window Focus docks the session beside its agenda instead (#502).
