@@ -98,6 +98,7 @@ class RestoreDriveBackupUseCase
         private val authorization: CloudAuthorization,
         private val cloudStore: CloudBackupStore,
         private val importBackup: ImportBackupUseCase,
+        private val lock: DriveBackupLock = DriveBackupLock(),
     ) {
         suspend operator fun invoke(
             backup: CloudBackupFile,
@@ -107,7 +108,9 @@ class RestoreDriveBackupUseCase
             val content =
                 cloudCall { cloudStore.download(authorization.requireToken(), backup.id) }
                     .getOrElse { return RestoreOutcome.CloudFailed((it as CloudBackupException).failure) }
-            return when (val outcome = importBackup(content, mode, passphrase)) {
+            // Not while a backup runs: one that read the database before this import committed would
+            // then upload the old data as the newest backup. Downloading can overlap; writing can't.
+            return when (val outcome = lock.withLock { importBackup(content, mode, passphrase) }) {
                 is ImportOutcome.Success -> RestoreOutcome.Restored(outcome.summary)
                 ImportOutcome.WrongPassphrase -> RestoreOutcome.WrongPassphrase
                 ImportOutcome.CorruptFile -> RestoreOutcome.Corrupt
