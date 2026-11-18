@@ -50,6 +50,47 @@ class DriveBackupUseCasesTest {
     }
 
     @Test
+    fun `when scheduling fails, enabling puts everything back and reports the failure`() {
+        scheduler.failEnablingWith = IllegalStateException("work manager")
+
+        val thrown =
+            runCatching {
+                EnableDriveBackupUseCase(store, preferences, scheduler)("secret".toCharArray(), "secret".toCharArray())
+            }.exceptionOrNull()
+
+        assertThat(thrown).isInstanceOf(IllegalStateException::class.java)
+        assertThat(store.stored).isNull()
+        assertThat(preferences.settings.value.enabled).isFalse()
+    }
+
+    @Test
+    fun `failing to queue the first backup still leaves backup on`() {
+        scheduler.failRunNowWith = IllegalStateException("work manager")
+
+        val enable = EnableDriveBackupUseCase(store, preferences, scheduler)
+
+        val check = enable("secret".toCharArray(), "secret".toCharArray())
+
+        assertThat(check).isEqualTo(PassphraseCheck.OK)
+        assertThat(store.stored).isEqualTo("secret")
+        assertThat(preferences.settings.value.enabled).isTrue()
+    }
+
+    @Test
+    fun `a passphrase change stands even if the backup after it can't be queued`() {
+        store.stored = "old"
+        enabled()
+        scheduler.failRunNowWith = IllegalStateException("work manager")
+
+        val change = ChangeBackupPassphraseUseCase(store, preferences, scheduler)
+
+        val check = change("new".toCharArray(), "new".toCharArray())
+
+        assertThat(check).isEqualTo(PassphraseCheck.OK)
+        assertThat(store.stored).isEqualTo("new")
+    }
+
+    @Test
     fun `enabling refuses an empty or mismatched passphrase and changes nothing`() {
         val enable = EnableDriveBackupUseCase(store, preferences, scheduler)
 

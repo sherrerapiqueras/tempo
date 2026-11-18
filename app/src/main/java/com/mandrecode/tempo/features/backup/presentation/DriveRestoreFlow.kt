@@ -215,6 +215,9 @@ class DriveRestoreFlow
                     }
                 } finally {
                     keeping = false
+                    // Wiped here too: a cancelled host never reaches show(null) below.
+                    restoredWith?.fill('\u0000')
+                    restoredWith = null
                 }
                 show(null, host)
             }

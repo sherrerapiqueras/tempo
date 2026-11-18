@@ -119,11 +119,17 @@ class FakeScheduler : DriveBackupScheduler {
     val synced = mutableListOf<DriveBackupSettings>()
     var runNowCalls = 0
 
+    /** Thrown by [sync] for settings that turn backup on, like WorkManager refusing the work. */
+    var failEnablingWith: Exception? = null
+    var failRunNowWith: Exception? = null
+
     override fun sync(settings: DriveBackupSettings) {
+        if (settings.enabled) failEnablingWith?.let { throw it }
         synced += settings
     }
 
     override fun runNow(settings: DriveBackupSettings) {
+        failRunNowWith?.let { throw it }
         runNowCalls++
     }
 }
