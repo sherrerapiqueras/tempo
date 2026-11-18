@@ -802,7 +802,6 @@
     <string name="drive_backup_never">Nunca</string>
     <string name="drive_backup_now">Hacer copia ahora</string>
     <string name="drive_backup_now_description">Se hace en cuanto la red lo permita</string>
-    <string name="drive_backup_now_started">Copia iniciada</string>
     <string name="drive_backup_running">Haciendo la copia…</string>
     <string name="drive_backup_progress_title">Copiando en Google Drive</string>
     <string name="drive_backup_progress_channel_name">Progreso de la copia</string>
@@ -829,7 +828,7 @@
     <string name="drive_backup_passphrase_store_failed">No se pudo guardar la frase de la copia en este dispositivo, así que la copia no ha cambiado. Vuelve a intentarlo.</string>
     <string name="drive_backup_set_passphrase">Elegir la frase de la copia</string>
     <string name="drive_backup_unavailable_title">No se pudo conectar con Google Drive</string>
-    <string name="drive_backup_unavailable_message">Google Drive no está disponible ahora. Comprueba la conexión y que los servicios de Google Play estén actualizados, y vuelve a intentarlo.</string>
+    <string name="drive_backup_unavailable_message">Google Drive no ha permitido conectar a Tempo. Vuelve a intentarlo más tarde; si sigue pasando, comprueba que los servicios de Google Play estén actualizados.</string>
     <string name="drive_backup_failure_network">No se pudo conectar con Google Drive. Tempo lo volverá a intentar.</string>
     <string name="drive_backup_failure_authorization">Tempo ya no tiene acceso a Google Drive. Vuelve a conectarlo para seguir haciendo copias.</string>
     <string name="drive_backup_failure_storage">Tu almacenamiento de Google está lleno. Libera espacio para seguir haciendo copias.</string>

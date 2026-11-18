@@ -41,6 +41,7 @@ class OnboardingViewModel
                     if (restored && step == null) completeOnboarding()
                 },
                 launchConsent = { effectChannel.trySend(OnboardingContract.UiEffect.LaunchDriveConsent(it)) },
+                onBackupTurnedOn = { effectChannel.trySend(OnboardingContract.UiEffect.RequestNotificationPermission) },
             )
 
         init {

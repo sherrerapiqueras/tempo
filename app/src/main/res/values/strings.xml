@@ -798,7 +798,6 @@
     <string name="drive_backup_never">Never</string>
     <string name="drive_backup_now">Back up now</string>
     <string name="drive_backup_now_description">Runs as soon as the network allows</string>
-    <string name="drive_backup_now_started">Backup started</string>
     <string name="drive_backup_running">Backing up…</string>
     <string name="drive_backup_progress_title">Backing up to Google Drive</string>
     <string name="drive_backup_progress_channel_name">Backup progress</string>
@@ -825,7 +824,7 @@
     <string name="drive_backup_passphrase_store_failed">Couldn\'t store the backup passphrase on this device, so backup wasn\'t changed. Try again.</string>
     <string name="drive_backup_set_passphrase">Set backup passphrase</string>
     <string name="drive_backup_unavailable_title">Couldn\'t connect to Google Drive</string>
-    <string name="drive_backup_unavailable_message">Google Drive isn\'t available right now. Check your connection and that Google Play services are up to date, then try again.</string>
+    <string name="drive_backup_unavailable_message">Google Drive didn\'t let Tempo connect. Try again later; if it keeps happening, make sure Google Play services is up to date.</string>
     <string name="drive_backup_failure_network">Couldn\'t reach Google Drive. Tempo will try again.</string>
     <string name="drive_backup_failure_authorization">Tempo no longer has access to Google Drive. Reconnect to keep backing up.</string>
     <string name="drive_backup_failure_storage">Your Google storage is full. Free up space to keep backing up.</string>

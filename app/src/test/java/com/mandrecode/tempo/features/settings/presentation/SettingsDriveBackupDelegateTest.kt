@@ -183,14 +183,35 @@ class SettingsDriveBackupDelegateTest {
         }
 
     @Test
-    fun `back up now runs one and says so`() =
+    fun `back up now runs one, with no message on top of the page's progress`() =
         runTest(UnconfinedTestDispatcher()) {
             preferences.updateSettings(preferences.settings.value.copy(enabled = true))
 
             delegate.onEvent(Event.BackUpNowClicked, host())
 
             assertThat(scheduler.runNowCalls).isEqualTo(1)
-            assertThat(effects.single()).isInstanceOf(SettingsContract.UiEffect.ShowMessage::class.java)
+            assertThat(effects).isEmpty()
+        }
+
+    @Test
+    fun `turning backup on asks for notification permission, once`() =
+        runTest(UnconfinedTestDispatcher()) {
+            delegate.start(host())
+
+            preferences.updateSettings(preferences.settings.value.copy(enabled = true))
+            preferences.updateSettings(preferences.settings.value.copy(unmeteredOnly = false))
+
+            assertThat(effects).containsExactly(SettingsContract.UiEffect.RequestNotificationPermission)
+        }
+
+    @Test
+    fun `opening Settings with backup already on asks for nothing`() =
+        runTest(UnconfinedTestDispatcher()) {
+            preferences.updateSettings(preferences.settings.value.copy(enabled = true))
+
+            delegate.start(host())
+
+            assertThat(effects).isEmpty()
         }
 
     @Test
