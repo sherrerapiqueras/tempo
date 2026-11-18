@@ -2,6 +2,7 @@ package com.mandrecode.tempo.features.backup.presentation
 
 import android.app.PendingIntent
 import android.content.Intent
+import com.mandrecode.tempo.core.di.IoDispatcher
 import com.mandrecode.tempo.features.backup.domain.model.CloudBackupFile
 import com.mandrecode.tempo.features.backup.domain.model.DriveBackupFailure
 import com.mandrecode.tempo.features.backup.domain.model.ImportMode
@@ -14,8 +15,10 @@ import com.mandrecode.tempo.features.backup.domain.usecase.RestoreDriveBackupUse
 import com.mandrecode.tempo.features.backup.domain.usecase.RestoreOutcome
 import com.mandrecode.tempo.infrastructure.backup.drive.GoogleDriveAuthorization
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /** Where a restore from Google Drive is (#307). Null in a screen's state when none is under way. */
@@ -110,6 +113,7 @@ class DriveRestoreFlow
         private val hasLocalData: HasLocalDataUseCase,
         private val enableBackup: EnableDriveBackupUseCase,
         private val backupPreferences: DriveBackupPreferences,
+        @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) {
         /** What the flow needs from the screen hosting it. */
         class Host(
@@ -172,12 +176,37 @@ class DriveRestoreFlow
                     } else {
                         event.passphrase.fill('\u0000')
                     }
-                is DriveRestoreEvent.KeepBackingUpChosen -> {
-                    val passphrase = restoredWith
-                    if (event.keep && passphrase != null) enableBackup(passphrase.copyOf(), passphrase.copyOf())
-                    show(null, host)
-                }
+                is DriveRestoreEvent.KeepBackingUpChosen -> keepBackingUp(event.keep, host)
                 DriveRestoreEvent.Dismissed -> show(null, host)
+            }
+        }
+
+        /**
+         * Stores the passphrase that just restored, so backups continue with it (#305). Off the main
+         * thread, since it creates a Keystore key and commits to disk, and the flow closes only once
+         * it is done: a host may finish as soon as the flow closes. A Keystore that cannot keep it
+         * leaves backup off, which Settings shows; the restore itself already succeeded.
+         */
+        private fun keepBackingUp(
+            keep: Boolean,
+            host: Host,
+        ) {
+            val passphrase = restoredWith
+            if (!keep || passphrase == null) {
+                show(null, host)
+                return
+            }
+            host.scope.launch {
+                withContext(ioDispatcher) {
+                    try {
+                        enableBackup(passphrase.copyOf(), passphrase.copyOf())
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                        // Backup stays off; see above.
+                    }
+                }
+                show(null, host)
             }
         }
 

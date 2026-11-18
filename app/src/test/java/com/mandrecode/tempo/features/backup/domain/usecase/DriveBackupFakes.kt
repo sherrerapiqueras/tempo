@@ -18,7 +18,11 @@ import kotlin.time.Instant
 class FakePassphraseStore(
     var stored: String? = null,
 ) : BackupPassphraseStore {
+    /** Thrown by [save], like a Keystore that cannot create or use its key. */
+    var failSaveWith: Exception? = null
+
     override fun save(passphrase: CharArray) {
+        failSaveWith?.let { throw it }
         stored = String(passphrase)
     }
 

@@ -25,6 +25,7 @@ import com.mandrecode.tempo.infrastructure.backup.drive.GoogleDriveAuthorization
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -167,6 +168,23 @@ class DriveRestoreFlowTest {
         }
 
     @Test
+    fun `a passphrase the Keystore cannot keep leaves backup off and still closes`() =
+        runTest(UnconfinedTestDispatcher()) {
+            backup()
+            coEvery { importBackup(any(), any(), any()) } returns ImportOutcome.Success(ImportSummary())
+            store.failSaveWith = IllegalStateException("keystore")
+            val host = host()
+            flow.start(host)
+            flow.onEvent(DriveRestoreEvent.RestoreClicked, host)
+            flow.onEvent(DriveRestoreEvent.PassphraseEntered("right".toCharArray()), host)
+
+            flow.onEvent(DriveRestoreEvent.KeepBackingUpChosen(true), host)
+
+            assertThat(preferences.settings.value.enabled).isFalse()
+            assertThat(step).isNull()
+        }
+
+    @Test
     fun `declining to keep backing up stores nothing`() =
         runTest(UnconfinedTestDispatcher()) {
             backup()
@@ -255,6 +273,7 @@ class DriveRestoreFlowTest {
 }
 
 /** A restore flow on fakes, also used by the Settings and onboarding tests that build whole screens. */
+@OptIn(ExperimentalCoroutinesApi::class)
 internal fun driveRestoreFlow(
     consent: GoogleDriveAuthorization = mockk(relaxed = true),
     auth: FakeAuthorization = FakeAuthorization(),
@@ -264,6 +283,7 @@ internal fun driveRestoreFlow(
     store: FakePassphraseStore = FakePassphraseStore(),
     preferences: FakeDrivePreferences = FakeDrivePreferences(),
     scheduler: FakeScheduler = FakeScheduler(),
+    ioDispatcher: CoroutineDispatcher = UnconfinedTestDispatcher(),
 ) = DriveRestoreFlow(
     authorization = consent,
     listBackups = ListDriveBackupsUseCase(auth, cloud),
@@ -271,4 +291,5 @@ internal fun driveRestoreFlow(
     hasLocalData = HasLocalDataUseCase(repository),
     enableBackup = EnableDriveBackupUseCase(store, preferences, scheduler),
     backupPreferences = preferences,
+    ioDispatcher = ioDispatcher,
 )

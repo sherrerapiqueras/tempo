@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.mandrecode.tempo.core.data.preferences.OnboardingPreferencesRepository
 import com.mandrecode.tempo.core.data.preferences.ThemePreferencesRepository
 import com.mandrecode.tempo.features.backup.presentation.DriveRestoreFlow
+import com.mandrecode.tempo.features.backup.presentation.DriveRestoreStep
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,7 +33,13 @@ class OnboardingViewModel
         private val restoreHost =
             DriveRestoreFlow.Host(
                 scope = viewModelScope,
-                showStep = { step -> mutableUiState.update { it.copy(driveRestore = step) } },
+                showStep = { step ->
+                    val restored = mutableUiState.value.driveRestore is DriveRestoreStep.Restored
+                    mutableUiState.update { it.copy(driveRestore = step) }
+                    // Someone who just brought their data back already knows Tempo: once the restore's
+                    // last dialog closes, onboarding is done rather than starting the tour.
+                    if (restored && step == null) completeOnboarding()
+                },
                 launchConsent = { effectChannel.trySend(OnboardingContract.UiEffect.LaunchDriveConsent(it)) },
             )
 

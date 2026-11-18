@@ -11,6 +11,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -23,6 +24,8 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -161,11 +164,20 @@ internal fun OnboardingWelcomePage(
     onRestoreClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // A short window (a phone in landscape) can't fit the page, so it scrolls there, with fixed gaps
+    // in place of the weights that centre it on a tall one: the restore offer must never be cut off.
+    val gap: @Composable ColumnScope.() -> Unit = {
+        Spacer(modifier = if (layout.isShort) Modifier.height(layout.sectionSpacing) else Modifier.weight(1f))
+    }
     Column(
-        modifier = modifier.fillMaxSize().padding(vertical = layout.pageVerticalPadding),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .then(if (layout.isShort) Modifier.verticalScroll(rememberScrollState()) else Modifier)
+                .padding(vertical = layout.pageVerticalPadding),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(modifier = Modifier.weight(1f))
+        gap()
         AndroidView(
             factory = { context ->
                 ImageView(context).apply {
@@ -197,7 +209,18 @@ internal fun OnboardingWelcomePage(
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 8.dp),
         )
-        Spacer(modifier = Modifier.weight(1f))
+        gap()
+        WelcomeRestoreOffer(layout = layout, onRestoreClick = onRestoreClick)
+    }
+}
+
+/** "Coming from another phone?" and its button, kept apart from "Get started" by a gap below. */
+@Composable
+private fun WelcomeRestoreOffer(
+    layout: OnboardingLayout,
+    onRestoreClick: () -> Unit,
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = stringResource(R.string.onboarding_restore_title),
             style = MaterialTheme.typography.bodyMedium,
