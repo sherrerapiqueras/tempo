@@ -68,11 +68,16 @@ class RunDriveBackupUseCase
                 } catch (_: Exception) {
                     Result.Failed(DriveBackupFailure.UNEXPECTED)
                 }
+            // Turned off while this run was working: its outcome is about backups that are off now,
+            // so nothing is recorded and nothing is notified.
+            return if (preferences.settings.value.enabled) record(result) else Result.Skipped
+        }
+
+        private fun record(result: Result): Result {
             val now = clock.now().toEpochMilliseconds()
             when (result) {
                 is Result.Failed -> preferences.recordFailure(result.failure, now)
                 Result.Succeeded -> preferences.recordSuccess(now)
-                // A run queued before backup was turned off: nothing ran, so nothing is recorded.
                 Result.Skipped -> Unit
             }
             return result
