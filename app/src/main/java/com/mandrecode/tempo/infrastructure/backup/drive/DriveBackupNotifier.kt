@@ -36,16 +36,6 @@ class DriveBackupNotifier
                     DriveBackupFailure.NETWORK -> R.string.drive_backup_failure_network
                     DriveBackupFailure.UNEXPECTED -> R.string.drive_backup_failure_unexpected
                 }
-            val open =
-                PendingIntent.getActivity(
-                    context,
-                    REQUEST_CODE,
-                    Intent(context, MainActivity::class.java).apply {
-                        flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                        putExtra(EXTRA_OPEN_SETTINGS, true)
-                    },
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-                )
             val notification =
                 NotificationCompat
                     .Builder(context, CHANNEL_ID)
@@ -53,7 +43,7 @@ class DriveBackupNotifier
                     .setContentTitle(context.getString(R.string.drive_backup_notification_title))
                     .setContentText(context.getString(message))
                     .setStyle(NotificationCompat.BigTextStyle().bigText(context.getString(message)))
-                    .setContentIntent(open)
+                    .setContentIntent(openDriveBackupPage())
                     .setAutoCancel(true)
                     .build()
             @Suppress("MissingPermission") // checked by canPostNotifications above
@@ -79,10 +69,23 @@ class DriveBackupNotifier
                     .setSilent(true)
                     .setPriority(NotificationCompat.PRIORITY_LOW)
                     .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+                    .setContentIntent(openDriveBackupPage())
                     .build()
             @Suppress("MissingPermission") // checked by canPostNotifications above
             NotificationManagerCompat.from(context).notify(PROGRESS_NOTIFICATION_ID, notification)
         }
+
+        /** Both notifications open the Google Drive backup page, where the status and its fix are. */
+        private fun openDriveBackupPage(): PendingIntent =
+            PendingIntent.getActivity(
+                context,
+                REQUEST_CODE,
+                Intent(context, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    putExtra(EXTRA_OPEN_SETTINGS, true)
+                },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
 
         fun hideProgress() {
             NotificationManagerCompat.from(context).cancel(PROGRESS_NOTIFICATION_ID)

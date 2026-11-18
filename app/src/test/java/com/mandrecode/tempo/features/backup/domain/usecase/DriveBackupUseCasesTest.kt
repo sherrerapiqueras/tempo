@@ -154,6 +154,16 @@ class DriveBackupUseCasesTest {
     }
 
     @Test
+    fun `choosing the frequency already set reschedules nothing`() {
+        enabled()
+        val before = scheduler.synced.size
+
+        UpdateDriveBackupScheduleUseCase(preferences, scheduler)(frequency = preferences.settings.value.frequency)
+
+        assertThat(scheduler.synced).hasSize(before)
+    }
+
+    @Test
     fun `updating the schedule saves and reschedules`() {
         enabled()
 
@@ -304,6 +314,27 @@ class DriveBackupUseCasesTest {
 
             assertThat(run()).isEqualTo(RunDriveBackupUseCase.Result.Skipped)
             assertThat(preferences.status.value.lastFailure).isNull()
+        }
+
+    @Test
+    fun `progress is reported by the run doing the work, not by one waiting or skipped`() =
+        runTest {
+            store.stored = "secret"
+            enabled()
+            val events = mutableListOf<String>()
+            coEvery { backupRepository.exportEncrypted(any()) } coAnswers {
+                yield()
+                "encrypted"
+            }
+
+            val first = async { run.invoke { events += "first $it" } }
+            val second = async { run.invoke { events += "second $it" } }
+            first.await()
+            second.await()
+            preferences.updateSettings(DriveBackupSettings(enabled = false))
+            run.invoke { events += "skipped $it" }
+
+            assertThat(events).containsExactly("first true", "first false", "second true", "second false").inOrder()
         }
 
     @Test

@@ -51,10 +51,23 @@ class RunDriveBackupUseCase
 
         private val oneAtATime = Mutex()
 
-        suspend operator fun invoke(): Result = oneAtATime.withLock { runOnce() }
+        /**
+         * [onRunning] hears true when this run really starts backing up, after any run ahead of it
+         * and only if backup is on, and false when it stops. Both inside the lock, so whatever it
+         * shows (a progress notification) belongs to the run doing the work, never to one waiting.
+         */
+        suspend operator fun invoke(onRunning: (Boolean) -> Unit = {}): Result =
+            oneAtATime.withLock {
+                if (!preferences.settings.value.enabled) return@withLock Result.Skipped
+                onRunning(true)
+                try {
+                    runOnce()
+                } finally {
+                    onRunning(false)
+                }
+            }
 
         private suspend fun runOnce(): Result {
-            if (!preferences.settings.value.enabled) return Result.Skipped
             val result: Result =
                 try {
                     backUp()

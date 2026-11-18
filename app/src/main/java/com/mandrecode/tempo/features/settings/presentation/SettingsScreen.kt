@@ -49,6 +49,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mandrecode.tempo.R
+import com.mandrecode.tempo.core.ui.components.rememberNotificationPermissionRequest
 import com.mandrecode.tempo.core.ui.glass.ambientBackground
 import com.mandrecode.tempo.core.ui.navigation.adaptiveScreenContentLayout
 import com.mandrecode.tempo.core.ui.navigation.floatingRailContentClearance
@@ -91,10 +92,13 @@ fun SettingsScreen(
         rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
             viewModel.onEvent(SettingsContract.UiEvent.DriveBackup.ConsentFinished(result.data))
         }
+    val requestNotificationPermission = rememberNotificationPermissionRequest()
 
     LaunchedEffect(viewModel) {
         viewModel.uiEffect.collect { effect ->
             when (effect) {
+                SettingsContract.UiEffect.RequestNotificationPermission -> requestNotificationPermission()
+
                 is SettingsContract.UiEffect.OpenGoogleStorage ->
                     runCatching {
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(GOOGLE_STORAGE_URL)))

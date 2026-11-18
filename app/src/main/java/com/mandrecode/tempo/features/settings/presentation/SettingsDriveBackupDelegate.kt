@@ -59,6 +59,9 @@ class SettingsDriveBackupDelegate
         /** The dialog this delegate last showed; every change to it goes through [showDialog]. */
         private var dialog: Dialog? = null
 
+        /** Whether backup was on at the last update, null before the first one. */
+        private var wasEnabled: Boolean? = null
+
         /** Keeps the section in step with the stored settings and backup status. */
         fun start(host: SettingsBackupDelegate.Host) {
             host.scope.launch {
@@ -71,7 +74,15 @@ class SettingsDriveBackupDelegate
                         failure = status.currentFailure,
                         running = running,
                     )
-                }.collect { drive -> host.updateState { it.copy(driveBackup = drive) } }
+                }.collect { drive ->
+                    // Turned on just now, here or by a restore's "keep backing up": its alerts, and its
+                    // progress, need notification permission, which Android 13+ asks for at runtime.
+                    if (drive.enabled && wasEnabled == false) {
+                        host.sendEffect(SettingsContract.UiEffect.RequestNotificationPermission)
+                    }
+                    wasEnabled = drive.enabled
+                    host.updateState { it.copy(driveBackup = drive) }
+                }
             }
             host.scope.launch { refreshStatus() }
         }
@@ -87,10 +98,8 @@ class SettingsDriveBackupDelegate
                 is Event.PassphraseConfirmed -> confirmPassphrase(event, host)
                 is Event.FrequencySelected, is Event.WifiOnlyToggled ->
                     onScheduleEvent(event)
-                Event.BackUpNowClicked -> {
-                    backUpNow()
-                    host.sendEffect(SettingsContract.UiEffect.ShowMessage(R.string.drive_backup_now_started))
-                }
+                // The page's own progress says it started; no message on top.
+                Event.BackUpNowClicked -> backUpNow()
                 Event.ChangePassphraseClicked -> showDialog(Dialog.SetPassphrase(isChange = true), host)
                 Event.TurnOffClicked -> showDialog(Dialog.ConfirmTurnOff, host)
                 Event.TurnOffConfirmed -> {
@@ -156,7 +165,6 @@ class SettingsDriveBackupDelegate
                     // Access is back: the lost-access failure is fixed, whatever the next backup says.
                     preferences.clearFailure()
                     backUpNow()
-                    host.sendEffect(SettingsContract.UiEffect.ShowMessage(R.string.drive_backup_now_started))
                 }
                 null -> Unit
             }
@@ -188,10 +196,7 @@ class SettingsDriveBackupDelegate
                         }
                     }
                 when (check) {
-                    PassphraseCheck.OK -> {
-                        showDialog(null, host)
-                        host.sendEffect(SettingsContract.UiEffect.ShowMessage(R.string.drive_backup_now_started))
-                    }
+                    PassphraseCheck.OK -> showDialog(null, host)
                     null -> {
                         showDialog(null, host)
                         host.sendEffect(

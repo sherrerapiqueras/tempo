@@ -62,7 +62,7 @@ object SettingsContract {
         val running: Boolean = false,
     )
 
-    /** Modal state of the Google Drive backup section. */
+    /** Modal state of Google Drive backup in Settings: its row and its page. */
     sealed interface DriveBackupDialog {
         /** Set the backup passphrase: first time ([isChange] false) or a replacement. */
         data class SetPassphrase(
@@ -248,6 +248,9 @@ object SettingsContract {
 
         /** Google storage management, where a full Drive can be freed (#306). */
         data object OpenGoogleStorage : UiEffect
+
+        /** Ask for notification permission, where Android needs it and it isn't granted yet. */
+        data object RequestNotificationPermission : UiEffect
 
         data class ShowMessage(
             @param:StringRes val message: Int,
