@@ -292,6 +292,21 @@ class DriveBackupUseCasesTest {
         }
 
     @Test
+    fun `a run that backup was turned off during records nothing`() =
+        runTest {
+            store.stored = "secret"
+            enabled()
+            cloud.failUploadWith = CloudBackupException(DriveBackupFailure.STORAGE_FULL)
+            coEvery { backupRepository.exportEncrypted(any()) } answers {
+                preferences.updateSettings(DriveBackupSettings(enabled = false))
+                "encrypted"
+            }
+
+            assertThat(run()).isEqualTo(RunDriveBackupUseCase.Result.Skipped)
+            assertThat(preferences.status.value.lastFailure).isNull()
+        }
+
+    @Test
     fun `only the newest backups are kept`() =
         runTest {
             store.stored = "secret"
