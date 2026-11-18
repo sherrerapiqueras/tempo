@@ -23,7 +23,7 @@ connect to Google Drive" (Play services returns `DEVELOPER_ERROR`).
    | Package name | SHA-1 from |
    |:---|:---|
    | `com.mandrecode.tempo.debug` | the debug keystore: `./gradlew :app:signingReport` (variant `debug`) |
-   | `com.mandrecode.tempo` | **Play App Signing**: Play Console → Test and release → App integrity → *Play app signing* (older consoles: Setup → App signing) → *App signing key certificate* (not the upload key) |
+   | `com.mandrecode.tempo` | **Play App Signing**: Play Console → Protect with Play → *App signing* (older consoles: Setup → App signing) → under *App signing key* (not *Upload key*), *SHA-1 certificate fingerprint* |
 
    Both are created here in Google Cloud; the Play Console only supplies the fingerprint. Add a third
    client with the upload key's SHA-1 if you install upload-signed builds directly.
