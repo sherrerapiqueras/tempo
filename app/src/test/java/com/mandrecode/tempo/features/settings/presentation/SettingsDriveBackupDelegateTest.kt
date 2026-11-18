@@ -159,8 +159,6 @@ class SettingsDriveBackupDelegateTest {
             preferences.updateSettings(preferences.settings.value.copy(enabled = true))
             val host = host()
 
-            delegate.onEvent(Event.FrequencyClicked, host)
-            assertThat(state.driveBackupDialog).isEqualTo(Dialog.ChooseFrequency)
             delegate.onEvent(Event.FrequencySelected(BackupFrequency.WEEKLY), host)
             delegate.onEvent(Event.WifiOnlyToggled(false), host)
             assertThat(preferences.settings.value.frequency).isEqualTo(BackupFrequency.WEEKLY)
@@ -171,6 +169,17 @@ class SettingsDriveBackupDelegateTest {
             delegate.onEvent(Event.TurnOffConfirmed, host)
             assertThat(preferences.settings.value.enabled).isFalse()
             assertThat(store.stored).isNull()
+        }
+
+    @Test
+    fun `a running backup shows as running`() =
+        runTest(UnconfinedTestDispatcher()) {
+            delegate.start(host())
+            assertThat(state.driveBackup.running).isFalse()
+
+            scheduler.running.value = true
+
+            assertThat(state.driveBackup.running).isTrue()
         }
 
     @Test
@@ -222,6 +231,7 @@ class SettingsDriveBackupDelegateTest {
                     backUpNow = RunDriveBackupNowUseCase(preferences, scheduler),
                     restoreFlow = driveRestoreFlow(preferences = preferences, scheduler = scheduler),
                     refreshStatus = refreshStatus(preferences),
+                    scheduler = scheduler,
                     ioDispatcher = UnconfinedTestDispatcher(testScheduler),
                 )
             val host = host()
@@ -271,6 +281,7 @@ internal fun driveBackupDelegate(
     backUpNow = RunDriveBackupNowUseCase(preferences, scheduler),
     restoreFlow = driveRestoreFlow(store = store, preferences = preferences, scheduler = scheduler),
     refreshStatus = refreshStatus(preferences),
+    scheduler = scheduler,
     ioDispatcher = UnconfinedTestDispatcher(),
 )
 
