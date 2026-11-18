@@ -11,6 +11,7 @@ import com.mandrecode.tempo.features.backup.domain.repository.DriveBackupPrefere
 import com.mandrecode.tempo.features.backup.domain.usecase.EnableDriveBackupUseCase
 import com.mandrecode.tempo.features.backup.domain.usecase.HasLocalDataUseCase
 import com.mandrecode.tempo.features.backup.domain.usecase.ListDriveBackupsUseCase
+import com.mandrecode.tempo.features.backup.domain.usecase.PassphraseCheck
 import com.mandrecode.tempo.features.backup.domain.usecase.RestoreDriveBackupUseCase
 import com.mandrecode.tempo.features.backup.domain.usecase.RestoreOutcome
 import com.mandrecode.tempo.infrastructure.backup.drive.GoogleDriveAuthorization
@@ -121,6 +122,8 @@ class DriveRestoreFlow
             val scope: CoroutineScope,
             val showStep: (DriveRestoreStep?) -> Unit,
             val launchConsent: (PendingIntent) -> Unit,
+            /** Backup was just turned on by "keep backing up": time to ask for notification permission. */
+            val onBackupTurnedOn: () -> Unit = {},
         )
 
         private var step: DriveRestoreStep? = null
@@ -199,22 +202,26 @@ class DriveRestoreFlow
             }
             keeping = true
             host.scope.launch {
-                try {
-                    withContext(ioDispatcher) {
-                        try {
-                            enableBackup(passphrase.copyOf(), passphrase.copyOf())
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (_: Exception) {
-                            // Backup stays off; see above.
+                val turnedOn =
+                    try {
+                        withContext(ioDispatcher) {
+                            try {
+                                enableBackup(passphrase.copyOf(), passphrase.copyOf()) == PassphraseCheck.OK
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (_: Exception) {
+                                // Backup stays off; see above.
+                                false
+                            }
                         }
+                    } finally {
+                        keeping = false
+                        // Wiped here too: a cancelled host never reaches show(null) below.
+                        restoredWith?.fill('\u0000')
+                        restoredWith = null
                     }
-                } finally {
-                    keeping = false
-                    // Wiped here too: a cancelled host never reaches show(null) below.
-                    restoredWith?.fill('\u0000')
-                    restoredWith = null
-                }
+                // Before closing: a host may finish as soon as the flow closes.
+                if (turnedOn) host.onBackupTurnedOn()
                 show(null, host)
             }
         }

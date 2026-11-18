@@ -224,6 +224,31 @@ class DriveRestoreFlowTest {
         }
 
     @Test
+    fun `keeping backup on says so before the flow closes, so the host can ask for notifications`() =
+        runTest(UnconfinedTestDispatcher()) {
+            backup()
+            coEvery { importBackup(any(), any(), any()) } returns ImportOutcome.Success(ImportSummary())
+            val order = mutableListOf<String>()
+            val host =
+                DriveRestoreFlow.Host(
+                    scope = backgroundScope,
+                    showStep = {
+                        step = it
+                        if (it == null) order += "closed"
+                    },
+                    launchConsent = {},
+                    onBackupTurnedOn = { order += "turned on" },
+                )
+            flow.start(host)
+            flow.onEvent(DriveRestoreEvent.RestoreClicked, host)
+            flow.onEvent(DriveRestoreEvent.PassphraseEntered("right".toCharArray()), host)
+
+            flow.onEvent(DriveRestoreEvent.KeepBackingUpChosen(true), host)
+
+            assertThat(order).containsExactly("turned on", "closed").inOrder()
+        }
+
+    @Test
     fun `declining to keep backing up stores nothing`() =
         runTest(UnconfinedTestDispatcher()) {
             backup()

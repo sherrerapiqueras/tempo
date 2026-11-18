@@ -68,6 +68,9 @@ object OnboardingContract {
     sealed interface UiEffect {
         data object Exit : UiEffect
 
+        /** Drive backup was just turned on: ask for notification permission where Android needs it. */
+        data object RequestNotificationPermission : UiEffect
+
         /** Google's consent for Drive access; the result comes back as a DriveRestore(ConsentFinished). */
         data class LaunchDriveConsent(
             val intent: PendingIntent,

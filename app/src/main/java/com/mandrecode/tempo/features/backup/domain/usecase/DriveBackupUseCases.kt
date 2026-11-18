@@ -146,7 +146,10 @@ class UpdateDriveBackupScheduleUseCase
             frequency: BackupFrequency = preferences.settings.value.frequency,
             unmeteredOnly: Boolean = preferences.settings.value.unmeteredOnly,
         ) {
-            val settings = preferences.settings.value.copy(frequency = frequency, unmeteredOnly = unmeteredOnly)
+            val current = preferences.settings.value
+            val settings = current.copy(frequency = frequency, unmeteredOnly = unmeteredOnly)
+            // Tapping the chip that is already selected changes nothing: don't reschedule for it.
+            if (settings == current) return
             preferences.updateSettings(settings)
             scheduler.sync(settings)
         }
