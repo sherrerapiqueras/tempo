@@ -787,6 +787,7 @@
     <string name="drive_backup_main_switch">Use Google Drive backup</string>
     <string name="drive_backup_screen_intro">Tempo backs up your tasks and routines to Google Drive automatically, encrypted with a passphrase only you know. Google can\'t read your backups.</string>
     <string name="drive_backup_entry_last_backup">Last backup %1$s</string>
+    <string name="drive_backup_just_now">Just now</string>
     <string name="drive_backup_entry_pending">On, waiting for the first backup</string>
     <string name="drive_backup_entry_attention">Backup needs your attention</string>
     <string name="drive_backup_section_backups">Backups</string>
