@@ -4,10 +4,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.mandrecode.tempo.features.routines.domain.usecase.ToggleHabitCompletionUseCase
+import com.mandrecode.tempo.infrastructure.receivers.launchReceiverWork
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
@@ -25,18 +24,13 @@ class CompleteHabitReceiver : BroadcastReceiver() {
     ) {
         val habitId = intent.getLongExtra(EXTRA_HABIT_ID, -1L)
         if (habitId != -1L) {
-            val pendingResult = goAsync()
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    val scheduledDate =
-                        intent
-                            .getStringExtra(EXTRA_SCHEDULED_DATE)
-                            ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
-                            ?: Clock.System.todayIn(TimeZone.currentSystemDefault())
-                    toggleHabitCompletionUseCase(habitId, true, scheduledDate, fromNotification = true)
-                } finally {
-                    pendingResult.finish()
-                }
+            launchReceiverWork(Dispatchers.IO, "CompleteHabitReceiver") {
+                val scheduledDate =
+                    intent
+                        .getStringExtra(EXTRA_SCHEDULED_DATE)
+                        ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+                        ?: Clock.System.todayIn(TimeZone.currentSystemDefault())
+                toggleHabitCompletionUseCase(habitId, true, scheduledDate, fromNotification = true)
             }
         }
     }

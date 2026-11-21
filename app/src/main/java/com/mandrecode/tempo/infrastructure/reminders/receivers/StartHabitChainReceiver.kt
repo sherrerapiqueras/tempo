@@ -5,10 +5,9 @@ import android.content.Context
 import android.content.Intent
 import com.mandrecode.tempo.features.routines.domain.repository.HabitRepository
 import com.mandrecode.tempo.infrastructure.notifications.NotificationSyncManager
+import com.mandrecode.tempo.infrastructure.receivers.launchReceiverWork
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import javax.inject.Inject
 
@@ -31,17 +30,12 @@ class StartHabitChainReceiver : BroadcastReceiver() {
                     .getStringExtra(EXTRA_SCHEDULED_DATE)
                     ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
 
-            val pendingResult = goAsync()
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    habitRepository.refreshHabitChainLiveActivity(
-                        chainId,
-                        scheduledDate,
-                        fromNotification = true,
-                    )
-                } finally {
-                    pendingResult.finish()
-                }
+            launchReceiverWork(Dispatchers.IO, "StartHabitChainReceiver") {
+                habitRepository.refreshHabitChainLiveActivity(
+                    chainId,
+                    scheduledDate,
+                    fromNotification = true,
+                )
             }
 
             notificationSyncManager.dismissHabitChainNotification(chainId)

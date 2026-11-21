@@ -6,11 +6,10 @@ import android.content.Intent
 import com.mandrecode.tempo.core.di.IoDispatcher
 import com.mandrecode.tempo.features.focus.domain.usecase.StartFocusSessionOnTaskUseCase
 import com.mandrecode.tempo.infrastructure.notifications.NotificationSyncManager
+import com.mandrecode.tempo.infrastructure.receivers.launchReceiverWork
 import com.mandrecode.tempo.infrastructure.reminders.receivers.TaskReminderReceiver
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -39,13 +38,8 @@ class StartFocusSessionReceiver : BroadcastReceiver() {
         // to the session it just started would be the same task announced twice.
         notificationSyncManager.dismissTaskNotification(taskId)
 
-        val pendingResult = goAsync()
-        CoroutineScope(ioDispatcher).launch {
-            try {
-                startFocusSessionOnTask(taskId)
-            } finally {
-                pendingResult.finish()
-            }
+        launchReceiverWork(ioDispatcher, "StartFocusSessionReceiver") {
+            startFocusSessionOnTask(taskId)
         }
     }
 

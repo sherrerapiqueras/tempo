@@ -10,10 +10,9 @@ import com.mandrecode.tempo.features.focus.domain.usecase.FocusSessionUseCases
 import com.mandrecode.tempo.features.tasks.domain.repository.TaskRepository
 import com.mandrecode.tempo.features.tasks.domain.usecase.ToggleTaskCompletionUseCase
 import com.mandrecode.tempo.infrastructure.notifications.RequestCodeGenerator
+import com.mandrecode.tempo.infrastructure.receivers.launchReceiverWork
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -46,16 +45,11 @@ class FocusSessionActionReceiver : BroadcastReceiver() {
         intent: Intent,
     ) {
         val action = intent.action ?: return
-        val pendingResult = goAsync()
-        CoroutineScope(ioDispatcher).launch {
-            try {
-                when (action) {
-                    ACTION_PAUSE -> togglePause()
-                    ACTION_STOP -> focusSessionUseCases.end()
-                    ACTION_COMPLETE -> completeSessionTask()
-                }
-            } finally {
-                pendingResult.finish()
+        launchReceiverWork(ioDispatcher, "FocusSessionActionReceiver") {
+            when (action) {
+                ACTION_PAUSE -> togglePause()
+                ACTION_STOP -> focusSessionUseCases.end()
+                ACTION_COMPLETE -> completeSessionTask()
             }
         }
     }
