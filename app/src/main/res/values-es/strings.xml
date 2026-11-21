@@ -791,6 +791,7 @@
     <string name="drive_backup_main_switch">Usar la copia en Google Drive</string>
     <string name="drive_backup_screen_intro">Tempo copia tus tareas y rutinas en Google Drive automáticamente, cifradas con una frase que solo tú conoces. Google no puede leer tus copias.</string>
     <string name="drive_backup_entry_last_backup">Última copia %1$s</string>
+    <string name="drive_backup_just_now">Hace un momento</string>
     <string name="drive_backup_entry_pending">Activada, a la espera de la primera copia</string>
     <string name="drive_backup_entry_attention">La copia necesita tu atención</string>
     <string name="drive_backup_section_backups">Copias</string>

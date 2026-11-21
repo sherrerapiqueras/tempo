@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -81,14 +82,35 @@ private fun SettingsContract.DriveBackupUiState.summary(): String =
         !enabled -> stringResource(R.string.drive_backup_turn_on_description)
         running -> stringResource(R.string.drive_backup_running)
         failure != null -> stringResource(R.string.drive_backup_entry_attention)
-        lastSuccessAt != null -> stringResource(R.string.drive_backup_entry_last_backup, relativeTime(lastSuccessAt))
+        lastSuccessAt != null ->
+            stringResource(
+                R.string.drive_backup_entry_last_backup,
+                relativeTime(lastSuccessAt, midSentence = true),
+            )
         else -> stringResource(R.string.drive_backup_entry_pending)
     }
 
-private fun relativeTime(atMillis: Long): String =
-    DateUtils
-        .getRelativeTimeSpanString(atMillis, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS)
-        .toString()
+/**
+ * When a backup happened, relative to now. Under a minute reads as "just now" rather than the
+ * platform's "0 minutes ago". [midSentence] lowercases the first letter for use after a label
+ * ("Last backup 5 minutes ago"), since the platform capitalises it in some locales ("Hace…").
+ */
+@Composable
+private fun relativeTime(
+    atMillis: Long,
+    midSentence: Boolean = false,
+): String {
+    val now = System.currentTimeMillis()
+    val text =
+        if (now - atMillis < DateUtils.MINUTE_IN_MILLIS) {
+            stringResource(R.string.drive_backup_just_now)
+        } else {
+            DateUtils.getRelativeTimeSpanString(atMillis, now, DateUtils.MINUTE_IN_MILLIS).toString()
+        }
+    if (!midSentence) return text
+    val locale = LocalConfiguration.current.locales[0]
+    return text.replaceFirstChar { it.lowercase(locale) }
+}
 
 /**
  * Google Drive backup's own Settings page (#306). The main switch leads; while backup is on, the
@@ -241,7 +263,7 @@ private fun DriveBackupStatusItem(
     val lastBackup =
         when {
             drive.running -> stringResource(R.string.drive_backup_running)
-            else -> drive.lastSuccessAt?.let(::relativeTime) ?: stringResource(R.string.drive_backup_never)
+            else -> drive.lastSuccessAt?.let { relativeTime(it) } ?: stringResource(R.string.drive_backup_never)
         }
     val action =
         when (failure) {

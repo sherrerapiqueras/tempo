@@ -174,7 +174,9 @@ internal fun SettingsScaffold(
                 (slideOutHorizontally { width -> -direction * width / UNDERLAY_SLIDE_DIVISOR } + fadeOut())
         },
         label = "settingsPage",
-        modifier = modifier,
+        // Each page paints its own backdrop, and both fade during the switch. Without one under
+        // them, the tab behind the Settings overlay shows through mid-transition.
+        modifier = modifier.ambientBackground(),
     ) { shown ->
         pageStates.SaveableStateProvider(shown) {
             when (shown) {
