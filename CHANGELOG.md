@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.21.0](https://github.com/sherrerapiqueras/tempo/compare/v1.20.0...v1.21.0) (2026-11-18)
+
+
+### Features
+
+* **#283:** backup format v2 keyed on stable identifiers ([#544](https://github.com/sherrerapiqueras/tempo/issues/544)) ([87ebb5e](https://github.com/sherrerapiqueras/tempo/commit/87ebb5eb00b32e41f65998717b0e40ad24a23df9))
+* **#306:** scheduled automatic backup to Google Drive ([#552](https://github.com/sherrerapiqueras/tempo/issues/552)) ([e6446f0](https://github.com/sherrerapiqueras/tempo/commit/e6446f050cae633ed01e76ebf6a9173c66e655f3))
+* **#307:** restore from a Google Drive backup in onboarding and Settings ([#554](https://github.com/sherrerapiqueras/tempo/issues/554)) ([64ceb88](https://github.com/sherrerapiqueras/tempo/commit/64ceb88cbb1254cc7f5003aa234e4e0f10e07654))
+* **#30:** add sync-safe identifiers and merge metadata to core entities ([#540](https://github.com/sherrerapiqueras/tempo/issues/540)) ([7788bb5](https://github.com/sherrerapiqueras/tempo/commit/7788bb5cbfc8b117558cf9066a6a158c12328906))
+* **#546:** journal local mutations for later replay ([#547](https://github.com/sherrerapiqueras/tempo/issues/547)) ([1efed14](https://github.com/sherrerapiqueras/tempo/commit/1efed14363df2374feba87c608a7f938fe101578))
+
+
+### Bug Fixes
+
+* a replace import restores daily focus history in the same transaction ([#556](https://github.com/sherrerapiqueras/tempo/issues/556)) ([4162b51](https://github.com/sherrerapiqueras/tempo/commit/4162b513bb298900cc67dbb1438660e406066b53))
+
 ## [1.20.0](https://github.com/sherrerapiqueras/tempo/compare/v1.19.2...v1.20.0) (2026-11-15)
 
 
