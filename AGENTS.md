@@ -126,10 +126,28 @@ Extract ID from branch name. If no ID in branch, look up with `gh`. If none foun
 - Title matches commit format above. Base branch: `main`.
 - Body: summary of changes + `Closes #[ID]` if applicable.
 
-### Copilot Review Conversations
-- When handling Copilot feedback on a PR, respond in every Copilot thread and resolve every Copilot conversation before requesting another pass.
-- After all Copilot conversations are resolved, re-request Copilot review via GitHub's Reviewers request API first (for example via `gh api` against `POST /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers`).
-- Use `@Copilot` comment pings only as a fallback when reviewer-request API flow is not available (for example due to permission or reviewer-type limitations), and state the reason in the PR activity.
+### Review Loop
+Every PR gets reviewed by the agent working on it, in a loop, before it is ready to merge. This replaces Copilot reviews.
+
+1. **Review** the PR's diff against its base branch (for a stacked PR, the branch below it, not `main`) with your agent's review command (see below).
+2. **Fix** every real finding, on the branch where that code lives: in a stack, the lowest PR that introduced it, then merge it up through the branches above.
+3. **Check** again: `./gradlew ktlintFormat`, the checks in [Commands](#commands) and [CI / Quality Gates](#ci--quality-gates), and any affected tests. Push.
+4. **Repeat** until a review finds nothing relevant and CI is green on every PR in the stack.
+
+A finding that isn't part of the PR's work, such as a bug already on `main` that the review happened to surface, goes in its own PR targeting the stack, not into the PR under review. A finding you decide not to fix needs a reason, stated in the PR.
+
+**Per agent:**
+
+| Agent | Review command |
+|:---|:---|
+| Claude Code | `/code-review [level] <PR number, branch or path>`, built in. `high` suits a whole stack; `--fix` applies the findings to the working tree. `ultra` is a billed, multi-agent cloud review that only the user starts. |
+| OpenAI Codex CLI | `/review` → *Review against a base branch*, or `codex review --base <base branch>` outside the interactive session. |
+| Gemini CLI | Google's code-review extension: `gemini extensions install https://github.com/gemini-cli-extensions/code-review`, then `/code-review`. |
+| Any other agent | No built-in command: review the diff by hand. Go through every hunk; for each line ask what input, state or timing makes it wrong. Check what removed lines used to guarantee and whether the new code still does. Check the callers of every changed function. Look for code that duplicates an existing helper, wasted work, and breaches of this file's rules. |
+
+### Copilot Review
+- Don't request Copilot reviews on PRs: not through the reviewers API, not with `@Copilot` comment pings, and not by enabling the repository's Copilot review ruleset. Use the [Review Loop](#review-loop) instead.
+- If a Copilot review already exists on a PR, a real finding in it is fixed like any other feedback; reply in its thread and resolve it. Never request another pass.
 
 ### Pre-Commit
 Always run `./gradlew ktlintFormat` explicitly before committing. A git hook exists (`bash scripts/install-hooks.sh`) but do not rely on it.
