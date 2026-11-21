@@ -15,9 +15,10 @@ connect to Google Drive" (Play services returns `DEVELOPER_ERROR`).
    - app name *Tempo*, a support email, and the privacy policy URL;
    - data access, add the scope `https://www.googleapis.com/auth/drive.appdata`. It's listed as
      non-sensitive, so no verification is required ([#304](google-drive-backup-scopes.md));
-   - while the publishing status is *Testing*, add your Google account as a test user.
-     Authorisations then expire after 7 days. That's expected, and it exercises the "Reconnect"
-     path.
+   - Audience → publishing status: **In production**. With only a non-sensitive scope the app
+     goes live without review, any Google account can connect, and authorisations don't expire
+     after 7 days the way they do in *Testing*. Brand verification, which shows the app name and
+     logo on the consent screen, is optional.
 4. **Create Android OAuth clients** (Clients → Create client → *Android*), one per app identity:
 
    | Package name | SHA-1 from |
@@ -27,13 +28,10 @@ connect to Google Drive" (Play services returns `DEVELOPER_ERROR`).
 
    Both are created here in Google Cloud; the Play Console only supplies the fingerprint. Add a third
    client with the upload key's SHA-1 if you install upload-signed builds directly.
-5. Before public release, set the publishing status to **In production**. With only a
-   non-sensitive scope, the app goes live without review. Brand verification, which shows the app
-   name and logo on the consent screen, is optional.
 
 ## Checking it works
 
-On a device signed in to a test-user account, open Settings → Backup & Restore and turn on the
+With a release build installed from Google Play, open Settings → Backup & Restore and turn on the
 *Google Drive backup* switch. The consent screen should list "See, create, and delete its own
 configuration data in your Google Drive". After you set the passphrase, tap the row to open the
 Google Drive backup page: its status should show a backup within a minute on Wi-Fi.

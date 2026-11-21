@@ -11,11 +11,12 @@ on:
         required: true
 
 permissions:
-  contents: write
+  contents: read
 
-concurrency:
-  group: publish
-  cancel-in-progress: false
+# Each release goes to open testing on its own, then waits for a reviewer on the
+# play-production environment before the same build is promoted to production.
+# Concurrency is per job, so a release waiting for that approval doesn't block the
+# next one from reaching open testing.
 
 defaults:
   run:
@@ -25,18 +26,34 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  publish:
-    name: 📦 Publish
+  build:
+    name: 📦 Build
     runs-on: ubuntu-latest
-    environment: google-play
+    permissions:
+      contents: write # attaches the APK to the GitHub release
+    concurrency:
+      group: publish-build
+      cancel-in-progress: false
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      version-code: ${{ steps.version.outputs.version-code }}
     steps:
       - name: Resolve tag
         id: version
+        env:
+          RAW: ${{ github.event.release.tag_name || inputs.tag }}
         run: |
-          RAW="${{ github.event.release.tag_name || inputs.tag }}"
           VERSION="${RAW#v}"
+          if [[ ! "$VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error::Tag '$RAW' is not a MAJOR.MINOR.PATCH version."
+            exit 1
+          fi
+          # Same formula as app/build.gradle.kts: major * 1_000_000 + minor * 1_000 + patch.
+          VERSION_CODE=$(( 10#${BASH_REMATCH[1]} * 1000000 + 10#${BASH_REMATCH[2]} * 1000 + 10#${BASH_REMATCH[3]} ))
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "version-code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@v7
         with:
@@ -114,11 +131,68 @@ jobs:
             exit 1
           fi
 
-      - name: Publish to Google Play Closed Testing
+      - name: Upload Play Store changelog
+        uses: actions/upload-artifact@v7
+        with:
+          name: whatsnew-${{ steps.version.outputs.version }}
+          path: build/whatsnew/
+          retention-days: 90
+
+  open-testing:
+    name: 🧪 Open testing
+    runs-on: ubuntu-latest
+    needs: build
+    environment: play-open-testing
+    concurrency:
+      group: publish-open-testing
+      cancel-in-progress: false
+    steps:
+      - name: Download release AAB
+        uses: actions/download-artifact@v8
+        with:
+          name: tempo-${{ needs.build.outputs.version }}.aab
+          path: release
+
+      - name: Download Play Store changelog
+        uses: actions/download-artifact@v8
+        with:
+          name: whatsnew-${{ needs.build.outputs.version }}
+          path: whatsnew
+
+      - name: Publish to Google Play open testing
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
           packageName: com.mandrecode.tempo
-          releaseFiles: app/build/outputs/bundle/release/tempo-${{ steps.version.outputs.version }}.aab
-          tracks: alpha
-          whatsNewDirectory: build/whatsnew
+          releaseFiles: release/tempo-${{ needs.build.outputs.version }}.aab
+          tracks: beta
+          whatsNewDirectory: whatsnew
+
+  production:
+    name: 🚀 Production
+    runs-on: ubuntu-latest
+    needs: [build, open-testing]
+    # play-production has a required reviewer: this job waits until the release is
+    # approved (or rejected) in the run's page. If a newer release arrives while one is
+    # still waiting, GitHub cancels the older pending job, so only the newest can ship.
+    environment: play-production
+    concurrency:
+      group: publish-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.build.outputs.tag }}
+          sparse-checkout: scripts/ci
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Install Play API client
+        run: pip install --disable-pip-version-check google-auth==2.40.3 requests==2.32.4
+
+      - name: Promote open testing release to production
+        env:
+          PLAY_STORE_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
+        run: python scripts/ci/promote-to-production.py com.mandrecode.tempo "${{ needs.build.outputs.version-code }}"
