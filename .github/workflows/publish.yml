@@ -37,7 +37,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
-      version-code: ${{ steps.version.outputs.version-code }}
+      version-code: ${{ steps.version-code.outputs.version-code }}
     steps:
       - name: Resolve tag
         id: version
@@ -49,11 +49,8 @@ jobs:
             echo "::error::Tag '$RAW' is not a MAJOR.MINOR.PATCH version."
             exit 1
           fi
-          # Same formula as app/build.gradle.kts: major * 1_000_000 + minor * 1_000 + patch.
-          VERSION_CODE=$(( 10#${BASH_REMATCH[1]} * 1000000 + 10#${BASH_REMATCH[2]} * 1000 + 10#${BASH_REMATCH[3]} ))
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
-          echo "version-code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@v7
         with:
@@ -92,6 +89,20 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew assembleRelease
+
+      # Production promotes by version code, so take it from what was built rather than
+      # re-deriving it from the tag.
+      - name: Read version code
+        id: version-code
+        run: |
+          AAPT2=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          VERSION_CODE=$("$AAPT2" dump badging app/build/outputs/apk/release/app-release.apk \
+            | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p")
+          if [ -z "$VERSION_CODE" ]; then
+            echo "::error::Couldn't read the version code from the release APK."
+            exit 1
+          fi
+          echo "version-code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
 
       - name: Rename artifacts
         run: |
@@ -173,16 +184,33 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build, open-testing]
     # play-production has a required reviewer: this job waits until the release is
-    # approved (or rejected) in the run's page. If a newer release arrives while one is
-    # still waiting, GitHub cancels the older pending job, so only the newest can ship.
+    # approved (or rejected) in the run's page. Only the build still in open testing can be
+    # promoted; approving an older release fails without changing anything.
     environment: play-production
+    permissions:
+      contents: read
+      actions: read # reads the environment's protection rules
     concurrency:
       group: publish-production
       cancel-in-progress: false
     steps:
+      # GitHub creates a missing environment on first use, without protection rules. Refuse to
+      # ship rather than reach every user without the approval this job exists for.
+      - name: Require approval on play-production
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          REVIEWERS=$(gh api "repos/${{ github.repository }}/environments/play-production" \
+            --jq '[.protection_rules[]? | select(.type == "required_reviewers")] | length')
+          if [ "$REVIEWERS" = "0" ]; then
+            echo "::error::play-production has no required reviewers. Add one (docs/implementation/play-release.md), then re-run this job."
+            exit 1
+          fi
+
+      # The promotion script is tooling: take it from this workflow's commit, not the release
+      # tag, so re-publishing an older tag still works.
       - uses: actions/checkout@v7
         with:
-          ref: ${{ needs.build.outputs.tag }}
           sparse-checkout: scripts/ci
 
       - uses: actions/setup-python@v7

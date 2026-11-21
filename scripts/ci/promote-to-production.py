@@ -48,14 +48,22 @@ def main() -> None:
 
     edit_id = check(session.post(f"{app}/edits"), "Creating the edit")["id"]
     edit = f"{app}/edits/{edit_id}"
+    try:
+        promote(session, edit, version_code)
+    except SystemExit:
+        # Don't leave a half-made edit open in Play Console.
+        session.delete(edit)
+        raise
+    print(f"Promoted version code {version_code} from open testing to production (100%).")
 
+
+def promote(session, edit: str, version_code: str) -> None:
     source = check(session.get(f"{edit}/tracks/{SOURCE_TRACK}"), "Reading the open-testing track")
     release = next(
         (r for r in source.get("releases", []) if version_code in r.get("versionCodes", [])),
         None,
     )
     if release is None:
-        session.delete(edit)
         fail(
             f"Version code {version_code} is not in open testing. A newer release may have replaced "
             "it there; approve that release's production job instead.",
@@ -74,7 +82,6 @@ def main() -> None:
         "Updating the production track",
     )
     check(session.post(f"{edit}:commit"), "Committing the edit")
-    print(f"Promoted version code {version_code} from open testing to production (100%).")
 
 
 if __name__ == "__main__":
