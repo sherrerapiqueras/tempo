@@ -1,8 +1,8 @@
 # Backup Destinations Beyond Google Drive — Spike
 
-Outcome of #308 (part of #12). **Documentation only**: findings come from public sources, checked
-2026-11-17. Testing Proton Drive's Android provider on a device is still to be done (see
-[Still open](#still-open)).
+Outcome of #308 (part of #12). Findings come from public sources, checked 2026-11-17, and from a
+device check of Proton Drive's Android provider on 2026-11-21 ([below](#proton-drive-through-saf)).
+The unattended-write measurements a SAF destination needs are tracked in #560.
 
 ## Recommendation
 
@@ -11,10 +11,11 @@ Outcome of #308 (part of #12). **Documentation only**: findings come from public
 2. **A generic "backup folder" destination through Android's Storage Access Framework (SAF)** is the
    right long-term answer for non-Google storage. It's provider-agnostic, it fits Tempo's local-first
    stance, and it needs no provider-specific code. But it should **not** land in 1.1 or 2.0: its
-   unattended reliability is unproven, and it depends on each provider. Track it as its own issue
-   for after 2.0, starting with the reliability tests listed below.
+   unattended reliability is unproven, and it depends on each provider. It's tracked for after 2.0
+   in #560, starting with the reliability tests listed below. It would not cover Proton Drive today.
 3. **Until then, manual export already covers non-Google storage:** the system file picker lets the
-   user save the encrypted `.tempo` file to any provider they have.
+   user save the encrypted `.tempo` file to any provider they have, Proton Drive included (checked
+   on a device).
 
 ## Proton Drive: is there a usable API?
 
@@ -39,17 +40,23 @@ maintain, isn't viable for a solo-maintained app's backup path.
 
 ## Proton Drive through SAF
 
-**Unconfirmed, and likely insufficient today.**
+**Checked on a device: save picker yes, folder picker no.**
 
-- Public user reports ([Proton feedback thread](https://protonmail.uservoice.com/forums/932839-proton-drive/suggestions/46393474-proton-drive-integration-with-android-default-stor))
-  say Proton Drive appears in the Files app and when an app opens a single file. It reportedly does
-  **not** appear in the folder picker (`ACTION_OPEN_DOCUMENT_TREE`), which a backup destination
-  needs.
-- The same thread quotes Proton Support saying the Files-app integration works only while the Proton
-  Drive app can run in the background. That is a direct risk for an unattended write.
-- A user reports that App Lock in Proton Drive blocks access through the Files app.
+Pixel 7, Android 16, Proton Drive 3.3.1, signed in, 2026-11-21:
 
-These are user reports, not Proton documentation, and haven't been checked on a device.
+- The app ships a `DocumentsProvider` (`me.proton.core.drive.documentsprovider.data.DriveDocumentsProvider`,
+  authority `me.proton.android.drive.documents`).
+- Its root reports `flags=1`: only `FLAG_SUPPORTS_CREATE`. It lacks `FLAG_SUPPORTS_IS_CHILD`, which
+  the system picker requires to offer a root for `ACTION_OPEN_DOCUMENT_TREE`.
+- In the **folder picker** (`ACTION_OPEN_DOCUMENT_TREE`), the roots offered were the device and the
+  Google Drive accounts. **Proton Drive was absent.**
+- In the **save picker** (`ACTION_CREATE_DOCUMENT`), Proton Drive **is offered**, so Tempo's manual
+  export can write a backup straight to it.
+
+This matches the public user reports ([Proton feedback thread](https://protonmail.uservoice.com/forums/932839-proton-drive/suggestions/46393474-proton-drive-integration-with-android-default-stor)).
+The same thread quotes Proton Support saying the integration works only while the Proton Drive app
+can run in the background, and a user reports that App Lock blocks it. Both were not re-checked and
+matter only once a folder destination is possible.
 
 ## SAF as a general backup destination
 
@@ -84,14 +91,10 @@ confirmed per provider. It isn't established here.
 
 ## Still open
 
-Required by #308's acceptance criteria, and needing a device and the relevant accounts:
+Moved to #560, which is what a generic SAF destination needs before it's scoped:
 
-1. **Proton Drive on a device:** install Proton Drive, sign in, and check whether it appears in
-   `ACTION_OPEN_DOCUMENT_TREE`. If it does, write a file from a background worker with the screen
-   locked and confirm it reaches Proton Drive on another device.
-2. **The same unattended-write test** for the other providers worth covering (Nextcloud, Dropbox,
-   OneDrive, local storage).
-3. **Permission revocation and folder deletion:** confirm the worker can tell these apart from
+1. **Unattended writes** into a SAF tree, with the screen locked, for the providers worth covering
+   (local storage, Nextcloud, Dropbox, OneDrive), confirming the file reaches the cloud.
+2. **Permission revocation and folder deletion:** confirm the worker can tell these apart from
    transient failures.
-
-A generic SAF destination should be scoped only after (1)–(3) are measured.
+3. **Proton Drive's folder-picker support**, re-checked, since it is what rules Proton out today.
