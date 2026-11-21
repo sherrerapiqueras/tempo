@@ -360,11 +360,15 @@ wide, heavy for headlines) and the Tempo palette from `Color.kt`.
 
 | Form factor | Canvas | Frame |
 |---|---|---|
-| Phone | 1080×1920 (9:16) | phone, chips over its lower half |
-| Medium tablet | 1440×2560 (9:16) | tablet, portrait |
+| Phone | 1080×1920 (9:16) | phone, whole screen, chips in a row above it |
+| Medium tablet | 1440×2560 (9:16) | tablet, portrait, same as phone |
 | Expanded tablet | 2560×1440 (16:9) | tablet, text column on the left |
 | Desktop | 2560×1440 (16:9) | monitor on a stand |
 | XR | 2560×1440 (16:9) | the 2558×1439 crop, bezel-less with a glow, like a panel in space |
+
+No chip sits over a screen. In portrait the chips go in a row under the text and
+the device is scaled to fit whole below them, because the Focus session sheet
+lives at the bottom of the screen with its buttons on the last rows.
 
 The five images tell the raw set's story and add a closer:
 
