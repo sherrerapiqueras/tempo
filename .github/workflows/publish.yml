@@ -32,9 +32,15 @@ jobs:
     steps:
       - name: Resolve tag
         id: version
+        env:
+          # Through the environment, not interpolated into the script, so a tag name can't inject shell.
+          RAW_TAG: ${{ github.event.release.tag_name || inputs.tag }}
         run: |
-          RAW="${{ github.event.release.tag_name || inputs.tag }}"
-          VERSION="${RAW#v}"
+          VERSION="${RAW_TAG#v}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Tag '$RAW_TAG' is not a release version (X.Y.Z or vX.Y.Z)."
+            exit 1
+          fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
 
@@ -96,6 +102,15 @@ jobs:
           path: app/build/outputs/apk/release/tempo-${{ steps.version.outputs.version }}.apk
           retention-days: 90
 
+      # The APK attached below is minified too; crashes reported from it need this file to read.
+      # (The AAB carries its own copy for Play Console.)
+      - name: Upload R8 mapping
+        uses: actions/upload-artifact@v7
+        with:
+          name: tempo-${{ steps.version.outputs.version }}-mapping
+          path: app/build/outputs/mapping/release/mapping.txt
+          retention-days: 90
+
       - name: Attach APK to GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -115,7 +130,8 @@ jobs:
           fi
 
       - name: Publish to Google Play Closed Testing
-        uses: r0adkll/upload-google-play@v1
+        # Pinned to a commit (v1.1.5): this third-party step is handed the Play service account key.
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
           packageName: com.mandrecode.tempo
