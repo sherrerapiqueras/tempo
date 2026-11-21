@@ -226,6 +226,9 @@ avdmanager create avd -n XR_Headset -d xr_headset_device \
 
 Launch every AVD with `-gpu host` (`emulator -avd <name> -gpu host`, or the
 same flag through `android emulator start` if your version passes it on).
+`android emulator start` 1.1 takes no GPU flag, so set it in each AVD instead:
+`hw.gpu.mode=host` in `~/.android/avd/<name>.avd/config.ini` (new AVDs start
+on `auto`).
 Left to choose for itself, the emulator falls back to software rendering
 (SwiftShader) for these large displays; on a loaded machine the 2560×1600
 tablets then took 15–25 s to draw a frame, the keyboard hit ANRs, and the
