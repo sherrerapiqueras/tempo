@@ -87,7 +87,7 @@ class FocusSessionEndReceiver : BroadcastReceiver() {
                     if (wasBreak) {
                         context.getString(R.string.focus_break_finished_title)
                     } else {
-                        context.getString(R.string.focus_session_finished_title, minutes)
+                        context.resources.getQuantityString(R.plurals.focus_session_finished_title, minutes, minutes)
                     },
                 ).setContentText(title)
                 .setAutoCancel(true)

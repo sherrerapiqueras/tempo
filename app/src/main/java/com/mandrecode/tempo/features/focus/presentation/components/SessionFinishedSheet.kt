@@ -9,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -139,7 +140,12 @@ private fun ColumnScope.FinishedChoices(
                 SessionAction(
                     // The configured length, not the elapsed time: this offers the next session,
                     // and stopping early must not shrink what "another" means.
-                    label = stringResource(R.string.focus_session_another, nextSessionMinutes),
+                    label =
+                        pluralStringResource(
+                            R.plurals.focus_session_another,
+                            nextSessionMinutes,
+                            nextSessionMinutes,
+                        ),
                     icon = painterResource(R.drawable.ic_play_arrow),
                     emphasis = ButtonEmphasis.QUIET,
                     onClick = { onEvent(FocusContract.UiEvent.StartAnotherSession) },

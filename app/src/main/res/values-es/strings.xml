@@ -307,6 +307,7 @@
     <plurals name="section_overdue_count">
         <item quantity="one">%1$d vencida</item>
         <item quantity="other">%1$d vencidas</item>
+        <item quantity="many">%1$d vencidas</item>
     </plurals>
     <string name="msg_category_delete_failed">Error al eliminar categoría: %1$s</string>
     <string name="msg_cannot_delete_last_category">No se puede eliminar la última categoría</string>
@@ -399,22 +400,27 @@
     <plurals name="each_n_hours">
         <item quantity="one">Cada hora</item>
         <item quantity="other">Cada %1$d horas</item>
+        <item quantity="many">Cada %1$d horas</item>
     </plurals>
     <plurals name="each_n_days">
         <item quantity="one">Cada día</item>
         <item quantity="other">Cada %1$d días</item>
+        <item quantity="many">Cada %1$d días</item>
     </plurals>
     <plurals name="each_n_weeks">
         <item quantity="one">Cada semana</item>
         <item quantity="other">Cada %1$d semanas</item>
+        <item quantity="many">Cada %1$d semanas</item>
     </plurals>
     <plurals name="each_n_months">
         <item quantity="one">Cada mes</item>
         <item quantity="other">Cada %1$d meses</item>
+        <item quantity="many">Cada %1$d meses</item>
     </plurals>
     <plurals name="each_n_years">
         <item quantity="one">Cada año</item>
         <item quantity="other">Cada %1$d años</item>
+        <item quantity="many">Cada %1$d años</item>
     </plurals>
 
     <!-- Complex periodicity -->
@@ -489,6 +495,7 @@
     <plurals name="settings_retention_days">
         <item quantity="one">%d día</item>
         <item quantity="other">%d días</item>
+        <item quantity="many">%d días</item>
     </plurals>
     <string name="settings_language">Idioma</string>
     <string name="settings_language_subtitle">Idioma de la aplicación</string>
@@ -701,15 +708,18 @@
     <plurals name="focus_streak_days">
         <item quantity="one">%1$d día de enfoque</item>
         <item quantity="other">%1$d días de enfoque</item>
+        <item quantity="many">%1$d días de enfoque</item>
     </plurals>
     <plurals name="focus_undated_tasks">
         <item quantity="one">Planifica %1$d tarea</item>
         <item quantity="other">Planifica %1$d tareas</item>
+        <item quantity="many">Planifica %1$d tareas</item>
     </plurals>
     <string name="plan_tasks_title">Planifica tus tareas</string>
     <plurals name="plan_tasks_subtitle">
         <item quantity="one">%1$d sigue sin día</item>
         <item quantity="other">%1$d siguen sin día</item>
+        <item quantity="many">%1$d siguen sin día</item>
     </plurals>
     <string name="plan_tasks_subtitle_all_done">Todas tienen ya su día</string>
     <string name="plan_tasks_section_planned">Planificadas</string>
@@ -720,10 +730,15 @@
     <plurals name="plan_tasks_undo_message">
         <item quantity="one">%1$d tarea planificada</item>
         <item quantity="other">%1$d tareas planificadas</item>
+        <item quantity="many">%1$d tareas planificadas</item>
     </plurals>
     <string name="task_category_badge_description">Categoría: %1$s</string>
     <string name="focus_session_paused">En pausa</string>
-    <string name="focus_session_finished_title">%1$d minutos completados</string>
+    <plurals name="focus_session_finished_title">
+        <item quantity="one">%1$d minuto completado</item>
+        <item quantity="other">%1$d minutos completados</item>
+        <item quantity="many">%1$d minutos completados</item>
+    </plurals>
     <string name="focus_break_finished_title">Fin del descanso, ¡a seguir!</string>
     <string name="focus_session_start">Empezar %1$s</string>
     <string name="focus_session_length_decrease">Sesión más corta</string>
@@ -731,7 +746,11 @@
     <string name="focus_session_pause">Pausar</string>
     <string name="focus_session_resume">Reanudar</string>
     <string name="focus_session_stop">Parar</string>
-    <string name="focus_session_another">Otros %1$d minutos</string>
+    <plurals name="focus_session_another">
+        <item quantity="one">Otro %1$d minuto</item>
+        <item quantity="other">Otros %1$d minutos</item>
+        <item quantity="many">Otros %1$d minutos</item>
+    </plurals>
     <string name="focus_session_take_break">Descanso de %1$d min</string>
     <string name="focus_session_focusing">En curso</string>
     <string name="focus_session_remaining">Quedan %1$s</string>
@@ -758,6 +777,7 @@
     <plurals name="focus_session_rounds">
         <item quantity="one">%1$d ronda</item>
         <item quantity="other">%1$d rondas</item>
+        <item quantity="many">%1$d rondas</item>
     </plurals>
     <string name="session_editor_title_placeholder">Nombre de la sesión</string>
     <string name="session_editor_focus_time">Concentración</string>
@@ -773,6 +793,7 @@
     <plurals name="focus_sessions_done">
         <item quantity="one">%1$d sesión hecha</item>
         <item quantity="other">%1$d sesiones hechas</item>
+        <item quantity="many">%1$d sesiones hechas</item>
     </plurals>
     <string name="focus_today_minutes">%1$d min hoy</string>
 
