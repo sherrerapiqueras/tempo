@@ -13,8 +13,4 @@
 ## 3. Integration
 
 - [x] 3.1 Run lint, detekt, unit tests, kover, the instrumented suite and `openspec validate --strict`. Verified green.
-- [ ] 3.2 Restore end to end on a wiped device with real Drive. This needs the user's OAuth client; it stays open until done.
-
-## Workflow follow-up
-
-- Archive once 3.2 is done.
+- [x] 3.2 Restore end to end on a wiped device with real Drive. Verified on a Pixel 7 (Android 16), debug build, 2026-11-21: a backup taken with two tasks (one with a subtask), a second list and a habit; the app uninstalled and reinstalled on a user where it had never run; onboarding offered the backup, and the restore brought back every item. A wrong passphrase showed "That passphrase doesn't open this backup"; restoring again from Settings onto a device with a new local task asked for the mode, and merge kept the local task with no duplicates. Backup resumed and uploaded afterwards.
