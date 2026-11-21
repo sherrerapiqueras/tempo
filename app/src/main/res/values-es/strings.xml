@@ -590,6 +590,8 @@
     <string name="send_feedback_description">Comparte tus opiniones con nosotros</string>
     <string name="source_code">Código fuente</string>
     <string name="source_code_description">Explora el repositorio de Tempo en GitHub</string>
+    <string name="privacy_policy">Política de privacidad</string>
+    <string name="privacy_policy_description">Cómo trata Tempo tus datos</string>
     <string name="version_format">Versión %1$s</string>
     <string name="no_browser_app">No se encontró ningún navegador</string>
 

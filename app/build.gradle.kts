@@ -202,6 +202,11 @@ configure<com.android.build.api.dsl.ApplicationExtension> {
         )
         buildConfigField("String", "FEEDBACK_VERSION_ENTRY", "\"entry.863266237\"")
         buildConfigField("String", "SOURCE_CODE_URL", "\"https://github.com/sherrerapiqueras/tempo\"")
+        buildConfigField(
+            "String",
+            "PRIVACY_POLICY_URL",
+            "\"https://github.com/sherrerapiqueras/tempo/blob/main/docs/PRIVACY_POLICY.md\"",
+        )
         buildConfigField("String", "COMMIT_SHA", "\"$appCommitSha\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

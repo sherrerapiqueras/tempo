@@ -579,6 +579,8 @@
     <string name="send_feedback_description">Share your thoughts with us</string>
     <string name="source_code">Source Code</string>
     <string name="source_code_description">Browse the Tempo repository on GitHub</string>
+    <string name="privacy_policy">Privacy Policy</string>
+    <string name="privacy_policy_description">How Tempo handles your data</string>
     <string name="version_format">Version %1$s</string>
     <string name="no_browser_app">No browser app found</string>
 
