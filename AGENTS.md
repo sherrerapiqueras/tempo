@@ -11,6 +11,7 @@ Before starting substantive implementation, run `openspec list --json` to unders
 - If the user is exploring an idea, comparing approaches, clarifying requirements, or the request is ambiguous, use the `openspec-explore` skill.
 - If the request is a new substantive feature, behavior change, non-trivial bug fix, architecture change, data/model change, or cross-layer refactor and no matching active change exists, use the `openspec-propose` skill before implementation.
 - If a matching active change exists, or the user asks to implement/continue work that maps to an existing change, use the `openspec-apply-change` skill.
+- If an active change's plan needs revising (a new decision, a review finding, a scope change) before or during implementation, use the `openspec-update-change` skill to update its artifacts together rather than editing one by hand.
 - If implementation is complete and the change is ready to finalize, suggest or use the `openspec-archive-change` skill as appropriate.
 
 After completing a change's implementation and required verification, update its
