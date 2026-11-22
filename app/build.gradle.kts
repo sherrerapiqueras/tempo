@@ -186,7 +186,13 @@ val appCommitSha =
 
 configure<com.android.build.api.dsl.ApplicationExtension> {
     namespace = "com.mandrecode.tempo"
-    compileSdk = 37
+    // The latest stable SDK, 37.2. Compose 1.13 (BOM 2026.11.01) needs at least the 37.1 minor SDK.
+    compileSdk {
+        version =
+            release(37) {
+                minorApiLevel = 2
+            }
+    }
 
     defaultConfig {
         applicationId = "com.mandrecode.tempo"
