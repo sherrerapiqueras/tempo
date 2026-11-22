@@ -5,7 +5,6 @@ import android.content.Intent
 import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.glance.ColorFilter
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
@@ -37,9 +36,6 @@ import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.semantics.contentDescription
 import androidx.glance.semantics.semantics
-import androidx.glance.text.FontWeight
-import androidx.glance.text.Text
-import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.mandrecode.tempo.MainActivity
 import com.mandrecode.tempo.R
@@ -64,7 +60,7 @@ import com.mandrecode.tempo.infrastructure.reminders.receivers.TaskReminderRecei
 internal fun TodayWidgetContent(day: WidgetDay) {
     val size = LocalSize.current
     when {
-        size.width < TinyThreshold -> QuickAddTile(day)
+        size.width < TinyThreshold -> QuickAddTile()
         size.height < TinyThreshold -> TodayStrip(day)
         else ->
             Column(modifier = widgetContainer().padding(WidgetPadding)) {
@@ -110,20 +106,10 @@ private fun TaskCard(
                     .padding(vertical = 10.dp)
                     .clickable(openTaskAction(LocalContext.current, row.taskId)),
         ) {
-            Text(
+            WidgetText(
                 text = row.title,
-                style =
-                    TextStyle(
-                        color =
-                            if (row.isCompleted) {
-                                GlanceTheme.colors.onSurfaceVariant
-                            } else {
-                                GlanceTheme.colors.onSurface
-                            },
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Medium,
-                    ),
-                maxLines = 2,
+                style = WidgetTextStyle.Task,
+                color = if (row.isCompleted) GlanceTheme.colors.onSurfaceVariant else GlanceTheme.colors.onSurface,
             )
             Metadata(row)
         }
@@ -163,25 +149,38 @@ private fun TaskCheck(row: WidgetTaskRow) {
     }
 }
 
-/** "09:00 · Work", or "Overdue · Work" for work carried over; nothing when there is neither. */
+/**
+ * The task's priority flag, then "09:00 · Work" — or "Overdue · Work" for work carried over — the
+ * order the app's own task cards read their metadata in. Nothing when there is none of it.
+ */
 @Composable
 private fun Metadata(row: WidgetTaskRow) {
     val context = LocalContext.current
     val lead: Pair<String, ColorProvider>? =
         when {
             row.isOverdue -> context.getString(R.string.active_overdue) to GlanceTheme.colors.error
-            row.dueTime != null ->
-                widgetTimeLabel(row.dueTime, context) to GlanceTheme.colors.onSurfaceVariant
+            row.dueTime != null -> widgetTimeLabel(row.dueTime, context) to GlanceTheme.colors.onSurfaceVariant
             else -> null
         }
-    if (lead == null && row.categoryName == null) return
-    val style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 12.sp)
-    Row {
-        lead?.let { (text, color) ->
-            Text(text = text, style = style.copy(color = color), maxLines = 1)
+    val details = listOfNotNull(lead?.first, row.categoryName)
+    if (row.priority == null && details.isEmpty()) return
+    Row(modifier = GlanceModifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        row.priority?.let { priority ->
+            Image(
+                provider = ImageProvider(priority.flagIcon()),
+                contentDescription = context.getString(priority.label()),
+                modifier = GlanceModifier.size(14.dp),
+            )
+            if (details.isNotEmpty()) Spacer(GlanceModifier.width(4.dp))
         }
-        if (lead != null && row.categoryName != null) Text(text = " · ", style = style, maxLines = 1)
-        row.categoryName?.let { Text(text = it, style = style, maxLines = 1) }
+        lead?.let { (text, color) -> WidgetText(text = text, style = WidgetTextStyle.Meta, color = color) }
+        row.categoryName?.let { category ->
+            WidgetText(
+                text = if (lead != null) " · $category" else category,
+                style = WidgetTextStyle.Meta,
+                color = GlanceTheme.colors.onSurfaceVariant,
+            )
+        }
     }
 }
 
@@ -197,9 +196,10 @@ private fun EmptyDay() {
                 ).padding(16.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
+        WidgetText(
             text = LocalContext.current.getString(R.string.widget_today_empty),
-            style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 14.sp),
+            style = WidgetTextStyle.Body,
+            color = GlanceTheme.colors.onSurfaceVariant,
         )
     }
 }

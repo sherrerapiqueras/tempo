@@ -16,6 +16,7 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.provideContent
 import com.mandrecode.tempo.R
+import com.mandrecode.tempo.core.domain.model.Priority
 import com.mandrecode.tempo.util.supportsDynamicColor
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CancellationException
@@ -118,6 +119,7 @@ class TodayWidget : GlanceAppWidget() {
                         isOverdue = false,
                         categoryName = category,
                         isCompleted = false,
+                        priority = Priority.HIGH,
                     ),
                     WidgetTaskRow(
                         taskId = 2,

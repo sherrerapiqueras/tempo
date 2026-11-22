@@ -3,13 +3,13 @@ package com.mandrecode.tempo.features.widget.presentation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.glance.ColorFilter
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
+import androidx.glance.LocalSize
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.cornerRadius
@@ -21,40 +21,26 @@ import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
+import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.semantics.contentDescription
 import androidx.glance.semantics.semantics
-import androidx.glance.text.FontWeight
-import androidx.glance.text.Text
-import androidx.glance.text.TextStyle
 import com.mandrecode.tempo.MainActivity
 import com.mandrecode.tempo.R
 
 // The Today widget's header pieces and its add action (see TodayWidgetContent).
 
-/** 1×1, including widgets placed before the redesign: the quick-add the widget used to be. */
+/**
+ * 1×1, including widgets placed before the redesign: only the add button, as large as the cell
+ * allows. Nothing else fits legibly at this size.
+ */
 @Composable
-internal fun QuickAddTile(day: WidgetDay) {
-    Box(
-        modifier = widgetContainer().clickable(openNewTaskAction()),
-        contentAlignment = Alignment.Center,
-    ) {
-        AddButton(size = 48.dp, clickable = false)
-        if (day.remainingCount > 0) {
-            Box(modifier = GlanceModifier.fillMaxSize().padding(6.dp), contentAlignment = Alignment.TopEnd) {
-                Text(
-                    text = day.remainingCount.toString(),
-                    style =
-                        TextStyle(
-                            color = GlanceTheme.colors.onSurfaceVariant,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                        ),
-                )
-            }
-        }
+internal fun QuickAddTile() {
+    val size = LocalSize.current
+    Box(modifier = GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        AddButton(size = minOf(size.width, size.height) - TileMargin, iconSize = 32.dp)
     }
 }
 
@@ -72,30 +58,17 @@ internal fun TodayStrip(day: WidgetDay) {
     ) {
         Column(modifier = GlanceModifier.defaultWeight().clickable(actionStartActivity<MainActivity>())) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = context.getString(R.string.widget_today_label),
-                    style =
-                        TextStyle(
-                            color = GlanceTheme.colors.onSurface,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium,
-                        ),
-                    maxLines = 1,
-                )
+                WidgetText(text = context.getString(R.string.widget_today_label), style = WidgetTextStyle.Title)
                 if (day.scheduledCount > 0) {
                     Spacer(GlanceModifier.width(8.dp))
-                    Text(
+                    WidgetText(
                         text = progress(day),
-                        style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 13.sp),
-                        maxLines = 1,
+                        style = WidgetTextStyle.Body,
+                        color = GlanceTheme.colors.onSurfaceVariant,
                     )
                 }
             }
-            Text(
-                text = next,
-                style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 14.sp),
-                maxLines = 1,
-            )
+            WidgetText(text = next, style = WidgetTextStyle.Body, color = GlanceTheme.colors.onSurfaceVariant)
         }
         AddButton(size = 40.dp)
     }
@@ -109,21 +82,9 @@ internal fun FullHeader(day: WidgetDay) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = GlanceModifier.defaultWeight()) {
-            Text(
-                text = context.getString(R.string.widget_today_label),
-                style =
-                    TextStyle(
-                        color = GlanceTheme.colors.onSurface,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Medium,
-                    ),
-                maxLines = 1,
-            )
-            Text(
-                text = subtitle(day),
-                style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 13.sp),
-                maxLines = 1,
-            )
+            WidgetText(text = context.getString(R.string.widget_today_label), style = WidgetTextStyle.Header)
+            Spacer(GlanceModifier.height(2.dp))
+            WidgetText(text = subtitle(day), style = WidgetTextStyle.Body, color = GlanceTheme.colors.onSurfaceVariant)
         }
         AddButton(size = 48.dp)
     }
@@ -136,21 +97,12 @@ internal fun CompactHeader(day: WidgetDay) {
         modifier = GlanceModifier.fillMaxWidth().padding(start = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = context.getString(R.string.widget_today_label),
-            style =
-                TextStyle(
-                    color = GlanceTheme.colors.onSurface,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                ),
-            maxLines = 1,
-        )
+        WidgetText(text = context.getString(R.string.widget_today_label), style = WidgetTextStyle.Title)
         Spacer(GlanceModifier.width(8.dp))
-        Text(
+        WidgetText(
             text = progress(day),
-            style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 13.sp),
-            maxLines = 1,
+            style = WidgetTextStyle.Body,
+            color = GlanceTheme.colors.onSurfaceVariant,
             modifier = GlanceModifier.defaultWeight(),
         )
         AddButton(size = 36.dp)
@@ -175,7 +127,7 @@ internal fun progress(day: WidgetDay): String =
 @Composable
 internal fun AddButton(
     size: Dp,
-    clickable: Boolean = true,
+    iconSize: Dp = 24.dp,
 ) {
     val description = LocalContext.current.getString(R.string.add_task)
     val base =
@@ -184,15 +136,15 @@ internal fun AddButton(
             .background(GlanceTheme.colors.primary)
             .cornerRadius(size / 2)
             .semantics { contentDescription = description }
-    Box(
-        modifier = if (clickable) base.clickable(openNewTaskAction()) else base,
-        contentAlignment = Alignment.Center,
-    ) {
+    Box(modifier = base.clickable(openNewTaskAction()), contentAlignment = Alignment.Center) {
         Image(
             provider = ImageProvider(R.drawable.ic_add),
             contentDescription = null,
             colorFilter = ColorFilter.tint(GlanceTheme.colors.onPrimary),
-            modifier = GlanceModifier.size(24.dp),
+            modifier = GlanceModifier.size(iconSize),
         )
     }
 }
+
+/** Room around the 1×1 add button, so it reads as a button rather than a filled cell. */
+private val TileMargin = 12.dp

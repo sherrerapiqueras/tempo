@@ -1,6 +1,7 @@
 package com.mandrecode.tempo.features.widget.presentation
 
 import com.google.common.truth.Truth.assertThat
+import com.mandrecode.tempo.core.domain.model.Priority
 import com.mandrecode.tempo.features.focus.domain.model.FocusAgenda
 import com.mandrecode.tempo.features.focus.domain.model.FocusAgendaItem
 import com.mandrecode.tempo.features.tasks.domain.model.Task
@@ -75,6 +76,27 @@ class WidgetDayTest {
                 .single()
                 .isOverdue,
         ).isFalse()
+    }
+
+    @Test
+    fun `a row carries its task's priority`() {
+        val task =
+            Task(
+                id = 7,
+                title = "Urgent",
+                description = "",
+                priority = Priority.HIGH,
+                reminderDate = today.atTime(9, 0),
+            )
+        val agenda = FocusAgenda(today = listOf(FocusAgendaItem.TaskEntry(task = task)))
+
+        assertThat(
+            WidgetDay
+                .from(today, agenda)
+                .rows
+                .single()
+                .priority,
+        ).isEqualTo(Priority.HIGH)
     }
 
     @Test

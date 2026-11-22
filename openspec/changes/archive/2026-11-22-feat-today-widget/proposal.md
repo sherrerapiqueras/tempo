@@ -19,7 +19,7 @@ The only home-screen widget is a 1×1 "add task" icon. It cannot be resized, it 
 - Habits and habit chains (Focus excludes them too, #404).
 - Starting a focus session from the widget.
 - Spaces (#331): the widget shows every category, as Focus does.
-- Tempo's bundled Google Sans Flex: RemoteViews can only use system font families.
+- Tempo's bundled Google Sans Flex: a widget can only use system font families, so it uses the system's Google Sans where the device has it (Pixel) and the default elsewhere.
 - A configuration activity: there is nothing to configure.
 
 ## Capabilities

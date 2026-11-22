@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Today widget shows the Focus day
-The home-screen widget SHALL list the tasks of the current local day as Focus defines them (due today, then overdue and still open), uncompleted before completed, across all categories. Each row SHALL show the task title, and a supporting line with its time (or an "Overdue" label for an item carried over from a previous day) and its category.
+The home-screen widget SHALL list the tasks of the current local day as Focus defines them (due today, then overdue and still open), uncompleted before completed, across all categories. Each row SHALL show the task title, and a supporting line with its priority flag, its time (or an "Overdue" label for an item carried over from a previous day) and its category.
 
 #### Scenario: Day with tasks
 - **WHEN** two tasks are due today at 09:00 and 15:00 and one task from yesterday is still open
@@ -23,7 +23,7 @@ Tapping a row's check SHALL toggle that task's completion with the same effects 
 - **THEN** the app opens with that task's editor
 
 ### Requirement: Widget adapts to its size
-The widget SHALL be resizable. Below 110 dp of width it SHALL show a quick-add tile with the count of open tasks; below 110 dp of height (and wider) it SHALL show one line with the day's progress and the next open task beside the add action; below 180 dp of height it SHALL show a compact header (day, progress, add) above the list; otherwise it SHALL show a header with the day, the date, the completed-of-scheduled count and the add action above the list.
+The widget SHALL be resizable. Below 110 dp of width it SHALL show only the add button; below 110 dp of height (and wider) it SHALL show one line with the day's progress and the next open task beside the add action; below 180 dp of height it SHALL show a compact header (day, progress, add) above the list; otherwise it SHALL show a header with the day, the date, the completed-of-scheduled count and the add action above the list.
 
 #### Scenario: One row high
 - **WHEN** the widget is 4×1
@@ -31,7 +31,7 @@ The widget SHALL be resizable. Below 110 dp of width it SHALL show a quick-add t
 
 #### Scenario: Previously placed 1×1 widget
 - **WHEN** a widget placed before this change is 1×1
-- **THEN** it shows the quick-add tile and opens the new-task sheet when tapped
+- **THEN** it shows only the add button, and opens the new-task sheet when tapped
 
 ### Requirement: Widget stays current
 The widget SHALL reflect task changes made in the app, from notification actions or from the widget itself, and SHALL show the new day after local midnight, without the user opening the app. Its text SHALL be in the language chosen for the app, even when the system language differs.
@@ -49,7 +49,7 @@ The widget SHALL reflect task changes made in the app, from notification actions
 - **THEN** shortly after it the widget shows the new day's tasks, also when the app's process is not running
 
 ### Requirement: Widget follows Tempo's visual language
-The widget SHALL use Tempo's two-block layout (tinted header over a surface block), present the task rows as one connected group of cards, use Tempo's task check, and colour the add action, its one main action, with `primary` (the tinted strip derives from `secondaryContainer`, so the colour the app uses for "add" would not stand out on it). It SHALL follow the system's dynamic colours where available and Tempo's palette otherwise, in light and dark.
+The widget SHALL set its text in Google Sans where the system provides it (the family of the app's Google Sans Flex, which a widget cannot load) and the system default elsewhere. It SHALL use Tempo's two-block layout (tinted header over a surface block), present the task rows as one connected group of cards, use Tempo's task check, and colour the add action, its one main action, with `primary` (the tinted strip derives from `secondaryContainer`, so the colour the app uses for "add" would not stand out on it). It SHALL follow the system's dynamic colours where available and Tempo's palette otherwise, in light and dark.
 
 #### Scenario: Dynamic colour unavailable
 - **WHEN** the device does not support dynamic colour

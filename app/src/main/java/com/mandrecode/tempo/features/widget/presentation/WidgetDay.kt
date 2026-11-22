@@ -1,5 +1,6 @@
 package com.mandrecode.tempo.features.widget.presentation
 
+import com.mandrecode.tempo.core.domain.model.Priority
 import com.mandrecode.tempo.features.focus.domain.model.FocusAgenda
 import com.mandrecode.tempo.features.focus.domain.model.FocusAgendaItem
 import kotlinx.collections.immutable.ImmutableList
@@ -59,6 +60,7 @@ data class WidgetDay(
                         isOverdue = isOverdue && !isCompleted,
                         categoryName = categoryName,
                         isCompleted = isCompleted,
+                        priority = priority,
                     )
             }
     }
@@ -71,4 +73,5 @@ data class WidgetTaskRow(
     val isOverdue: Boolean,
     val categoryName: String?,
     val isCompleted: Boolean,
+    val priority: Priority? = null,
 )
