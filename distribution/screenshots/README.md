@@ -11,7 +11,7 @@ the app's UI changes enough to make these stale.
 distribution/screenshots/
   phone/     phone_{en,es}_{light,dark}_{1_focus_today,2_focus_session,3_routines_today,4_tasks_personal}.png
   medium/    medium_...
-  foldable/  foldable_...
+  foldable/  foldable_... (unfolded) and foldable_folded_... (outer screen)
   expanded/  expanded_...
   desktop/   desktop_...
   xr/        xr_...
@@ -20,7 +20,8 @@ distribution/screenshots/
                {en,es}_{1_focus_today,2_focus_session,3_routines_today,4_tasks_personal,5_private}.png
 ```
 
-4 views × light/dark × 2 locales × 6 form factors = 96 raw captures, and
+4 views × light/dark × 2 locales × 6 form factors = 96 raw captures, plus 16
+from the foldable's outer screen, and
 5 designed listing images × 2 locales × 6 form factors = 60 under `play-store/`.
 The raw captures are the input; the `play-store/` images are what gets uploaded
 (see [Designed listing images](#designed-listing-images)).
@@ -288,16 +289,22 @@ for LOCALE in en es; do
 done
 adb -s emulator-5554 emu kill
 
-# --- Foldable (unfolded) ---
+# --- Foldable: unfolded, then folded ---
 # Boots unfolded; confirm with `cmd device_state state` (OPENED) if a run
-# comes out phone-shaped. Only the inner screen is captured: folded, the
-# outer screen is a phone and the phone set already covers it.
+# comes out phone-shaped. Play's foldable section also wants a folded shot, so
+# the set is captured again on the outer screen (1080×2364) after `emu fold`
+# (CLOSED).
 android emulator start Pixel_10_Pro_Fold
 adb -s emulator-5554 install -r "$APK"
 adb -s emulator-5554 shell cmd overlay enable com.android.internal.systemui.navbar.gestural
 adb -s emulator-5554 shell cmd device_state state
 for LOCALE in en es; do
   bash scripts/generate-screenshot-set.sh emulator-5554 distribution/screenshots/foldable foldable "$LOCALE"
+done
+adb -s emulator-5554 emu fold
+adb -s emulator-5554 shell cmd device_state state
+for LOCALE in en es; do
+  bash scripts/generate-screenshot-set.sh emulator-5554 distribution/screenshots/foldable foldable_folded "$LOCALE"
 done
 adb -s emulator-5554 emu kill
 
@@ -382,7 +389,7 @@ wide, heavy for headlines) and the Tempo palette from `Color.kt`.
 |---|---|---|
 | Phone | 1080×1920 (9:16) | phone, whole screen, chips in a row above it |
 | Medium tablet | 1440×2560 (9:16) | tablet, portrait, same as phone |
-| Foldable | 1440×2560 (9:16) | unfolded foldable with a faint centre crease, wider than the tablet since its screen is nearly square |
+| Foldable | per slide: 1:1 (2160×2160), 10:16 (1600×2560), 4:3 (2560×1920) | unfolded foldable with a faint centre crease; the session slide is the folded outer screen in a phone frame |
 | Expanded tablet | 2560×1440 (16:9) | tablet, text column on the left |
 | Desktop | 2560×1440 (16:9) | monitor on a stand |
 | XR | 2560×1440 (16:9) | the 2558×1439 crop, bezel-less with a glow, like a panel in space |
@@ -424,9 +431,12 @@ rules keep it honest and in the app's voice:
 
 - **Phone / tablet**: no fixed aspect-ratio requirement observed to fail
   here; captured at each device's native resolution.
-- **Foldable**: Play Console has no foldable slot of its own; the foldable
-  images are meant for the tablet sections (a 7.6" inner screen sits with the
-  7-inch tablets).
+- **Foldable listing**: 3–8 PNG/JPEG, ≤8MB each, each side 960–3840px. At
+  least one unfolded image at 1:1, one unfolded at 4:3 and one folded portrait
+  at 10:16; any others at 4:3, 3:4, 16:10, 10:16, 1:1, 16:9 or 9:16. So the
+  foldable slides don't share one canvas: Focus and Tasks are 1:1, Routines and
+  Privacy 4:3 (all unfolded), and the session slide is 10:16 on the outer
+  screen, where the session sheet reads as it does on a phone.
 - **Desktop (Chromebook) listing**: 4–8 PNG/JPEG, ≤8MB each, 16:9 or 9:16,
   each side 1080–7680px. `Small_Desktop` (1366×768) fails on the
   768px height; `Large_Desktop` (1920×1080) is exact 16:9 and clears the
