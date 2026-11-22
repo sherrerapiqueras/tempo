@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Today widget: one card of the connected task group, tinted at runtime. Glance has no per-corner
+     radius, so the group's shape (round ends, tight 8dp joins, as CardGroupPosition draws it in the
+     app) comes from these backgrounds. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#FFFFFFFF" />
+    <corners
+        android:topLeftRadius="8dp"
+        android:topRightRadius="8dp"
+        android:bottomLeftRadius="8dp"
+        android:bottomRightRadius="8dp" />
+</shape>

@@ -8,6 +8,7 @@ import androidx.work.Configuration
 import com.mandrecode.tempo.core.data.local.TempoDatabase
 import com.mandrecode.tempo.core.data.local.security.DatabaseWarmupSignal
 import com.mandrecode.tempo.features.tasks.domain.usecase.PruneOrphanedTaskAttachmentsUseCase
+import com.mandrecode.tempo.features.widget.presentation.TodayWidgetUpdater
 import dagger.Lazy
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CancellationException
@@ -33,6 +34,9 @@ class TempoApp :
 
     @Inject
     lateinit var pruneOrphanedTaskAttachments: Lazy<PruneOrphanedTaskAttachmentsUseCase>
+
+    @Inject
+    lateinit var todayWidgetUpdater: Lazy<TodayWidgetUpdater>
 
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -80,6 +84,8 @@ class TempoApp :
             } catch (_: Exception) {
                 // Orphans left now are pruned on the next start.
             }
+            // Also after the warm-up: it reads the day from the database the moment it starts.
+            todayWidgetUpdater.get().start(applicationScope)
         }
     }
 

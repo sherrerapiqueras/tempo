@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Today widget: Tempo's done check, the circle become a rounded square with a light primary fill
+     and a primary check mark (TaskCard: 16dp radius on 48dp, 15% primary). Tinted primary at
+     runtime; the fill's own alpha carries the 15%. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillAlpha="0.18"
+        android:pathData="M8,1h8a7,7 0,0 1,7 7v8a7,7 0,0 1,-7 7h-8a7,7 0,0 1,-7 -7v-8a7,7 0,0 1,7 -7z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M9.55,15.6L6.2,12.25l1.25,-1.25 2.1,2.1 6.95,-6.95 1.25,1.25z" />
+</vector>

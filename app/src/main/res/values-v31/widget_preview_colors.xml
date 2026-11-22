@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Today widget's static picker preview (layout/widget_today_preview), in the system's dynamic
+     colours like the widget itself: tinted strip, surface cards, primary add button. -->
+<resources>
+    <color name="widget_preview_background">@android:color/system_accent2_50</color>
+    <color name="widget_preview_card">@android:color/system_neutral1_10</color>
+    <color name="widget_preview_text">@android:color/system_neutral1_900</color>
+    <color name="widget_preview_text_secondary">@android:color/system_neutral2_700</color>
+    <color name="widget_preview_add">@android:color/system_accent1_600</color>
+    <color name="widget_preview_on_add">@android:color/system_accent1_0</color>
+    <color name="widget_preview_check">@android:color/system_neutral2_500</color>
+</resources>

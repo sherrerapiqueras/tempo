@@ -34,7 +34,7 @@ private val LightColorScheme = lightColorScheme()
 
 private val DarkColorScheme = darkColorScheme()
 
-private val TempoLightColorScheme =
+internal val TempoLightColorScheme =
     lightColorScheme(
         primary = TempoLightPrimary,
         onPrimary = TempoLightOnPrimary,
@@ -74,7 +74,7 @@ private val TempoLightColorScheme =
         surfaceContainerHighest = TempoLightSurfaceContainerHighest,
     )
 
-private val TempoDarkColorScheme =
+internal val TempoDarkColorScheme =
     darkColorScheme(
         primary = TempoDarkPrimary,
         onPrimary = TempoDarkOnPrimary,

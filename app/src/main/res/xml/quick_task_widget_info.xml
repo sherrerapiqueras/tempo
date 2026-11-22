@@ -1,12 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- The Today widget (openspec: home-screen-widget). The file keeps its old name because the
+     receiver keeps its old component name (see QuickAddTaskWidgetReceiver).
+     - 3×2 by default, resizable both ways; down to 1×1 for the quick-add tile, which is also what
+       widgets placed before the redesign show until they are enlarged.
+     - updatePeriodMillis (30 min, the minimum) only backstops the date rolling over while the
+       app's process is dead; TodayWidgetUpdater redraws on every change while it is alive.
+     - Picker preview: generated from the real layout on Android 15+ (TodayWidgetUpdater), the
+       static previewLayout on 12-14, the previewImage icon before that. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-    android:minWidth="64dp"
-    android:minHeight="64dp"
-    android:targetCellWidth="1"
-    android:targetCellHeight="1"
-    android:updatePeriodMillis="0"
+    android:minWidth="180dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="40dp"
+    android:minResizeHeight="40dp"
+    android:maxResizeWidth="624dp"
+    android:maxResizeHeight="560dp"
+    android:targetCellWidth="3"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/glance_default_loading_layout"
-    android:description="@string/widget_quick_add_task_description"
+    android:description="@string/widget_today_description"
     android:previewImage="@drawable/ic_add_task_widget_preview"
-    android:resizeMode="none"
+    android:previewLayout="@layout/widget_today_preview"
+    android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen" />
