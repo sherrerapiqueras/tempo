@@ -165,16 +165,16 @@ def wave_path(width, amplitude, wavelength, phase=0.0):
     return "M" + " L".join(pts)
 
 
-def device_html(kind, img_uri, width, extra_style=""):
+def device_html(kind, img_uri, width, extra_style="", cls=""):
     """A device frame `width` CSS px wide around one raw capture."""
     if kind == "phone":
         bezel, radius = width * 0.028, width * 0.12
-        return (f'<div class="dev" style="width:{width}px;padding:{bezel}px;border-radius:{radius}px;'
+        return (f'<div class="dev {cls}" style="width:{width}px;padding:{bezel}px;border-radius:{radius}px;'
                 f'background:#121816;{extra_style}"><img src="{img_uri}" '
                 f'style="border-radius:{radius - bezel}px"></div>')
     if kind == "tablet":
         bezel, radius = width * 0.022, width * 0.05
-        return (f'<div class="dev" style="width:{width}px;padding:{bezel}px;border-radius:{radius}px;'
+        return (f'<div class="dev {cls}" style="width:{width}px;padding:{bezel}px;border-radius:{radius}px;'
                 f'background:#121816;{extra_style}"><img src="{img_uri}" '
                 f'style="border-radius:{radius - bezel}px"></div>')
     if kind == "monitor":
@@ -239,17 +239,16 @@ def build_page(ff, locale, idx, raw_paths):
             )
             chip_block = f'<div class="chipgrid" style="top:{top - 40 * u}px">{chips_html(copy["chips"])}</div>'
         else:
+            # The chips sit in a row under the text, as on the privacy slide, and
+            # never over the screen: the Focus session sheet lives at the bottom
+            # of the screen, where floating call-outs would cover it. The device
+            # goes below them and shrinks until the whole screen fits (see
+            # FIT_SCRIPT), since the sheet's buttons are at the very bottom.
             devices = device_html(kind, uris[0], dev_w,
-                                  f"position:absolute;left:{(W - dev_w) / 2}px;top:{top}px")
-            # Chips float over the lower part of the device, staggered so they read
-            # as call-outs. Low down because that is where every capture has the
-            # least to say — the top of each screen is the part worth seeing.
-            # A tablet's taller screen leaves more empty room at the bottom, so its
-            # chips can sit lower still.
-            low, high = (110, 250) if kind == "phone" else (60, 190)
-            c1 = f"position:absolute;left:{W * 0.05}px;bottom:{high * u}px;transform:rotate(-2deg)"
-            c2 = f"position:absolute;right:{W * 0.05}px;bottom:{low * u}px;transform:rotate(2deg)"
-            chip_block = chips_html(copy["chips"], "float", [c1, c2])
+                                  f"position:absolute;left:{(W - dev_w) / 2}px;top:{top}px;"
+                                  f"transform-origin:top center",
+                                  "fit")
+            chip_block = ""
         text_style = f"left:{70 * u}px;right:{70 * u}px;top:{110 * u}px;text-align:center;align-items:center"
     else:
         text_w = 1100 * u
@@ -283,7 +282,12 @@ def build_page(ff, locale, idx, raw_paths):
         text_style = (f"left:{130 * u}px;width:{text_w - 130 * u}px;top:0;bottom:0;"
                       f"justify-content:center;align-items:flex-start;text-align:left")
 
-    chips_inline = "" if portrait else f'<div class="chiplist">{chips_html(copy["chips"])}</div>'
+    if not portrait:
+        chips_inline = f'<div class="chiplist">{chips_html(copy["chips"])}</div>'
+    elif is_duo:
+        chips_inline = ""  # the duo's chip grid sits between the text and the pair
+    else:
+        chips_inline = f'<div class="chiprow">{chips_html(copy["chips"])}</div>'
     brand = ""
     if idx == 0:
         brand = (f'<div class="brand"><img src="{ICON.as_uri()}"><span>Tempo</span></div>')
@@ -332,6 +336,7 @@ p.body {{ font-size: {body_size}px; line-height: 1.32; color: {t['body']}; max-w
   display: inline-flex; align-items: center; justify-content: center; flex: none; }}
 .chip .dot svg {{ width: 62%; height: 62%; }}
 .chiplist {{ display: flex; flex-direction: column; align-items: flex-start; gap: {18 * u}px; margin-top: {22 * u}px; }}
+.chiprow {{ display: flex; flex-wrap: wrap; justify-content: center; gap: {18 * u}px; margin-top: {10 * u}px; }}
 .chipgrid {{ position: absolute; left: 0; right: 0; display: flex; flex-wrap: wrap; justify-content: center;
   gap: {18 * u}px; padding: 0 {60 * u}px; z-index: 6; }}
 </style></head><body>
@@ -347,7 +352,25 @@ p.body {{ font-size: {body_size}px; line-height: 1.32; color: {t['body']}; max-w
 </div>
 {devices}
 {chip_block}
+<script>{FIT_SCRIPT % {"gap": 48 * u, "margin": 36 * u}}</script>
 </body></html>"""
+
+
+# Portrait single-device slides: once the font has loaded and the text block has
+# its real height, drop the device just below it and scale it down until its
+# whole screen fits above the bottom margin. Runs inside headless Chrome; the
+# --virtual-time-budget in render() gives the promise time to settle.
+FIT_SCRIPT = """
+document.fonts.ready.then(function () {
+  var dev = document.querySelector('.dev.fit');
+  if (!dev) return;
+  var top = document.querySelector('.text').getBoundingClientRect().bottom + %(gap)f;
+  var avail = window.innerHeight - %(margin)f - top;
+  var scale = Math.min(1, avail / dev.offsetHeight);
+  dev.style.top = top + 'px';
+  dev.style.transform = 'scale(' + scale + ')';
+});
+"""
 
 
 def render(chrome, html_path, png_path, size):
