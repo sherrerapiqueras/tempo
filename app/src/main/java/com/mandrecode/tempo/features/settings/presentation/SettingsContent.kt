@@ -1,5 +1,6 @@
 package com.mandrecode.tempo.features.settings.presentation
 
+import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -259,15 +260,7 @@ private fun AboutSection(
                     onClick = { openFeedback(context, appVersion) },
                 )
             }
-            item {
-                SettingsItem(
-                    icon = R.drawable.ic_code,
-                    title = stringResource(R.string.source_code),
-                    subtitle = stringResource(R.string.source_code_description),
-                    trailingIcon = R.drawable.ic_chevron_right,
-                    onClick = { openSourceCode(context) },
-                )
-            }
+            repositoryLinkItems(context)
         }
         if (appVersion.isNotEmpty()) {
             Text(
@@ -278,6 +271,28 @@ private fun AboutSection(
                 textAlign = TextAlign.Center,
             )
         }
+    }
+}
+
+/** The About entries that open pages kept in the GitHub repository. */
+private fun SettingsGroupScope.repositoryLinkItems(context: Context) {
+    item {
+        SettingsItem(
+            icon = R.drawable.ic_code,
+            title = stringResource(R.string.source_code),
+            subtitle = stringResource(R.string.source_code_description),
+            trailingIcon = R.drawable.ic_chevron_right,
+            onClick = { openSourceCode(context) },
+        )
+    }
+    item {
+        SettingsItem(
+            icon = R.drawable.ic_shield,
+            title = stringResource(R.string.privacy_policy),
+            subtitle = stringResource(R.string.privacy_policy_description),
+            trailingIcon = R.drawable.ic_chevron_right,
+            onClick = { openPrivacyPolicy(context) },
+        )
     }
 }
 

@@ -34,7 +34,7 @@ workflow; everything here is reference material.
 | [`BACKUP_FORMAT.md`](BACKUP_FORMAT.md) | Export/import schema, versioning, conflict handling, encryption |
 | [`DB_ENCRYPTION.md`](DB_ENCRYPTION.md) | SQLCipher setup and the Keystore-held database key |
 | [`implementation/MIGRATIONS.md`](implementation/MIGRATIONS.md) | Room migration practice |
-| [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md) | The published privacy policy |
+| [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md) | The published privacy policy. Settings > About links to this file on `main` (`PRIVACY_POLICY_URL` in `app/build.gradle.kts`), so moving or renaming it breaks the link in every installed build |
 
 ## Design & implementation notes
 

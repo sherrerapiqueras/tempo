@@ -137,6 +137,31 @@ class SettingsContentTest {
     }
 
     @Test
+    fun displaysPrivacyPolicyEntryInAboutSection() {
+        val privacyPolicyText = localizedString(R.string.privacy_policy)
+        val privacyPolicyDescription = localizedString(R.string.privacy_policy_description)
+
+        composeTestRule.setContent {
+            TempoTheme {
+                SettingsContent(
+                    uiState = SettingsContract.UiState(appVersion = "1.0.0"),
+                    onEvent = {},
+                    onOnboardingClick = {},
+                )
+            }
+        }
+
+        composeTestRule.waitForIdle()
+        composeTestRule
+            .onNodeWithText(privacyPolicyText, ignoreCase = true)
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(privacyPolicyDescription, ignoreCase = true)
+            .assertIsDisplayed()
+    }
+
+    @Test
     fun retentionControlsAreHiddenWhenAutomaticRemovalIsDisabled() {
         val removeAfterText = localizedString(R.string.settings_remove_completed_after)
 

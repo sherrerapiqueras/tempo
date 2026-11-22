@@ -94,6 +94,14 @@ internal fun openSourceCode(context: Context) {
     )
 }
 
+internal fun openPrivacyPolicy(context: Context) {
+    openExternalLink(
+        context,
+        BuildConfig.PRIVACY_POLICY_URL,
+        failureLogMessage = "Unable to open privacy policy",
+    )
+}
+
 /**
  * Opens [url] in whichever app handles it, falling back to the shared "no browser" toast when the
  * device has no handler for it.
