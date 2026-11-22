@@ -21,7 +21,7 @@ Tapping a row's check SHALL toggle that task's completion with the same effects 
 
 #### Scenario: Complete from the widget
 - **WHEN** the user taps the check of an open task
-- **THEN** the task is completed, the row shows the done check, and a periodic task creates its next occurrence as it would in the app
+- **THEN** the task is completed and a periodic task creates its next occurrence as it would in the app; a task due today stays with the done check, and an overdue one leaves the list, as it leaves Focus's day
 
 #### Scenario: Open a task
 - **WHEN** the user taps a row's title
@@ -51,7 +51,7 @@ The widget SHALL reflect task changes made in the app, from notification actions
 
 #### Scenario: Day rolls over
 - **WHEN** local midnight passes
-- **THEN** within 30 minutes the widget shows the new day's tasks
+- **THEN** shortly after it the widget shows the new day's tasks, also when the app's process is not running
 
 ### Requirement: Widget follows Tempo's visual language
 The widget SHALL use Tempo's two-block layout (tinted header over a surface block), present the task rows as one connected group of cards, use Tempo's task check, and colour the add action, its one main action, with `primary` (the tinted strip derives from `secondaryContainer`, so the colour the app uses for "add" would not stand out on it). It SHALL follow the system's dynamic colours where available and Tempo's palette otherwise, in light and dark.

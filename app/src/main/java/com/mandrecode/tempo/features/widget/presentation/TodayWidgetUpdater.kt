@@ -1,12 +1,18 @@
 package com.mandrecode.tempo.features.widget.presentation
 
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.util.Log
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.updateAll
 import com.mandrecode.tempo.BuildConfig
 import com.mandrecode.tempo.features.focus.domain.usecase.GetFocusAgendaUseCase
+import com.mandrecode.tempo.infrastructure.notifications.RequestCodeGenerator
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -22,6 +28,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.plus
@@ -29,6 +36,7 @@ import kotlinx.datetime.toLocalDateTime
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * Keeps placed Today widgets current while the app's process is alive (spec: "Widget stays
@@ -38,7 +46,7 @@ import kotlin.time.Clock
  * they show changes. Whatever starts the process — the app, a notification action, an alarm, the
  * widget's own periodic update — starts this too, and its first emission redraws the widgets, so a
  * change made while the process was dead shows as soon as anything wakes it. While it stays dead,
- * the widget's `updatePeriodMillis` is the backstop for the date rolling over.
+ * a midnight alarm (see [scheduleMidnightRefresh]) brings the new day in.
  */
 @Singleton
 class TodayWidgetUpdater
@@ -57,7 +65,10 @@ class TodayWidgetUpdater
                     // A database that can't be read leaves the widget as it was; it must not take
                     // down whatever process this is running in.
                     .catch { Log.w(TAG, "Unable to watch the day for the widget", it) }
-                    .collect { redrawPlacedWidgets() }
+                    .collect { day ->
+                        redrawPlacedWidgets()
+                        scheduleMidnightRefresh(day.date)
+                    }
             }
             scope.launch { publishGeneratedPreview() }
         }
@@ -72,6 +83,48 @@ class TodayWidgetUpdater
                 throw e
             } catch (e: Exception) {
                 Log.w(TAG, "Unable to redraw the Today widget", e)
+            }
+        }
+
+        /**
+         * Asks for one widget update just after the next local midnight, so the new day shows even if
+         * the process has died by then. A non-waking, inexact alarm: it costs nothing while the
+         * screen is off, and the widget only needs to be right by the time someone looks at it.
+         * (Rather than `updatePeriodMillis`, which would start the process every 30 minutes.)
+         * Alarms do not survive a reboot, but boot starts the process, which arms it again.
+         */
+        @Suppress("TooGenericExceptionCaught") // AlarmManager failures are best-effort here.
+        private fun scheduleMidnightRefresh(today: LocalDate) {
+            try {
+                val alarmManager = context.getSystemService(AlarmManager::class.java) ?: return
+                val ids =
+                    AppWidgetManager
+                        .getInstance(context)
+                        .getAppWidgetIds(ComponentName(context, QuickAddTaskWidgetReceiver::class.java))
+                val intent =
+                    Intent(context, QuickAddTaskWidgetReceiver::class.java)
+                        .setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE)
+                        .putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+                val pendingIntent =
+                    PendingIntent.getBroadcast(
+                        context,
+                        RequestCodeGenerator.forTodayWidgetMidnight(),
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                    )
+                if (ids.isEmpty()) {
+                    alarmManager.cancel(pendingIntent)
+                    return
+                }
+                val nextMidnight =
+                    today.plus(DatePeriod(days = 1)).atStartOfDayIn(TimeZone.currentSystemDefault())
+                alarmManager.set(
+                    AlarmManager.RTC,
+                    nextMidnight.toEpochMilliseconds() + MIDNIGHT_SLACK_MS,
+                    pendingIntent,
+                )
+            } catch (e: Exception) {
+                Log.w(TAG, "Unable to arm the widget's midnight refresh", e)
             }
         }
 
@@ -99,6 +152,9 @@ class TodayWidgetUpdater
         private companion object {
             const val TAG = "TodayWidgetUpdater"
             const val RENDER_DEBOUNCE_MS = 500L
+
+            /** Just past midnight, so the update never lands a moment before the date changes. */
+            const val MIDNIGHT_SLACK_MS = 60_000L
             const val PREFS = "today_widget"
             const val KEY_PREVIEW_VERSION = "generated_preview_version"
         }
@@ -110,6 +166,8 @@ class TodayWidgetUpdater
  * open, and by [TodayWidgetUpdater], which redraws the widget when it changes after the session has
  * closed.
  */
+private val DATE_CHECK_INTERVAL = 15.minutes
+
 @OptIn(ExperimentalCoroutinesApi::class)
 internal fun widgetDays(
     getFocusAgenda: GetFocusAgendaUseCase,
@@ -121,7 +179,10 @@ internal fun widgetDays(
             val now = clock.now()
             val today = now.toLocalDateTime(zone).date
             emit(today)
-            delay(today.plus(DatePeriod(days = 1)).atStartOfDayIn(zone) - now)
+            // In slices rather than one sleep to midnight: a time zone or clock change moves
+            // midnight, and the date is read again on every wake.
+            delay(minOf(today.plus(DatePeriod(days = 1)).atStartOfDayIn(zone) - now, DATE_CHECK_INTERVAL))
         }
-    }.flatMapLatest { date -> getFocusAgenda(date).map { WidgetDay.from(date, it) } }
+    }.distinctUntilChanged()
+        .flatMapLatest { date -> getFocusAgenda(date).map { WidgetDay.from(date, it) } }
         .distinctUntilChanged()

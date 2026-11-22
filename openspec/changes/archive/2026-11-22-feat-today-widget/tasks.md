@@ -8,7 +8,7 @@
 - [x] 2.1 `TodayWidget` (`SizeMode.Exact`) with the tiny, compact and full layouts in Tempo's style; new drawables and en/es strings.
 - [x] 2.2 Toggle `ActionCallback`; row and add actions through `MainActivity`'s existing extras.
 - [x] 2.3 Full Tempo light/dark `TempoGlanceColorScheme`.
-- [x] 2.4 Widget info XML: resizable, 3×2 target, 30 min update period; receiver keeps its class name.
+- [x] 2.4 Widget info XML: resizable, 3×2 target, no periodic update (midnight alarm instead); receiver keeps its class name.
 - [x] 2.5 Generated preview on Android 15+.
 
 ## 3. Keeping it current

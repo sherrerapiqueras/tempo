@@ -45,7 +45,6 @@ import com.mandrecode.tempo.MainActivity
 import com.mandrecode.tempo.R
 import com.mandrecode.tempo.core.ui.components.CardGroupPosition
 import com.mandrecode.tempo.infrastructure.reminders.receivers.TaskReminderReceiver
-import com.mandrecode.tempo.util.DateTimeFormatter
 
 /**
  * The Today widget in Tempo's visual language, within what RemoteViews can draw:
@@ -172,7 +171,7 @@ private fun Metadata(row: WidgetTaskRow) {
         when {
             row.isOverdue -> context.getString(R.string.active_overdue) to GlanceTheme.colors.error
             row.dueTime != null ->
-                DateTimeFormatter.formatTimeOfDay(row.dueTime, context) to GlanceTheme.colors.onSurfaceVariant
+                widgetTimeLabel(row.dueTime, context) to GlanceTheme.colors.onSurfaceVariant
             else -> null
         }
     if (lead == null && row.categoryName == null) return

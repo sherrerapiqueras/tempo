@@ -30,8 +30,8 @@ import kotlinx.datetime.toLocalDateTime
  * The Today home-screen widget: the Focus day — due today, then overdue — with each task's check,
  * and a way to add one. See the `home-screen-widget` spec.
  *
- * Renders one snapshot of the day per update. [TodayWidgetUpdater] asks for a new one whenever the
- * day's tasks change or the date rolls over, so nothing here keeps a session open to watch.
+ * While Glance keeps the widget's session open the content watches the day itself; once Glance has
+ * closed it, [TodayWidgetUpdater] asks for a new one whenever the day changes.
  */
 class TodayWidget : GlanceAppWidget() {
     // Exact rather than Responsive: one layout held in the launcher's memory, laid out for the size
@@ -144,10 +144,10 @@ class TodayWidget : GlanceAppWidget() {
     companion object {
         // Read by MainActivity.handleIntent() to open the existing task-creation sheet
         // instead of the app's default start destination.
-        private const val TAG = "TodayWidget"
-
         const val EXTRA_OPEN_NEW_TASK_DIALOG = "OPEN_NEW_TASK_DIALOG"
         val openNewTaskDialogKey = ActionParameters.Key<Boolean>(EXTRA_OPEN_NEW_TASK_DIALOG)
+
+        private const val TAG = "TodayWidget"
     }
 }
 

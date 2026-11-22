@@ -36,6 +36,6 @@ None.
 
 - **UI (Glance):** `features/widget/presentation`. The provider class is renamed (`QuickAddTaskWidget` → `TodayWidget`) but the receiver keeps its class name `QuickAddTaskWidgetReceiver`, so widgets users have already placed upgrade in place instead of disappearing.
 - **Infrastructure:** a process-scoped updater started from `TempoApp`, and a Glance action callback that toggles completion through `ToggleTaskCompletionUseCase`.
-- **Resources:** widget info XML (resizable, 3×2 default), new drawables, en/es strings, `updatePeriodMillis` of 30 min as the day-rollover backstop when the process is dead.
+- **Resources:** widget info XML (resizable, 3×2 default), new drawables, en/es strings, a non-waking midnight alarm (no `updatePeriodMillis`) for the day rollover when the process is dead.
 - **Settings:** the existing widget refresh on the Tempo-colours toggle now targets the new widget.
 - No data, schema or backup changes.

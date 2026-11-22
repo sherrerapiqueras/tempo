@@ -11,6 +11,7 @@ package com.mandrecode.tempo.infrastructure.notifications
  * - Live Activity dismissal: 4,000,000 - 4,999,999
  * - Missed-reminder catch-up: 5,000,000 (single app-wide alarm)
  * - Focus session:  6,000,000 (single app-wide session)
+ * - Today widget midnight refresh: 7,000,000 (single app-wide alarm)
  */
 object RequestCodeGenerator {
     private const val RANGE_SIZE = 1_000_000
@@ -21,6 +22,7 @@ object RequestCodeGenerator {
     private const val LIVE_ACTIVITY_DISMISS_OFFSET = 4 * RANGE_SIZE
     private const val MISSED_REMINDER_CATCH_UP_OFFSET = 5 * RANGE_SIZE
     private const val FOCUS_SESSION_OFFSET = 6 * RANGE_SIZE
+    private const val TODAY_WIDGET_MIDNIGHT_OFFSET = 7 * RANGE_SIZE
 
     fun forTask(taskId: Long): Int = TASK_OFFSET + (taskId % RANGE_SIZE).toInt()
 
@@ -45,6 +47,9 @@ object RequestCodeGenerator {
      * replaces the previous pending intent rather than leaving a second alarm armed.
      */
     fun forFocusSession(): Int = FOCUS_SESSION_OFFSET
+
+    /** Fixed code for the Today widget's single midnight refresh alarm. */
+    fun forTodayWidgetMidnight(): Int = TODAY_WIDGET_MIDNIGHT_OFFSET
 
     /**
      * A slot per session action. Distinct from each other and from the session's own code, or the
