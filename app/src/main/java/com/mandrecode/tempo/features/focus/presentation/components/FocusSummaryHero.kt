@@ -61,7 +61,7 @@ internal fun FocusSummaryHero(
     modifier: Modifier = Modifier,
 ) {
     val progressDescription =
-        stringResource(R.string.focus_progress_description, completedCount, scheduledCount)
+        pluralStringResource(R.plurals.focus_progress_description, scheduledCount, completedCount, scheduledCount)
     val animatedProgress by animateFloatAsState(
         targetValue = progress,
         animationSpec =
@@ -149,7 +149,7 @@ private fun HistoryRow(
     modifier: Modifier = Modifier,
 ) {
     val onContainer = MaterialTheme.colorScheme.onPrimaryContainer
-    val description = stringResource(R.string.focus_history_description, history.size)
+    val description = pluralStringResource(R.plurals.focus_history_description, history.size, history.size)
     Row(
         modifier =
             modifier.semantics {

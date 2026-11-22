@@ -19,7 +19,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:localeConfig="@xml/locales_config"
-        android:theme="@style/Theme.Tempo">
+        android:theme="@style/Theme.Tempo"
+        tools:targetApi="33">
         <!--
             tools:ignore="Instantiatable" — false positive: MainActivity extends
             ComponentActivity (a subclass of Activity), but lint cannot resolve
@@ -40,6 +41,7 @@
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
             android:enableOnBackInvokedCallback="true"
+            tools:targetApi="33"
             android:exported="true"
             android:launchMode="singleTask"
             android:theme="@style/Theme.Tempo.Splash"

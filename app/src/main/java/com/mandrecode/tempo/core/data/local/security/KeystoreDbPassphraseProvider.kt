@@ -1,5 +1,6 @@
 package com.mandrecode.tempo.core.data.local.security
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
 import android.security.keystore.KeyGenParameterSpec
@@ -126,6 +127,7 @@ class KeystoreDbPassphraseProvider
          * Always mints a fresh Keystore key alongside a fresh passphrase, even if a stale alias
          * is somehow already present, so the two are never mismatched.
          */
+        @SuppressLint("UseKtx")
         private fun generateAndStorePassphrase(prefs: SharedPreferences): ByteArray {
             val store = keyStore()
             if (store.containsAlias(KEY_ALIAS)) {

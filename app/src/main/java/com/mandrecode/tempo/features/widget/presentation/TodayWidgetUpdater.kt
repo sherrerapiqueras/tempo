@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
+import androidx.core.content.edit
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.updateAll
 import com.mandrecode.tempo.BuildConfig
@@ -140,7 +141,7 @@ class TodayWidgetUpdater
             try {
                 val result = GlanceAppWidgetManager(context).setWidgetPreviews(QuickAddTaskWidgetReceiver::class)
                 if (result == GlanceAppWidgetManager.SET_WIDGET_PREVIEWS_RESULT_SUCCESS) {
-                    prefs.edit().putInt(KEY_PREVIEW_VERSION, BuildConfig.VERSION_CODE).apply()
+                    prefs.edit { putInt(KEY_PREVIEW_VERSION, BuildConfig.VERSION_CODE) }
                 }
             } catch (e: CancellationException) {
                 throw e

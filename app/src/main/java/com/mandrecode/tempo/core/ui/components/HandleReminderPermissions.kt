@@ -1,6 +1,12 @@
+// The two permission constants lint flags are compile-time strings, inlined into older builds: the
+// notification request only runs where hasNotificationPermission() can be false (Android 13+), and
+// the exact-alarm settings screen only once canScheduleExactAlarms() said no (Android 12+).
+@file:SuppressLint("InlinedApi")
+
 package com.mandrecode.tempo.core.ui.components
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.AlarmManager
 import android.content.Context
 import android.content.Intent

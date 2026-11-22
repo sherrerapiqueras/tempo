@@ -3,7 +3,6 @@ package com.mandrecode.tempo.features.settings.presentation
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -47,6 +46,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mandrecode.tempo.R
@@ -104,7 +104,7 @@ fun SettingsScreen(
 
                 is SettingsContract.UiEffect.OpenGoogleStorage ->
                     runCatching {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(GOOGLE_STORAGE_URL)))
+                        context.startActivity(Intent(Intent.ACTION_VIEW, GOOGLE_STORAGE_URL.toUri()))
                     }
 
                 is SettingsContract.UiEffect.LaunchExportPicker ->

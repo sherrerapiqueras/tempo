@@ -8,7 +8,6 @@
     <string name="delete">Delete</string>
     <string name="edit">Edit</string>
     <string name="update">Update</string>
-    <string name="new_label">New</string>
     <string name="continue_label">Continue</string>
     <string name="description">Description</string>
     <string name="completed">Completed</string>
@@ -20,16 +19,11 @@
     <string name="tasks">Tasks</string>
     <string name="focus">Focus</string>
     <string name="add_task">Add Task</string>
-    <string name="add_new_task">Add New Task</string>
     <string name="add_subtask">Add Subtask</string>
-    <string name="edit_task">Edit Task</string>
     <string name="edit_subtask">Edit Subtask</string>
     <string name="reorder_subtask">Reorder Subtask</string>
     <string name="reorder_habit">Reorder Habit</string>
-    <string name="task_title">Task Title</string>
-    <string name="task_description">Task Description</string>
     <string name="task_title_placeholder">New task…</string>
-    <string name="task_description_placeholder">Add more details (optional)</string>
     <string name="add_details">Add details</string>
     <string name="task_title_required">Title is required</string>
     <string name="loading_tasks">Loading tasks…</string>
@@ -37,8 +31,6 @@
     <string name="tap_to_create_first_task">Add your first task to get started</string>
 
     <!-- TASK FILTERS & STATUS -->
-    <string name="all_tasks">All</string>
-    <string name="active_tasks">Active</string>
     <string name="completed_tasks">Completed</string>
     <string name="completed_today">Today</string>
     <string name="completed_yesterday">Yesterday</string>
@@ -46,11 +38,7 @@
     <string name="completed_alphabetical">A → Z</string>
     <string name="active_overdue">Overdue</string>
     <string name="active_no_date">No date</string>
-    <string name="task_added">Task added successfully</string>
-    <string name="task_updated">Task updated successfully</string>
     <string name="task_deleted">Task deleted successfully</string>
-    <string name="error_adding_task">Failed to add task</string>
-    <string name="error_updating_task">Failed to update task</string>
     <string name="error_deleting_task">Failed to delete task</string>
     <string name="delete_task">Delete task</string>
 
@@ -63,14 +51,11 @@
     <string name="category_label">Category</string>
     <string name="category_name_label">Category name</string>
     <string name="category_placeholder">Personal, work…</string>
-    <string name="select_category">Select Category</string>
     <string name="update_category">Update Category</string>
     <string name="category_inbox">Inbox</string>
     <string name="category_add_category">Add category</string>
     <string name="set_as_default">Set as default</string>
     <string name="category_is_default">Default</string>
-    <string name="add_new_category">Add New Category</string>
-    <string name="this_category">this category</string>
     <string name="new_category">New Category</string>
     <string name="edit_category">Edit Category</string>
     <string name="icon_label">Icon</string>
@@ -80,9 +65,7 @@
     <string name="routines">Routines</string>
     <string name="habit">Habit</string>
     <string name="add_habit">Add habit</string>
-    <string name="habit_title">Habit Title</string>
     <string name="habit_title_placeholder">Go for a walk</string>
-    <string name="habit_description_placeholder">describe the habit,\nconvince yourself of doing it!</string>
 
     <string name="loading_habits">Loading habits…</string>
     <string name="no_habits_for_day">🧘 No habits for %1$s!</string>
@@ -104,7 +87,10 @@
         <item quantity="one">💪 %1$d day strong, keep going!</item>
         <item quantity="other">💪 %1$d days strong, keep going!</item>
     </plurals>
-    <string name="habit_history_last_days">Last %1$d days</string>
+    <plurals name="habit_history_last_days">
+        <item quantity="one">Last %1$d day</item>
+        <item quantity="other">Last %1$d days</item>
+    </plurals>
     <string name="habit_history_today">Today</string>
     <string name="habit_history_dot_completed">%1$s, completed</string>
     <string name="habit_history_dot_missed">%1$s, missed</string>
@@ -115,29 +101,26 @@
 
     <!-- HABIT CHAINS -->
     <string name="habit_chain">Habit chain</string>
-    <string name="habit_chain_title">Habit Chain Title</string>
     <string name="habit_chain_title_placeholder">Workout routine</string>
     <string name="start_chain">Start chain</string>
     <string name="habit_chain_next_habit">Next: %1$s</string>
     <string name="habit_chain_complete_current">Complete Habit</string>
     <string name="habit_chain_all_done">All habits completed! 🎉</string>
-    <string name="habit_chain_done_count">%1$d/%2$d done</string>
     <string name="habit_chain_progress_count">%1$d/%2$d</string>
     <string name="habit_chain_card_all_done">All done · %1$d/%1$d</string>
 
     <!-- HABIT SELECTION & REORDERING -->
     <string name="select_habits">Select habits</string>
-    <string name="selected_habits">Selected habits (in order)</string>
-    <string name="available_habits">Available habits</string>
     <string name="no_habits_available">No habits available. Create habits first.</string>
-    <string name="move_up">Move up</string>
-    <string name="move_down">Move down</string>
     <string name="remove_habit">Remove habit</string>
 
     <!-- HABIT/CHAIN LIVE ACTIVITY -->
     <string name="habit_chain_progress_title">%1$s in progress</string>
     <string name="habit_chain_completed_title">%1$s completed!</string>
-    <string name="habit_chain_progress_text">%1$d of %2$d habits completed</string>
+    <plurals name="habit_chain_progress_text">
+        <item quantity="one">%1$d of %2$d habit completed</item>
+        <item quantity="other">%1$d of %2$d habits completed</item>
+    </plurals>
 
     <!-- VALIDATION & DELETION DIALOGS -->
     <string name="discard">Discard</string>
@@ -151,8 +134,6 @@
     <string name="delete_habit_message_prefix">Are you sure you want to delete habit </string>
     <string name="delete_habit_message_suffix">\u003F You can undo this briefly afterward.</string>
     <string name="this_habit">this habit</string>
-    <string name="subtask">subtask</string>
-    <string name="subtasks">subtasks</string>
     <plurals name="subtasks_count">
         <item quantity="one">subtask</item>
         <item quantity="other">subtasks</item>
@@ -165,8 +146,6 @@
     <string name="msg_undo_success">Deletion undone</string>
     <string name="msg_undo_failed">Couldn’t undo deletion</string>
     <string name="msg_undo_restored_reminder_warning">Restored, but some reminders need attention</string>
-    <string name="habit_chain_select_at_least_one">Please select at least one habit for the habit chain</string>
-    <string name="habit_chain_deleted_success">Habit chain deleted successfully</string>
     <string name="empty_habit_chain_title">Empty Habit Chain</string>
     <string name="empty_habit_chain_message_prefix">Habit chain </string>
     <string name="empty_habit_chain_message_suffix"> would be empty without any habits. Would you like to delete it?</string>
@@ -180,19 +159,14 @@
 
     <!-- REMINDERS FEATURE -->
     <string name="reminder_label">Reminder</string>
-    <string name="set_reminder">Set Reminder</string>
     <string name="add_reminder">Add Reminder</string>
-    <string name="add_reminder_time">Add reminder time</string>
     <string name="clear_reminder">Clear Reminder</string>
     <string name="add_end_date">Add end date</string>
     <string name="periodicity_until">Until %1$s</string>
     <string name="clear_end_date">Clear end date</string>
-    <string name="select_time">Select time</string>
     <string name="mark_as_completed">Mark as completed</string>
     <string name="task_reminder_start_session">Start session</string>
     <string name="mark_as_not_completed">Mark as not completed</string>
-    <string name="habit_reminder_default_text">Time to work on your habit!</string>
-    <string name="habit_chain_reminder_default_text">Time to work on your habit chain!</string>
     <string name="clear_existing_reminders">Clear Existing Reminders?</string>
     <string name="clear_reminders_dialog_prefix">The following habit</string>
     <string name="clear_reminders_dialog_plural_has">s have</string>
@@ -205,13 +179,10 @@
     <!-- NOTIFICATIONS & PERMISSIONS -->
     <string name="notification_task_reminders_channel_name">Task reminders</string>
     <string name="notification_task_reminders_channel_description">Notifications for task reminders</string>
-    <string name="notification_task_reminders_group_name">Task reminders</string>
     <string name="notification_habit_reminders_channel_name">Habit reminders</string>
     <string name="notification_habit_reminders_channel_description">Notifications for habit and chain reminders</string>
-    <string name="notification_habit_reminders_group_name">Habit reminders</string>
     <string name="notification_habit_chain_live_activity_channel_name">Habit chain progress</string>
     <string name="notification_habit_chain_live_activity_channel_description">Shows progress while completing habit chains</string>
-    <string name="notification_new_reminder_title">You have a new reminder.</string>
     <string name="permission_required">Permission Required</string>
     <string name="permissions_needed">Permissions Needed</string>
     <string name="go_to_settings">Go to Settings</string>
@@ -235,12 +206,10 @@
 
     <!-- SCHEDULER & VIEWMODEL MESSAGES -->
     <string name="error_task_no_reminder_date">Task has no reminder date.</string>
-    <string name="error_reminder_time_past">Reminder time is in the past.</string>
     <string name="error_exact_alarm_permission">Exact alarm permission not granted.</string>
     <string name="error_security_exception">Security exception occurred while setting alarm.</string>
     <string name="error_habit_no_reminder_date">Habit has no reminder date.</string>
     <string name="error_habit_chain_no_reminder_date">Habit chain has no reminder date.</string>
-    <string name="error_unknown">Unknown error</string>
     <string name="msg_permission_needed">Permission needed for reminders.</string>
     <string name="msg_task_added_success">Task added successfully</string>
     <string name="msg_task_added_reminder_advanced">Task added. Reminder adjusted to next occurrence</string>
@@ -292,7 +261,6 @@
     </plurals>
     <string name="msg_category_delete_failed">Failed to delete category: %1$s</string>
     <string name="msg_cannot_delete_last_category">Cannot delete the last category</string>
-    <string name="msg_cannot_delete_inbox">The Inbox category cannot be deleted</string>
     <string name="msg_cannot_delete_default_category">The default category cannot be deleted</string>
     <string name="msg_completed_tasks_deleted_success">Completed tasks deleted successfully</string>
     <string name="msg_completed_tasks_delete_failed">Failed to delete completed tasks: %1$s</string>
@@ -301,7 +269,6 @@
     <string name="msg_error_loading_data">Error: %1$s</string>
     <string name="msg_error_loading_parent">Error loading parent task: %1$s</string>
     <string name="msg_category_name_required">Category name is required</string>
-    <string name="msg_more_options_for_category">More options for %1$s</string>
 
     <!-- ROUTINES MESSAGES -->
     <string name="msg_habit_chain_deleted_success">Habit chain deleted successfully</string>
@@ -372,14 +339,6 @@
     <string name="sat_initial">S</string>
     <string name="sun_initial">S</string>
     <string name="repeat">Repeat</string>
-    <string name="repeat_on">Repeat on</string>
-    <string name="all_days">All days</string>
-    <string name="weekdays">Weekdays</string>
-    <string name="daily">Daily</string>
-    <string name="weekly">Weekly</string>
-    <string name="monthly">Monthly</string>
-    <string name="yearly">Yearly</string>
-    <string name="hourly">Hourly</string>
     <plurals name="each_n_hours">
         <item quantity="one">Each hour</item>
         <item quantity="other">Each %1$d hours</item>
@@ -402,11 +361,6 @@
     </plurals>
 
     <!-- Complex periodicity -->
-    <string name="every_n_hours">Every %1$d hours</string>
-    <string name="every_n_days">Every %1$d days</string>
-    <string name="every_n_weeks">Every %1$d weeks</string>
-    <string name="every_n_months">Every %1$d months</string>
-    <string name="every_n_years">Every %1$d years</string>
     <string name="same_day">Same day</string>
     <string name="first_day_of_month">First day</string>
     <string name="last_day_of_month">Last day</string>
@@ -417,29 +371,6 @@
 
     <!-- COLORS FEATURE -->
     <string name="material_you_colors">Material You</string>
-    <string name="pastel_colors">Pastel Colors</string>
-    <string name="color_preview">Preview</string>
-    <string name="color_preview_completed">Completed</string>
-    <string name="color_primary">Primary</string>
-    <string name="color_secondary">Secondary</string>
-    <string name="color_tertiary">Tertiary</string>
-    <string name="color_primary_container">Primary accent</string>
-    <string name="color_secondary_container">Secondary accent</string>
-    <string name="color_tertiary_container">Tertiary accent</string>
-    <string name="color_pastel_red">Pastel Red</string>
-    <string name="color_pastel_orange">Pastel Orange</string>
-    <string name="color_pastel_yellow">Pastel Yellow</string>
-    <string name="color_pastel_green">Pastel Green</string>
-    <string name="color_pastel_cyan">Pastel Cyan</string>
-    <string name="color_pastel_blue">Pastel Blue</string>
-    <string name="color_pastel_purple">Pastel Purple</string>
-    <string name="color_pastel_pink">Pastel Pink</string>
-    <string name="color_pastel_lavender">Pastel Lavender</string>
-    <string name="color_pastel_mint">Pastel Mint</string>
-    <string name="color_pastel_peach">Pastel Peach</string>
-    <string name="color_pastel_rose">Pastel Rose</string>
-    <string name="color_tempo_green">Tempo Green</string>
-    <string name="habit_in_chain_info">Color, periodicity, and reminders are managed by the habit chain</string>
 
     <!-- HABIT TYPES -->
     <string name="habit_type_build">Build</string>
@@ -463,7 +394,6 @@
     <string name="settings_color_scheme">Color Scheme</string>
     <string name="settings_color_scheme_dynamic">Dynamic</string>
     <string name="settings_color_scheme_tempo">Tempo</string>
-    <string name="tab_warning">At least one main tab (Routines or Tasks) must remain active for the app to function properly.</string>
     <string name="settings_notifications">Notifications</string>
     <string name="settings_notifications_subtitle">Notification Settings</string>
     <string name="settings_notifications_description">Manage permissions and alerts</string>
@@ -488,7 +418,6 @@
     </plurals>
     <string name="settings_language">Language</string>
     <string name="settings_language_subtitle">App Language</string>
-    <string name="settings_language_description">Change the app\'s language in system settings</string>
 
     <!-- BACKUP SECTION -->
     <string name="settings_backup">Backup &amp; Restore</string>
@@ -703,8 +632,14 @@
     <string name="focus_up_next">Up next</string>
     <string name="focus_section_overdue">Overdue · %1$d</string>
     <string name="focus_section_today">Today · %1$d</string>
-    <string name="focus_progress_description">%1$d of %2$d done</string>
-    <string name="focus_history_description">Activity over the last %1$d days</string>
+    <plurals name="focus_progress_description">
+        <item quantity="one">%1$d of %2$d done</item>
+        <item quantity="other">%1$d of %2$d done</item>
+    </plurals>
+    <plurals name="focus_history_description">
+        <item quantity="one">Activity over the last %1$d day</item>
+        <item quantity="other">Activity over the last %1$d days</item>
+    </plurals>
     <string name="focus_empty_title">🌤️ A clear day!</string>
     <string name="focus_empty_message">Plan a task for today</string>
     <plurals name="focus_streak_days">
@@ -822,7 +757,6 @@
     <string name="drive_backup_progress_title">Backing up to Google Drive</string>
     <string name="drive_backup_progress_channel_name">Backup progress</string>
     <string name="drive_backup_progress_channel_description">Shown while a Google Drive backup is running</string>
-    <string name="drive_backup_frequency">Frequency</string>
     <string name="drive_backup_frequency_daily">Daily</string>
     <string name="drive_backup_frequency_weekly">Weekly</string>
     <string name="drive_backup_wifi_only">Only on Wi-Fi</string>

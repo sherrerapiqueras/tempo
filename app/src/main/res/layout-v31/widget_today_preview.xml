@@ -10,14 +10,14 @@
     android:backgroundTint="@color/widget_preview_background"
     android:orientation="vertical"
     android:padding="10dp"
-    tools:ignore="HardcodedText">
+    tools:ignore="HardcodedText,UseCompoundDrawables">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="8dp"
+        android:paddingHorizontal="8dp"
         android:paddingBottom="5dp">
 
         <TextView
@@ -48,6 +48,7 @@
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingVertical="8dp"
+        android:paddingStart="0dp"
         android:paddingEnd="14dp">
 
         <ImageView
@@ -90,6 +91,7 @@
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingVertical="8dp"
+        android:paddingStart="0dp"
         android:paddingEnd="14dp">
 
         <ImageView
