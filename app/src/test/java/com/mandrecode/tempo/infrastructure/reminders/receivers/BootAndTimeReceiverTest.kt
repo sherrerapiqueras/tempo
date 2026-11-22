@@ -34,6 +34,16 @@ class BootAndTimeReceiverTest {
     }
 
     @Test
+    fun `shouldRescheduleReminders returns true when exact alarm access is granted`() {
+        val result =
+            BootAndTimeReceiver.shouldRescheduleReminders(
+                "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED",
+            )
+
+        assertThat(result).isTrue()
+    }
+
+    @Test
     fun `shouldRescheduleReminders returns false for unrelated action`() {
         val result = BootAndTimeReceiver.shouldRescheduleReminders("some.other.action")
 
