@@ -5,6 +5,7 @@ import android.util.Log
 import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
 import com.mandrecode.tempo.core.data.preferences.ThemePreferencesRepository
+import com.mandrecode.tempo.core.domain.model.FeatureFlags
 import com.mandrecode.tempo.core.domain.model.ThemeMode
 import com.mandrecode.tempo.core.domain.repository.VacationModeRepository
 import com.mandrecode.tempo.features.backup.domain.model.ImportMode
@@ -678,7 +679,21 @@ class SettingsViewModelTest {
                 .isInstanceOf(SettingsContract.BackupDialog.ImportFailed::class.java)
         }
 
-    private fun createViewModel(): SettingsViewModel =
+    @Test
+    fun `drive backup off in this build hides it and never starts it`() =
+        runTest {
+            val delegate = mockk<SettingsDriveBackupDelegate>(relaxed = true)
+            val viewModel = createViewModel(driveBackupDelegate = delegate, driveBackupEnabled = false)
+            advanceUntilIdle()
+
+            assertThat(viewModel.uiState.value.isDriveBackupAvailable).isFalse()
+            verify(exactly = 0) { delegate.start(any()) }
+        }
+
+    private fun createViewModel(
+        driveBackupDelegate: SettingsDriveBackupDelegate = driveBackupDelegate(),
+        driveBackupEnabled: Boolean = true,
+    ): SettingsViewModel =
         SettingsViewModel(
             themePreferencesRepository,
             appVersionProvider,
@@ -687,9 +702,10 @@ class SettingsViewModelTest {
             missedReminderPreferences,
             missedReminderScheduler,
             SettingsBackupDelegate(exportBackup, importBackup, backupRepository, backupFileDataSource),
-            driveBackupDelegate(),
+            driveBackupDelegate,
             vacationModeRepository,
             focusSessionRepository,
             todayWidgetRefresher,
+            FeatureFlags(driveBackupEnabled = driveBackupEnabled),
         )
 }

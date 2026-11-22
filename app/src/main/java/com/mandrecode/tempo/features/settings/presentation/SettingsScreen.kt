@@ -157,7 +157,7 @@ internal fun SettingsScaffold(
     val currentOnDriveBackupPageOpen by rememberUpdatedState(onDriveBackupPageOpen)
     LaunchedEffect(openDriveBackupPage) {
         if (openDriveBackupPage) {
-            page = SettingsPage.DRIVE_BACKUP
+            if (uiState.isDriveBackupAvailable) page = SettingsPage.DRIVE_BACKUP
             currentOnDriveBackupPageOpen()
         }
     }

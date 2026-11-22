@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
 import com.mandrecode.tempo.core.data.preferences.OnboardingPreferencesRepository
 import com.mandrecode.tempo.core.data.preferences.ThemePreferencesRepository
+import com.mandrecode.tempo.core.domain.model.FeatureFlags
 import com.mandrecode.tempo.core.domain.model.ThemeMode
 import com.mandrecode.tempo.features.backup.domain.model.ImportOutcome
 import com.mandrecode.tempo.features.backup.domain.model.ImportSummary
@@ -137,6 +138,18 @@ class OnboardingViewModelTest {
         }
 
     @Test
+    fun givenDriveBackupOffInThisBuild_thenNoRestoreIsOfferedOrStarted() =
+        runTest {
+            val viewModel = createViewModel(restoreFlowWithOneBackup(), driveBackupEnabled = false)
+
+            assertThat(viewModel.uiState.value.isDriveRestoreAvailable).isFalse()
+            viewModel.onEvent(OnboardingContract.UiEvent.RestoreFromDriveClicked)
+            advanceUntilIdle()
+
+            assertThat(viewModel.uiState.value.driveRestore).isNull()
+        }
+
+    @Test
     fun givenARestoreOffer_whenDismissed_thenOnboardingCarriesOn() =
         runTest {
             val viewModel = createViewModel(restoreFlowWithOneBackup())
@@ -174,10 +187,14 @@ class OnboardingViewModelTest {
         advanceUntilIdle()
     }
 
-    private fun createViewModel(driveRestore: DriveRestoreFlow = driveRestoreFlow()): OnboardingViewModel =
+    private fun createViewModel(
+        driveRestore: DriveRestoreFlow = driveRestoreFlow(),
+        driveBackupEnabled: Boolean = true,
+    ): OnboardingViewModel =
         OnboardingViewModel(
             themePreferencesRepository = themePreferencesRepository,
             onboardingPreferencesRepository = onboardingPreferencesRepository,
             driveRestore = driveRestore,
+            featureFlags = FeatureFlags(driveBackupEnabled = driveBackupEnabled),
         )
 }
