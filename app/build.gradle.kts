@@ -70,7 +70,12 @@ kover {
                     "com.mandrecode.tempo.MainActivity",
                     "com.mandrecode.tempo.TempoApp",
                     "com.mandrecode.tempo.infrastructure.reminders.receivers.*",
-                    "com.mandrecode.tempo.features.widget.presentation.QuickAddTaskWidget*",
+                    // Today widget (openspec: home-screen-widget): Glance UI, its action callback, its
+                    // Hilt entry point and its updater — RemoteViews, AppWidgetManager and Glance
+                    // glue. What it shows comes from WidgetDay.from, which is unit-tested.
+                    "com.mandrecode.tempo.features.widget.presentation.QuickAddTaskWidgetReceiver*",
+                    "com.mandrecode.tempo.features.widget.presentation.TodayWidget*",
+                    "com.mandrecode.tempo.features.widget.presentation.ToggleTaskFromWidgetAction*",
                     "com.mandrecode.tempo.features.widget.presentation.TempoGlanceColorScheme*",
                     // Compose-generated classes & previews
                     "*ComposableSingletons*",

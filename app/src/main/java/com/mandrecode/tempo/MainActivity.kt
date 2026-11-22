@@ -47,7 +47,7 @@ import com.mandrecode.tempo.features.focus.domain.repository.FocusSessionReposit
 import com.mandrecode.tempo.features.focus.presentation.FocusViewModel
 import com.mandrecode.tempo.features.routines.presentation.RoutinesViewModel
 import com.mandrecode.tempo.features.tasks.presentation.TasksViewModel
-import com.mandrecode.tempo.features.widget.presentation.QuickAddTaskWidget
+import com.mandrecode.tempo.features.widget.presentation.TodayWidget
 import com.mandrecode.tempo.infrastructure.backup.drive.DriveBackupNotifier
 import com.mandrecode.tempo.infrastructure.reminders.ReminderRefreshScheduler
 import com.mandrecode.tempo.infrastructure.reminders.receivers.HabitReminderReceiver
@@ -312,11 +312,11 @@ class MainActivity :
         if (
             !handledRoutineNotificationOpen &&
             !handledTaskNotificationOpen &&
-            intent.getBooleanExtra(QuickAddTaskWidget.EXTRA_OPEN_NEW_TASK_DIALOG, false)
+            intent.getBooleanExtra(TodayWidget.EXTRA_OPEN_NEW_TASK_DIALOG, false)
         ) {
             mainViewModel.setPendingNotificationAction(PendingNotificationAction.OpenNewTaskDialog)
             tasksNavigationTrigger.longValue++
-            intent.removeExtra(QuickAddTaskWidget.EXTRA_OPEN_NEW_TASK_DIALOG)
+            intent.removeExtra(TodayWidget.EXTRA_OPEN_NEW_TASK_DIALOG)
         }
     }
 
@@ -332,7 +332,7 @@ class MainActivity :
         removeExtra(HabitReminderReceiver.EXTRA_HABIT_CHAIN_ID)
         removeExtra(HabitReminderReceiver.EXTRA_OPEN_ROUTINES)
         removeExtra(HabitReminderReceiver.EXTRA_SCHEDULED_DATE)
-        removeExtra(QuickAddTaskWidget.EXTRA_OPEN_NEW_TASK_DIALOG)
+        removeExtra(TodayWidget.EXTRA_OPEN_NEW_TASK_DIALOG)
     }
 
     /**

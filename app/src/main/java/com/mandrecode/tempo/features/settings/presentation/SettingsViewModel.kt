@@ -11,7 +11,7 @@ import com.mandrecode.tempo.features.tasks.domain.repository.CompletedTaskRetent
 import com.mandrecode.tempo.features.tasks.domain.repository.MissedReminderPreferences
 import com.mandrecode.tempo.features.tasks.domain.scheduler.MissedReminderScheduler
 import com.mandrecode.tempo.features.tasks.domain.usecase.ConfigureCompletedTaskRetentionUseCase
-import com.mandrecode.tempo.features.widget.presentation.QuickAddTaskWidgetRefresher
+import com.mandrecode.tempo.features.widget.presentation.TodayWidgetRefresher
 import com.mandrecode.tempo.util.AppVersionProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -57,7 +57,7 @@ class SettingsViewModel
         private val driveBackupDelegate: SettingsDriveBackupDelegate,
         private val vacationModeRepository: VacationModeRepository,
         private val focusSessionRepository: FocusSessionRepository,
-        private val quickAddTaskWidgetRefresher: QuickAddTaskWidgetRefresher,
+        private val todayWidgetRefresher: TodayWidgetRefresher,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(SettingsContract.UiState())
         val uiState: StateFlow<SettingsContract.UiState> = _uiState.asStateFlow()
@@ -125,7 +125,7 @@ class SettingsViewModel
 
                 is SettingsContract.UiEvent.TempoColorsToggled -> {
                     themePreferencesRepository.setUseTempoColors(event.enabled)
-                    refreshQuickAddTaskWidget()
+                    refreshTodayWidget()
                 }
 
                 is SettingsContract.UiEvent.FocusSessionLengthChanged -> {
@@ -189,14 +189,14 @@ class SettingsViewModel
         // the same generic-catch pattern already used for other best-effort operations (see
         // TasksViewModelTaskActions.addTask()).
         @Suppress("TooGenericExceptionCaught")
-        private fun refreshQuickAddTaskWidget() {
+        private fun refreshTodayWidget() {
             viewModelScope.launch {
                 try {
-                    quickAddTaskWidgetRefresher.refresh()
+                    todayWidgetRefresher.refresh()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    Log.e(LOG_TAG, "Unable to refresh Quick Add Task widget instances", e)
+                    Log.e(LOG_TAG, "Unable to refresh Today widget instances", e)
                 }
             }
         }

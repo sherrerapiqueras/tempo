@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_priority_high">#FFFFB3AD</color>
+    <color name="widget_priority_medium">#FFD6C64D</color>
+    <color name="widget_priority_low">#FFB1D18A</color>
+</resources>

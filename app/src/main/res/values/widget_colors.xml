@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Today widget priority flags (drawable/widget_flag_*), the app's priority colours. The launcher
+     resolves them, so they follow light and dark like the rest of the widget. -->
+<resources>
+    <color name="widget_priority_high">#FFBC1127</color>
+    <color name="widget_priority_medium">#FF695F00</color>
+    <color name="widget_priority_low">#FF4C662B</color>
+</resources>

@@ -693,8 +693,20 @@
     <string name="icon_picker_all_icons_title">Todos los iconos</string>
 
     <!-- QUICK ADD TASK WIDGET -->
-    <string name="widget_quick_add_task_label">Añadir tarea rápida</string>
-    <string name="widget_quick_add_task_description">Añade una tarea a Tempo con un toque desde tu pantalla de inicio</string>
+    <string name="widget_today_label">Hoy</string>
+    <string name="widget_today_description">Las tareas de hoy de un vistazo. Márcalas o añade una nueva.</string>
+    <plurals name="widget_today_progress">
+        <item quantity="one">%1$d de %2$d hecha</item>
+        <item quantity="other">%1$d de %2$d hechas</item>
+        <item quantity="many">%1$d de %2$d hechas</item>
+    </plurals>
+    <string name="widget_today_empty">Nada pendiente para hoy</string>
+    <string name="widget_preview_category">Personal</string>
+    <string name="widget_preview_task_plan">Planificar la semana</string>
+    <string name="widget_preview_task_call">Llamar al dentista</string>
+    <string name="widget_preview_task_run">Salir a correr</string>
+    <string name="widget_complete_task">Marcar %1$s como hecha</string>
+    <string name="widget_reopen_task">Marcar %1$s como pendiente</string>
     <string name="focus_headline_nothing_scheduled">Hoy no hay nada</string>
     <string name="focus_headline_just_started">Tienes el día por delante</string>
     <string name="focus_headline_under_way">Ya estás en marcha</string>
