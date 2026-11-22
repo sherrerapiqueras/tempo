@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.21.0](https://github.com/sherrerapiqueras/tempo/compare/v1.20.0...v1.21.0) (2026-11-22)
+
+
+### Features
+
+* **#283:** backup format v2 keyed on stable identifiers ([#544](https://github.com/sherrerapiqueras/tempo/issues/544)) ([87ebb5e](https://github.com/sherrerapiqueras/tempo/commit/87ebb5eb00b32e41f65998717b0e40ad24a23df9))
+* **#306:** scheduled automatic backup to Google Drive ([#552](https://github.com/sherrerapiqueras/tempo/issues/552)) ([e6446f0](https://github.com/sherrerapiqueras/tempo/commit/e6446f050cae633ed01e76ebf6a9173c66e655f3))
+* **#307:** restore from a Google Drive backup in onboarding and Settings ([#554](https://github.com/sherrerapiqueras/tempo/issues/554)) ([64ceb88](https://github.com/sherrerapiqueras/tempo/commit/64ceb88cbb1254cc7f5003aa234e4e0f10e07654))
+* **#30:** add sync-safe identifiers and merge metadata to core entities ([#540](https://github.com/sherrerapiqueras/tempo/issues/540)) ([7788bb5](https://github.com/sherrerapiqueras/tempo/commit/7788bb5cbfc8b117558cf9066a6a158c12328906))
+* **#546:** journal local mutations for later replay ([#547](https://github.com/sherrerapiqueras/tempo/issues/547)) ([1efed14](https://github.com/sherrerapiqueras/tempo/commit/1efed14363df2374feba87c608a7f938fe101578))
+* **#565:** hide Google Drive backup in release builds until OAuth is live ([#579](https://github.com/sherrerapiqueras/tempo/issues/579)) ([baf4a04](https://github.com/sherrerapiqueras/tempo/commit/baf4a041e65f2669336162171a3395477c5eacf3))
+* link the privacy policy from Settings ([#570](https://github.com/sherrerapiqueras/tempo/issues/570)) ([d5caae6](https://github.com/sherrerapiqueras/tempo/commit/d5caae6496d4b75291eb83d11a7bd92234038049))
+* rebuild the home-screen widget as Today, in Tempo's style ([#574](https://github.com/sherrerapiqueras/tempo/issues/574)) ([2b211af](https://github.com/sherrerapiqueras/tempo/commit/2b211af4534f58f49fbdc251c2643681e9819485))
+
+
+### Bug Fixes
+
+* a replace import restores daily focus history in the same transaction ([#556](https://github.com/sherrerapiqueras/tempo/issues/556)) ([4162b51](https://github.com/sherrerapiqueras/tempo/commit/4162b513bb298900cc67dbb1438660e406066b53))
+* keep the home screen hidden while Settings switches pages ([#561](https://github.com/sherrerapiqueras/tempo/issues/561)) ([37e8131](https://github.com/sherrerapiqueras/tempo/commit/37e81310f11864808e17d23e2a5a6814f6732a8e))
+* re-arm reminders when exact alarm access is granted ([#568](https://github.com/sherrerapiqueras/tempo/issues/568)) ([e03fdde](https://github.com/sherrerapiqueras/tempo/commit/e03fdde23932d3817b086ecc8b9ac3f7ad94767b))
+* say "1 minute" for one-minute focus sessions ([#569](https://github.com/sherrerapiqueras/tempo/issues/569)) ([a2c8fff](https://github.com/sherrerapiqueras/tempo/commit/a2c8fff16e8533a76d2ca66fd7ed3205894ddd31))
+* stop background broadcast work from crashing the app ([#567](https://github.com/sherrerapiqueras/tempo/issues/567)) ([2151a05](https://github.com/sherrerapiqueras/tempo/commit/2151a05eaf3588fe04575ce1e5e3b05014638b53))
+
 ## [1.20.0](https://github.com/sherrerapiqueras/tempo/compare/v1.19.2...v1.20.0) (2026-11-15)
 
 
