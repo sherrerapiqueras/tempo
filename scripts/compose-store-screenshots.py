@@ -37,13 +37,26 @@ ICON = REPO / "app" / "src" / "main" / "res" / "mipmap-xxxhdpi" / "ic_launcher_r
 
 DEFAULT_CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
-# Canvas sizes. Play Console accepts 16:9 or 9:16 for every listing type; phone
-# and portrait tablet go 9:16 so the device can fill the frame, the wide form
-# factors go 16:9. All sides stay inside Play's 320/720/1080–3840/7680 bounds.
+# Canvas sizes. Play Console accepts 16:9 or 9:16 for every listing type but
+# foldables (see below); phone and portrait tablet go 9:16 so the device can fill
+# the frame, the wide form factors go 16:9. All sides stay inside Play's
+# 320/720/960/1080–3840/7680 bounds.
 FORM_FACTORS = {
     "phone":    {"size": (1080, 1920), "layout": "portrait",  "device": "phone"},
     "medium":   {"size": (1440, 2560), "layout": "portrait",  "device": "tablet"},
-    "foldable": {"size": (1440, 2560), "layout": "portrait",  "device": "foldable"},
+    # Play's foldable section wants at least one unfolded image at 1:1, one
+    # unfolded at 4:3 and one folded (outer screen) at 10:16 portrait, so each
+    # slide sets its own canvas. "unit" scales the type and spacing where the
+    # default (canvas width / 1080 in portrait) would be too big for a square;
+    # "text_w" narrows the landscape text column for a 4:3 canvas; "raw" picks
+    # the folded captures.
+    "foldable": {"device": "foldable", "slides": {
+        0: {"size": (2160, 2160), "layout": "portrait", "unit": 1.1},
+        1: {"size": (1600, 2560), "layout": "portrait", "device": "phone", "raw": "foldable_folded"},
+        2: {"size": (2560, 1920), "layout": "landscape", "text_w": 800},
+        3: {"size": (2160, 2160), "layout": "portrait", "unit": 1.1},
+        4: {"size": (2560, 1920), "layout": "landscape", "text_w": 800},
+    }},
     "expanded": {"size": (2560, 1440), "layout": "landscape", "device": "tablet"},
     "desktop":  {"size": (2560, 1440), "layout": "landscape", "device": "monitor"},
     "xr":       {"size": (2560, 1440), "layout": "landscape", "device": "spatial"},
@@ -59,6 +72,12 @@ SLIDES = [
     ("5_private", ["light", "dark"]),
 ]
 SLIDE_RAW = {"5_private": "1_focus_today"}
+
+
+def slide_spec(ff, idx):
+    """The form factor's spec with that slide's overrides, if it has any."""
+    spec = FORM_FACTORS[ff]
+    return {**spec, **spec.get("slides", {}).get(idx, {})}
 
 # Copy, one entry per slide with both locales side by side so neither can be
 # edited without the other in view. `<em>` marks the part of the headline that
@@ -213,14 +232,14 @@ def chips_html(chips, cls="", styles=None):
 
 
 def build_page(ff, locale, idx, raw_paths):
-    spec = FORM_FACTORS[ff]
+    spec = slide_spec(ff, idx)
     W, H = spec["size"]
     slide_id, themes = SLIDES[idx]
     # The duo slide carries both themes; it sits on dark so the light phone pops.
     theme = THEMES["dark" if len(themes) > 1 else themes[0]]
     copy = COPY[idx][locale]
     portrait = spec["layout"] == "portrait"
-    u = W / 1080 if portrait else H / 1440  # scale unit
+    u = spec.get("unit") or (W / 1080 if portrait else H / 1440)  # scale unit
 
     title_size = (92 if portrait else 84) * u
     body_size = (38 if portrait else 40) * u
@@ -261,10 +280,15 @@ def build_page(ff, locale, idx, raw_paths):
             chip_block = ""
         text_style = f"left:{70 * u}px;right:{70 * u}px;top:{110 * u}px;text-align:center;align-items:center"
     else:
-        text_w = 1100 * u
-        dev_left = 1140 * u
+        text_w = spec.get("text_w", 1100) * u
+        dev_left = text_w + 40 * u
         avail = W - dev_left - 90 * u
-        if kind == "monitor":
+        if kind == "foldable":
+            # Nearly square: contained, as wide as the column allows without
+            # outgrowing the canvas height.
+            dev_w = min(avail, (H - 200 * u) / (2152 / 2076 + 0.044))
+            dev_h = dev_w * (2152 / 2076 + 0.044)
+        elif kind == "monitor":
             dev_w = avail
             dev_h = dev_w * (1080 / 1920) + dev_w * 0.028 + dev_w * 0.082
         elif kind == "spatial":
@@ -419,7 +443,9 @@ def main():
         for locale in locales:
             for idx, (slide_id, themes) in enumerate(SLIDES):
                 raw_view = SLIDE_RAW.get(slide_id, slide_id)
-                raws = [RAW / ff / f"{ff}_{locale}_{th}_{raw_view}.png" for th in themes]
+                spec = slide_spec(ff, idx)
+                prefix = spec.get("raw", ff)
+                raws = [RAW / ff / f"{prefix}_{locale}_{th}_{raw_view}.png" for th in themes]
                 missing = [r for r in raws if not r.exists()]
                 if missing:
                     print(f"skip {ff} {locale} {slide_id}: missing {missing[0].name}")
@@ -427,7 +453,7 @@ def main():
                 page = work / f"{ff}_{locale}_{slide_id}.html"
                 page.write_text(build_page(ff, locale, idx, raws), encoding="utf-8")
                 png = out_dir / f"{locale}_{slide_id}.png"
-                jobs.append((page, png, FORM_FACTORS[ff]["size"]))
+                jobs.append((page, png, spec["size"]))
     # Each render is a separate headless Chrome, mostly start-up time, so run a
     # few at once rather than paying for fifty cold starts back to back.
     with ThreadPoolExecutor(max_workers=min(6, os.cpu_count() or 1)) as pool:
