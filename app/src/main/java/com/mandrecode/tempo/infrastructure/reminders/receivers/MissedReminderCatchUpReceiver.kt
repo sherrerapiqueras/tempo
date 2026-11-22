@@ -4,11 +4,10 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.mandrecode.tempo.core.di.IoDispatcher
+import com.mandrecode.tempo.infrastructure.receivers.launchReceiverWork
 import com.mandrecode.tempo.infrastructure.reminders.MissedReminderCatchUpRunner
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -29,13 +28,8 @@ class MissedReminderCatchUpReceiver : BroadcastReceiver() {
         context: Context,
         intent: Intent,
     ) {
-        val pendingResult = goAsync()
-        CoroutineScope(ioDispatcher).launch {
-            try {
-                catchUpRunner.run()
-            } finally {
-                pendingResult.finish()
-            }
+        launchReceiverWork(ioDispatcher, "MissedReminderCatchUpReceiver") {
+            catchUpRunner.run()
         }
     }
 }

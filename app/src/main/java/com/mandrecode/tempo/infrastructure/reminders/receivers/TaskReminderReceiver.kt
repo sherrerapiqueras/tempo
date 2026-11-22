@@ -10,10 +10,9 @@ import com.mandrecode.tempo.features.tasks.domain.model.Task
 import com.mandrecode.tempo.features.tasks.domain.repository.TaskRepository
 import com.mandrecode.tempo.features.tasks.domain.usecase.RollOverduePeriodicTaskUseCase
 import com.mandrecode.tempo.infrastructure.notifications.TaskReminderNotifier
+import com.mandrecode.tempo.infrastructure.receivers.launchReceiverWork
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -41,24 +40,19 @@ class TaskReminderReceiver : BroadcastReceiver() {
         val taskId = intent.getLongExtra(EXTRA_TASK_ID, -1L)
         if (taskId == -1L) return
 
-        val pendingResult = goAsync()
-        CoroutineScope(ioDispatcher).launch {
-            try {
-                val task = taskRepository.getTaskById(taskId)
-                if (shouldProcessTaskReminder(task)) {
-                    val activeTask = requireNotNull(task)
-                    val outcome = reminderOutcome(activeTask, hasFocusTimeToday(activeTask.id))
+        launchReceiverWork(ioDispatcher, "TaskReminderReceiver") {
+            val task = taskRepository.getTaskById(taskId)
+            if (shouldProcessTaskReminder(task)) {
+                val activeTask = requireNotNull(task)
+                val outcome = reminderOutcome(activeTask, hasFocusTimeToday(activeTask.id))
 
-                    if (outcome.notify) {
-                        taskReminderNotifier.notify(activeTask)
-                    }
-                    // Preserve the overdue occurrence and schedule a linked next instance.
-                    if (outcome.rollOver) {
-                        rollOverduePeriodicTaskUseCase(activeTask)
-                    }
+                if (outcome.notify) {
+                    taskReminderNotifier.notify(activeTask)
                 }
-            } finally {
-                pendingResult.finish()
+                // Preserve the overdue occurrence and schedule a linked next instance.
+                if (outcome.rollOver) {
+                    rollOverduePeriodicTaskUseCase(activeTask)
+                }
             }
         }
     }

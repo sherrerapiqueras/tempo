@@ -22,11 +22,10 @@ import com.mandrecode.tempo.features.routines.domain.util.HabitReminderDateUtil
 import com.mandrecode.tempo.infrastructure.notifications.NotificationChannelManager
 import com.mandrecode.tempo.infrastructure.notifications.NotificationSyncManager
 import com.mandrecode.tempo.infrastructure.notifications.RequestCodeGenerator
+import com.mandrecode.tempo.infrastructure.receivers.launchReceiverWork
 import com.mandrecode.tempo.util.CompletionHistoryUtil
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
@@ -57,38 +56,33 @@ class HabitReminderReceiver : BroadcastReceiver() {
     ) {
         val isChain = intent.getBooleanExtra(EXTRA_IS_CHAIN, false)
 
-        val pendingResult = goAsync()
-        CoroutineScope(ioDispatcher).launch {
-            try {
-                if (isChain) {
-                    handleChainReminder(context, intent)
-                } else {
-                    val habitId = intent.getLongExtra(EXTRA_HABIT_ID, -1L)
-                    if (habitId != -1L) {
-                        val habit = habitRepository.getHabitById(habitId)
-                        if (habit != null) {
-                            val scheduledDate =
-                                resolveScheduledDate(
-                                    intent.getStringExtra(EXTRA_SCHEDULED_DATE),
-                                    habit.reminderDate?.date
-                                        ?: Clock.System.todayIn(TimeZone.currentSystemDefault()),
-                                )
-                            if (shouldShowHabitReminder(habit, scheduledDate, vacationModeRepository.periods.value)) {
-                                showHabitNotification(
-                                    context,
-                                    habit.id,
-                                    habit.title,
-                                    habit.description,
-                                    scheduledDate,
-                                    habit.habitType,
-                                )
-                            }
-                            rescheduleHabit(habit)
+        launchReceiverWork(ioDispatcher, "HabitReminderReceiver") {
+            if (isChain) {
+                handleChainReminder(context, intent)
+            } else {
+                val habitId = intent.getLongExtra(EXTRA_HABIT_ID, -1L)
+                if (habitId != -1L) {
+                    val habit = habitRepository.getHabitById(habitId)
+                    if (habit != null) {
+                        val scheduledDate =
+                            resolveScheduledDate(
+                                intent.getStringExtra(EXTRA_SCHEDULED_DATE),
+                                habit.reminderDate?.date
+                                    ?: Clock.System.todayIn(TimeZone.currentSystemDefault()),
+                            )
+                        if (shouldShowHabitReminder(habit, scheduledDate, vacationModeRepository.periods.value)) {
+                            showHabitNotification(
+                                context,
+                                habit.id,
+                                habit.title,
+                                habit.description,
+                                scheduledDate,
+                                habit.habitType,
+                            )
                         }
+                        rescheduleHabit(habit)
                     }
                 }
-            } finally {
-                pendingResult.finish()
             }
         }
     }

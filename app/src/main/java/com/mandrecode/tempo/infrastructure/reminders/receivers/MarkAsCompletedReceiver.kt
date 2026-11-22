@@ -5,10 +5,9 @@ import android.content.Context
 import android.content.Intent
 import com.mandrecode.tempo.features.tasks.domain.repository.TaskRepository
 import com.mandrecode.tempo.features.tasks.domain.usecase.ToggleTaskCompletionUseCase
+import com.mandrecode.tempo.infrastructure.receivers.launchReceiverWork
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDateTime
 import javax.inject.Inject
 
@@ -26,28 +25,23 @@ class MarkAsCompletedReceiver : BroadcastReceiver() {
     ) {
         val taskId = intent.getLongExtra(TaskReminderReceiver.EXTRA_TASK_ID, 0)
         if (taskId != 0L) {
-            val pendingResult = goAsync()
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    val task = taskRepository.getTaskById(taskId)
-                    if (task != null && !task.isCompleted) {
-                        // For periodic tasks, TaskReminderReceiver already advanced
-                        // reminderDate to the next occurrence. Restore the original
-                        // so the use case computes the correct next instance date.
-                        val originalReminderDate =
-                            intent
-                                .getStringExtra(EXTRA_ORIGINAL_REMINDER_DATE)
-                                ?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() }
-                        val taskToComplete =
-                            if (originalReminderDate != null && task.periodicity != null) {
-                                task.copy(reminderDate = originalReminderDate)
-                            } else {
-                                task
-                            }
-                        toggleTaskCompletionUseCase(taskToComplete)
-                    }
-                } finally {
-                    pendingResult.finish()
+            launchReceiverWork(Dispatchers.IO, "MarkAsCompletedReceiver") {
+                val task = taskRepository.getTaskById(taskId)
+                if (task != null && !task.isCompleted) {
+                    // For periodic tasks, TaskReminderReceiver already advanced
+                    // reminderDate to the next occurrence. Restore the original
+                    // so the use case computes the correct next instance date.
+                    val originalReminderDate =
+                        intent
+                            .getStringExtra(EXTRA_ORIGINAL_REMINDER_DATE)
+                            ?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() }
+                    val taskToComplete =
+                        if (originalReminderDate != null && task.periodicity != null) {
+                            task.copy(reminderDate = originalReminderDate)
+                        } else {
+                            task
+                        }
+                    toggleTaskCompletionUseCase(taskToComplete)
                 }
             }
         }

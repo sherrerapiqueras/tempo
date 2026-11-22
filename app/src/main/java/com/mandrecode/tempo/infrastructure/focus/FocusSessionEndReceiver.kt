@@ -11,10 +11,9 @@ import com.mandrecode.tempo.core.di.IoDispatcher
 import com.mandrecode.tempo.features.focus.domain.usecase.FocusSessionUseCases
 import com.mandrecode.tempo.infrastructure.notifications.NotificationChannelManager
 import com.mandrecode.tempo.infrastructure.notifications.RequestCodeGenerator
+import com.mandrecode.tempo.infrastructure.receivers.launchReceiverWork
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -38,26 +37,21 @@ class FocusSessionEndReceiver : BroadcastReceiver() {
         context: Context,
         intent: Intent,
     ) {
-        val pendingResult = goAsync()
-        CoroutineScope(ioDispatcher).launch {
-            try {
-                // Not `end()`: a saved session with rounds to go moves on to its rest or its next
-                // round here, and only the last one is over. A late or repeated alarm finds a phase
-                // that has not run out and does nothing.
-                val timeUp = focusSessionUseCases.timeUp() ?: return@launch
-                // A new phase announces itself through its own ongoing notification; "time's up"
-                // is for the run that has actually ended.
-                if (timeUp.next != null) return@launch
-                val finished = timeUp.finished
-                notifyTimeIsUp(
-                    context = context,
-                    title = finished.title,
-                    minutes = finished.plannedLength.inWholeMinutes.toInt(),
-                    wasBreak = finished.isBreak,
-                )
-            } finally {
-                pendingResult.finish()
-            }
+        launchReceiverWork(ioDispatcher, "FocusSessionEndReceiver") {
+            // Not `end()`: a saved session with rounds to go moves on to its rest or its next
+            // round here, and only the last one is over. A late or repeated alarm finds a phase
+            // that has not run out and does nothing.
+            val timeUp = focusSessionUseCases.timeUp() ?: return@launchReceiverWork
+            // A new phase announces itself through its own ongoing notification; "time's up"
+            // is for the run that has actually ended.
+            if (timeUp.next != null) return@launchReceiverWork
+            val finished = timeUp.finished
+            notifyTimeIsUp(
+                context = context,
+                title = finished.title,
+                minutes = finished.plannedLength.inWholeMinutes.toInt(),
+                wasBreak = finished.isBreak,
+            )
         }
     }
 
