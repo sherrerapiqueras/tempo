@@ -2,6 +2,7 @@ package com.mandrecode.tempo.infrastructure.receivers
 
 import android.content.BroadcastReceiver
 import android.util.Log
+import com.mandrecode.tempo.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -14,8 +15,12 @@ import kotlinx.coroutines.launch
  * The scope has no parent and no exception handler, so before this helper an exception thrown by
  * the work — the database failing to open, a full disk, a bug in a use case — reached the thread's
  * default handler and killed the process from the background: a notification action or an alarm
- * turned into a crash the user never asked for. Here it is logged and dropped instead. The next
- * alarm, the next app start or the periodic refresh gets another go at the same work.
+ * turned into a crash the user never asked for. In a release build it is logged and dropped instead;
+ * the next alarm, the next app start or the periodic refresh gets another go at the same work.
+ *
+ * A debug build still crashes, after finishing the broadcast: with no crash reporter in the app, a
+ * failure that only reached the log would go unnoticed during development, where it is cheapest to
+ * find.
  */
 internal fun BroadcastReceiver.launchReceiverWork(
     dispatcher: CoroutineDispatcher,
@@ -26,7 +31,10 @@ internal fun BroadcastReceiver.launchReceiverWork(
     CoroutineScope(dispatcher).launch {
         runReceiverWork(
             block = { block() },
-            onError = { error -> Log.e(tag, "Background work for a broadcast failed", error) },
+            onError = { error ->
+                Log.e(tag, "Background work for a broadcast failed", error)
+                if (BuildConfig.DEBUG) throw error
+            },
             finish = { pendingResult.finish() },
         )
     }
