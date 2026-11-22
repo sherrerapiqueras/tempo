@@ -11,16 +11,17 @@ the app's UI changes enough to make these stale.
 distribution/screenshots/
   phone/     phone_{en,es}_{light,dark}_{1_focus_today,2_focus_session,3_routines_today,4_tasks_personal}.png
   medium/    medium_...
+  foldable/  foldable_...
   expanded/  expanded_...
   desktop/   desktop_...
   xr/        xr_...
   play-store/
-    phone/ medium/ expanded/ desktop/ xr/
+    phone/ medium/ foldable/ expanded/ desktop/ xr/
                {en,es}_{1_focus_today,2_focus_session,3_routines_today,4_tasks_personal,5_private}.png
 ```
 
-4 views × light/dark × 2 locales × 5 form factors = 80 raw captures, and
-5 designed listing images × 2 locales × 5 form factors = 50 under `play-store/`.
+4 views × light/dark × 2 locales × 6 form factors = 96 raw captures, and
+5 designed listing images × 2 locales × 6 form factors = 60 under `play-store/`.
 The raw captures are the input; the `play-store/` images are what gets uploaded
 (see [Designed listing images](#designed-listing-images)).
 
@@ -34,7 +35,7 @@ How the session shows there depends on how much room the navigation has:
 | Form factor | Navigation | With a session running |
 |---|---|---|
 | Phone | bottom bar | Focus tab widens into a pill with the countdown |
-| Medium tablet | compact icon-only rail | Focus tab tinted; no room for digits |
+| Medium tablet, Foldable (unfolded) | compact icon-only rail | Focus tab tinted; no room for digits |
 | Expanded tablet, Desktop | labeled rail | countdown replaces the "Focus" label |
 | XR | compact icon-only rail | Focus tab tinted; no room for digits |
 
@@ -197,6 +198,7 @@ tried first and abandoned: the app has a single width breakpoint at
 |---|---|---|---|
 | Phone | `Pixel_10` | portrait (native) | 1080×2424 |
 | Medium tablet | `Medium_Tablet` | **portrait** (forced) | 1600×2560, 800dp width — below the 1200dp breakpoint, compact icon-only rail |
+| Foldable | `Pixel_10_Pro_Fold` | unfolded (native) | 2076×2152 at 390dpi, about 850dp wide — below the breakpoint, compact icon-only rail |
 | Expanded/big tablet | `Pixel_Tablet` | landscape (native) | 2560×1600, 1280dp width — above the breakpoint, full labeled rail with app title |
 | Desktop | `Large_Desktop` | landscape (native) | 1920×1080, exact 16:9 |
 | Android XR | `XR_Headset` | n/a (square passthrough scene) | 2558×2558 → cropped to 2558×1439 |
@@ -213,6 +215,11 @@ android emulator create Large_Desktop     # profile exists in --list-profiles
 avdmanager create avd -n Pixel_Tablet \
   -d pixel_tablet \
   -k "system-images;android-37.1;google_apis_ps16k;arm64-v8a"
+# Same for the foldable, which the `android` CLI only offers as generic
+# foldable_1_1 / foldable_4_3 profiles:
+avdmanager create avd -n Pixel_10_Pro_Fold \
+  -d pixel_10_pro_fold \
+  -k "system-images;android-37.2;google_apis_playstore_ps16k;arm64-v8a"
 # Pixel_10 should already exist per AGENTS.md / android-cli conventions; if
 # not, `android emulator create pixel_10`. The `android` CLI has no XR
 # profile, so XR_Headset also goes through avdmanager (from
@@ -278,6 +285,19 @@ sleep 2
 adb -s emulator-5554 shell dumpsys window displays | grep -o "cur=[0-9x]*"
 for LOCALE in en es; do
   bash scripts/generate-screenshot-set.sh emulator-5554 distribution/screenshots/medium medium "$LOCALE"
+done
+adb -s emulator-5554 emu kill
+
+# --- Foldable (unfolded) ---
+# Boots unfolded; confirm with `cmd device_state state` (OPENED) if a run
+# comes out phone-shaped. Only the inner screen is captured: folded, the
+# outer screen is a phone and the phone set already covers it.
+android emulator start Pixel_10_Pro_Fold
+adb -s emulator-5554 install -r "$APK"
+adb -s emulator-5554 shell cmd overlay enable com.android.internal.systemui.navbar.gestural
+adb -s emulator-5554 shell cmd device_state state
+for LOCALE in en es; do
+  bash scripts/generate-screenshot-set.sh emulator-5554 distribution/screenshots/foldable foldable "$LOCALE"
 done
 adb -s emulator-5554 emu kill
 
@@ -362,6 +382,7 @@ wide, heavy for headlines) and the Tempo palette from `Color.kt`.
 |---|---|---|
 | Phone | 1080×1920 (9:16) | phone, whole screen, chips in a row above it |
 | Medium tablet | 1440×2560 (9:16) | tablet, portrait, same as phone |
+| Foldable | 1440×2560 (9:16) | unfolded foldable with a faint centre crease, wider than the tablet since its screen is nearly square |
 | Expanded tablet | 2560×1440 (16:9) | tablet, text column on the left |
 | Desktop | 2560×1440 (16:9) | monitor on a stand |
 | XR | 2560×1440 (16:9) | the 2558×1439 crop, bezel-less with a glow, like a panel in space |
@@ -403,6 +424,9 @@ rules keep it honest and in the app's voice:
 
 - **Phone / tablet**: no fixed aspect-ratio requirement observed to fail
   here; captured at each device's native resolution.
+- **Foldable**: Play Console has no foldable slot of its own; the foldable
+  images are meant for the tablet sections (a 7.6" inner screen sits with the
+  7-inch tablets).
 - **Desktop (Chromebook) listing**: 4–8 PNG/JPEG, ≤8MB each, 16:9 or 9:16,
   each side 1080–7680px. `Small_Desktop` (1366×768) fails on the
   768px height; `Large_Desktop` (1920×1080) is exact 16:9 and clears the
