@@ -40,7 +40,9 @@ internal fun BackupSection(
     onOpenDriveBackup: () -> Unit = {},
 ) {
     SettingsSection(title = stringResource(R.string.settings_backup)) {
-        driveBackupEntry(drive = uiState.driveBackup, onEvent = onEvent, onOpen = onOpenDriveBackup)
+        if (uiState.isDriveBackupAvailable) {
+            driveBackupEntry(drive = uiState.driveBackup, onEvent = onEvent, onOpen = onOpenDriveBackup)
+        }
         item {
             SettingsItem(
                 icon = R.drawable.ic_file_download,

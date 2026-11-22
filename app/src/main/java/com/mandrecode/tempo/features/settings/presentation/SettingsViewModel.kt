@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mandrecode.tempo.core.data.preferences.ThemePreferencesRepository
+import com.mandrecode.tempo.core.domain.model.FeatureFlags
 import com.mandrecode.tempo.core.domain.model.VacationPeriod
 import com.mandrecode.tempo.core.domain.repository.VacationModeRepository
 import com.mandrecode.tempo.features.focus.domain.repository.FocusSessionRepository
@@ -58,8 +59,10 @@ class SettingsViewModel
         private val vacationModeRepository: VacationModeRepository,
         private val focusSessionRepository: FocusSessionRepository,
         private val todayWidgetRefresher: TodayWidgetRefresher,
+        private val featureFlags: FeatureFlags,
     ) : ViewModel() {
-        private val _uiState = MutableStateFlow(SettingsContract.UiState())
+        private val _uiState =
+            MutableStateFlow(SettingsContract.UiState(isDriveBackupAvailable = featureFlags.driveBackupEnabled))
         val uiState: StateFlow<SettingsContract.UiState> = _uiState.asStateFlow()
 
         private val _uiEffect = Channel<SettingsContract.UiEffect>(Channel.BUFFERED)
@@ -78,7 +81,8 @@ class SettingsViewModel
             loadVersionInfo()
             observeFocusPreferences()
             observePreferenceStores()
-            driveBackupDelegate.start(backupHost)
+            // Nothing of Drive runs where the build doesn't offer it: no status refresh, no scheduling.
+            if (featureFlags.driveBackupEnabled) driveBackupDelegate.start(backupHost)
         }
 
         private fun observeThemeMode() {

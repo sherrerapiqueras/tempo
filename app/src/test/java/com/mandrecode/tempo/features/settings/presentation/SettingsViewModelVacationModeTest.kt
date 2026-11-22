@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import com.google.common.truth.Truth.assertThat
 import com.mandrecode.tempo.core.data.preferences.ThemePreferencesRepository
 import com.mandrecode.tempo.core.data.preferences.VacationModePreferencesImpl
+import com.mandrecode.tempo.core.domain.model.FeatureFlags
 import com.mandrecode.tempo.core.domain.model.ThemeMode
 import com.mandrecode.tempo.core.domain.model.VacationPeriod
 import com.mandrecode.tempo.core.domain.repository.VacationModeRepository
@@ -192,6 +193,7 @@ class SettingsViewModelVacationModeTest {
                 every { breakLengthMinutes } returns MutableStateFlow(5)
             },
             mockk<TodayWidgetRefresher>(relaxed = true),
+            FeatureFlags(driveBackupEnabled = true),
         )
     }
 

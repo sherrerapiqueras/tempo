@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mandrecode.tempo.core.data.preferences.OnboardingPreferencesRepository
 import com.mandrecode.tempo.core.data.preferences.ThemePreferencesRepository
+import com.mandrecode.tempo.core.domain.model.FeatureFlags
 import com.mandrecode.tempo.features.backup.presentation.DriveRestoreFlow
 import com.mandrecode.tempo.features.backup.presentation.DriveRestoreStep
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,8 +24,10 @@ class OnboardingViewModel
         private val themePreferencesRepository: ThemePreferencesRepository,
         private val onboardingPreferencesRepository: OnboardingPreferencesRepository,
         private val driveRestore: DriveRestoreFlow,
+        featureFlags: FeatureFlags,
     ) : ViewModel() {
-        private val mutableUiState = MutableStateFlow(OnboardingContract.UiState())
+        private val mutableUiState =
+            MutableStateFlow(OnboardingContract.UiState(isDriveRestoreAvailable = featureFlags.driveBackupEnabled))
         val uiState: StateFlow<OnboardingContract.UiState> = mutableUiState.asStateFlow()
 
         private val effectChannel = Channel<OnboardingContract.UiEffect>(Channel.BUFFERED)
@@ -62,7 +65,8 @@ class OnboardingViewModel
                 is OnboardingContract.UiEvent.ThemeModeSelected ->
                     themePreferencesRepository.setThemeMode(event.mode)
 
-                OnboardingContract.UiEvent.RestoreFromDriveClicked -> driveRestore.start(restoreHost)
+                OnboardingContract.UiEvent.RestoreFromDriveClicked ->
+                    if (mutableUiState.value.isDriveRestoreAvailable) driveRestore.start(restoreHost)
 
                 is OnboardingContract.UiEvent.DriveRestore -> driveRestore.onEvent(event.event, restoreHost)
             }

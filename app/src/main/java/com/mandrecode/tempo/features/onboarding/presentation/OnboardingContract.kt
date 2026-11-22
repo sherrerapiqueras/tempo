@@ -35,6 +35,8 @@ object OnboardingContract {
         val useTempoColors: Boolean = true,
         /** A restore from Google Drive under way (#307), null when none is. */
         val driveRestore: DriveRestoreStep? = null,
+        /** Whether the welcome page offers a restore from Google Drive (FeatureFlags.driveBackupEnabled). */
+        val isDriveRestoreAvailable: Boolean = true,
     ) {
         val isFirstPage: Boolean get() = currentPage == 0
         val isLastPage: Boolean get() = currentPage == PAGE_COUNT - 1

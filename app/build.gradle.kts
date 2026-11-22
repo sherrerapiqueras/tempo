@@ -241,8 +241,13 @@ configure<com.android.build.api.dsl.ApplicationExtension> {
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
+            buildConfigField("boolean", "DRIVE_BACKUP_ENABLED", "true")
         }
         release {
+            // Google Drive backup stays hidden in release until the OAuth consent screen is in
+            // production; until then only listed test users can authorise it. Turn on as part of
+            // #565 (see core/domain/model/FeatureFlags.kt).
+            buildConfigField("boolean", "DRIVE_BACKUP_ENABLED", "false")
             isMinifyEnabled = true
             isShrinkResources = true
             ndk {

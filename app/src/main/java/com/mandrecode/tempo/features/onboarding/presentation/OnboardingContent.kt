@@ -142,6 +142,7 @@ private fun OnboardingPage(
                 OnboardingContract.Page.WELCOME ->
                     OnboardingWelcomePage(
                         layout = layout,
+                        showRestoreOffer = uiState.isDriveRestoreAvailable,
                         onRestoreClick = { onEvent(OnboardingContract.UiEvent.RestoreFromDriveClicked) },
                     )
                 OnboardingContract.Page.FOCUS -> FocusPage(layout = layout)
@@ -163,6 +164,7 @@ internal fun OnboardingWelcomePage(
     layout: OnboardingLayout,
     onRestoreClick: () -> Unit,
     modifier: Modifier = Modifier,
+    showRestoreOffer: Boolean = true,
 ) {
     // A short window (a phone in landscape) can't fit the page, so it scrolls there, with fixed gaps
     // in place of the weights that centre it on a tall one: the restore offer must never be cut off.
@@ -209,8 +211,9 @@ internal fun OnboardingWelcomePage(
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 8.dp),
         )
+        // The gap stays without the offer, so the title sits centred rather than pushed down.
         gap()
-        WelcomeRestoreOffer(layout = layout, onRestoreClick = onRestoreClick)
+        if (showRestoreOffer) WelcomeRestoreOffer(layout = layout, onRestoreClick = onRestoreClick)
     }
 }
 
