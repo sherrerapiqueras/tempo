@@ -91,6 +91,15 @@ For manual app smoke testing, prefer the user's real connected Pixel 7 when it i
 - **Trailing commas** in multi-line declarations.
 - **Settings feature scope (D3 decision):** Settings is a deliberate thin exception to full Clean Architecture layering. It may remain presentation/data-light without a dedicated `features/settings/domain/` use-case layer unless orchestration complexity grows (multi-repository rules, non-trivial workflows, or reusable business policies). If complexity increases, promote Settings to the standard domain/use-case structure.
 
+## Feature flags
+
+Build-time flags gate work that ships before it may be used (for example, Drive backup until its OAuth consent screen is in production). There is no remote config: the app talks to no server of its own.
+
+- **Declare** a flag in two places: `FeatureFlag` (`core/domain/model/FeatureFlag.kt`) with its activation issue and a description, and the `featureFlags` registry in `app/build.gradle.kts` with its debug and release values. `BuildFeatureFlags.buildValue` maps one to the other; the `when` there fails to compile until both exist.
+- **Read** flags through the injected `FeatureFlags` (`isEnabled(FeatureFlag.X)`), never `BuildConfig` directly. In tests use `FeatureFlags.of(FeatureFlag.X to true)`.
+- **Try** the other value without editing code: the "Tempo flags" launcher entry in debug builds overrides any flag (applies on restart; ignored in release builds), or build with `-Ptempo.flag.<NAME>=true|false`.
+- **Retire** a flag once it is on in release for good: delete it from `FeatureFlag` and the registry, and delete the code behind its "off" side, in the same PR that closes its activation issue. A flag without an activation issue doesn't get added.
+
 ## Localization
 
 - Every translatable string resource (e.g. `<string>`, `<plurals>`, `<string-array>`) in `app/src/main/res/values/strings.xml` MUST have a matching entry in every locale-specific `app/src/main/res/values-<locale>/strings.xml` folder in the same change.

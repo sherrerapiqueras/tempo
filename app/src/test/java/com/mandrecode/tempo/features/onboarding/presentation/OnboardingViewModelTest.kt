@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
 import com.mandrecode.tempo.core.data.preferences.OnboardingPreferencesRepository
 import com.mandrecode.tempo.core.data.preferences.ThemePreferencesRepository
+import com.mandrecode.tempo.core.domain.model.FeatureFlag
 import com.mandrecode.tempo.core.domain.model.FeatureFlags
 import com.mandrecode.tempo.core.domain.model.ThemeMode
 import com.mandrecode.tempo.features.backup.domain.model.ImportOutcome
@@ -195,6 +196,6 @@ class OnboardingViewModelTest {
             themePreferencesRepository = themePreferencesRepository,
             onboardingPreferencesRepository = onboardingPreferencesRepository,
             driveRestore = driveRestore,
-            featureFlags = FeatureFlags(driveBackupEnabled = driveBackupEnabled),
+            featureFlags = FeatureFlags.of(FeatureFlag.DRIVE_BACKUP to driveBackupEnabled),
         )
 }

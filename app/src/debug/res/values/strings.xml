@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug-only screen: not shipped, not translated. -->
+<resources>
+    <string name="debug_feature_flags_title" translatable="false">Tempo flags</string>
+    <string name="debug_feature_flags_build_value" translatable="false">Turned on for good in #%1$d · this build: %2$s</string>
+    <string name="debug_feature_flags_overridden" translatable="false">Overridden</string>
+    <string name="debug_feature_flags_reset" translatable="false">Reset</string>
+    <string name="debug_feature_flags_on" translatable="false">on</string>
+    <string name="debug_feature_flags_off" translatable="false">off</string>
+    <string name="debug_feature_flags_restart" translatable="false">Restart Tempo</string>
+    <string name="debug_feature_flags_restart_note" translatable="false">Changes apply when Tempo starts again.</string>
+</resources>

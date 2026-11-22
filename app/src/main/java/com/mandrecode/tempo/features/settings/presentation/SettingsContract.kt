@@ -4,7 +4,7 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.net.Uri
 import androidx.annotation.StringRes
-import com.mandrecode.tempo.core.domain.model.FeatureFlags
+import com.mandrecode.tempo.core.domain.model.FeatureFlag
 import com.mandrecode.tempo.core.domain.model.ThemeMode
 import com.mandrecode.tempo.features.backup.domain.model.BackupFrequency
 import com.mandrecode.tempo.features.backup.domain.model.DriveBackupFailure
@@ -52,7 +52,7 @@ object SettingsContract {
         val driveBackupDialog: DriveBackupDialog? = null,
         /** A restore from Google Drive under way (#307), null when none is. */
         val driveRestore: DriveRestoreStep? = null,
-        /** Whether this build offers Google Drive backup at all ([FeatureFlags.driveBackupEnabled]). */
+        /** Whether this build offers Google Drive backup at all ([FeatureFlag.DRIVE_BACKUP]). */
         val isDriveBackupAvailable: Boolean = true,
     )
 

@@ -121,6 +121,8 @@ kover {
                     "com.mandrecode.tempo.util.AppVersionProviderImpl",
                     "com.mandrecode.tempo.util.DataMode",
                     "com.mandrecode.tempo.util.DateTimeFormatter*",
+                    // Debug-only feature flags screen (src/debug): never in a release build.
+                    "com.mandrecode.tempo.debug.*",
                     // Preview parameter providers (Compose tooling, not runtime)
                     "*PreviewParameterProvider*",
                     "*PreviewFixtures*",
@@ -177,6 +179,32 @@ if (calculatedVersionCode > Int.MAX_VALUE.toLong()) {
 }
 
 val appVersionCode: Int = calculatedVersionCode.toInt()
+
+// Feature flags: every FeatureFlag (core/domain/model/FeatureFlag.kt) with its value in debug and
+// release builds. Override one for a single build with -Ptempo.flag.<NAME>=true|false, e.g.
+// `./gradlew assembleRelease -Ptempo.flag.DRIVE_BACKUP=true`. When a flag is on in release for
+// good, delete it here, in FeatureFlag and its "off" code (AGENTS.md, "Feature flags").
+data class FeatureFlagValues(
+    val debug: Boolean,
+    val release: Boolean,
+)
+
+val featureFlags =
+    mapOf(
+        // Hidden in release until the OAuth consent screen is in production (#565).
+        "DRIVE_BACKUP" to FeatureFlagValues(debug = true, release = false),
+    )
+
+fun featureFlagValue(
+    name: String,
+    buildValue: Boolean,
+): String =
+    (
+        providers
+            .gradleProperty("tempo.flag.$name")
+            .orNull
+            ?.toBooleanStrict() ?: buildValue
+    ).toString()
 
 val appCommitSha =
     providers
@@ -241,13 +269,14 @@ configure<com.android.build.api.dsl.ApplicationExtension> {
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
-            buildConfigField("boolean", "DRIVE_BACKUP_ENABLED", "true")
+            featureFlags.forEach { (name, values) ->
+                buildConfigField("boolean", "FLAG_$name", featureFlagValue(name, values.debug))
+            }
         }
         release {
-            // Google Drive backup stays hidden in release until the OAuth consent screen is in
-            // production; until then only listed test users can authorise it. Turn on as part of
-            // #565 (see core/domain/model/FeatureFlags.kt).
-            buildConfigField("boolean", "DRIVE_BACKUP_ENABLED", "false")
+            featureFlags.forEach { (name, values) ->
+                buildConfigField("boolean", "FLAG_$name", featureFlagValue(name, values.release))
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             ndk {
