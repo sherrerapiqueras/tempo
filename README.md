@@ -16,7 +16,7 @@ that puts today's work in front of you and runs a timer against it.
   <img src="distribution/screenshots/phone/phone_en_dark_4_tasks_personal.png" width="200" alt="Tasks screen with priorities and due dates, dark theme" />
 </p>
 
-More screenshots — Medium/Expanded tablet, Desktop, Android XR, both themes, English
+More screenshots — Medium/Expanded tablet, Foldable, Desktop, Android XR, both themes, English
 and Spanish — are in [`distribution/screenshots/`](distribution/screenshots/README.md).
 
 ## Features

@@ -43,6 +43,7 @@ DEFAULT_CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 FORM_FACTORS = {
     "phone":    {"size": (1080, 1920), "layout": "portrait",  "device": "phone"},
     "medium":   {"size": (1440, 2560), "layout": "portrait",  "device": "tablet"},
+    "foldable": {"size": (1440, 2560), "layout": "portrait",  "device": "foldable"},
     "expanded": {"size": (2560, 1440), "layout": "landscape", "device": "tablet"},
     "desktop":  {"size": (2560, 1440), "layout": "landscape", "device": "monitor"},
     "xr":       {"size": (2560, 1440), "layout": "landscape", "device": "spatial"},
@@ -177,6 +178,13 @@ def device_html(kind, img_uri, width, extra_style="", cls=""):
         return (f'<div class="dev {cls}" style="width:{width}px;padding:{bezel}px;border-radius:{radius}px;'
                 f'background:#121816;{extra_style}"><img src="{img_uri}" '
                 f'style="border-radius:{radius - bezel}px"></div>')
+    if kind == "foldable":
+        # Unfolded, the inner screen is nearly square: a tablet-like frame with a
+        # faint crease down the middle where the hinge is.
+        bezel, radius = width * 0.022, width * 0.045
+        return (f'<div class="dev {cls}" style="width:{width}px;padding:{bezel}px;border-radius:{radius}px;'
+                f'background:#121816;{extra_style}"><img src="{img_uri}" '
+                f'style="border-radius:{radius - bezel}px"><div class="crease"></div></div>')
     if kind == "monitor":
         bezel, radius = width * 0.014, width * 0.018
         return (f'<div class="mon" style="width:{width}px;{extra_style}">'
@@ -225,7 +233,9 @@ def build_page(ff, locale, idx, raw_paths):
 
     # --- device placement ---
     if portrait:
-        dev_w = W * (0.70 if kind == "phone" else 0.84)
+        # The unfolded foldable is nearly square, so it can run wider than a
+        # tablet before its height outgrows the room under the text.
+        dev_w = W * {"phone": 0.70, "foldable": 0.92}.get(kind, 0.84)
         top = 640 * u
         if is_duo:
             # The chips sit in a grid above the pair, so the devices start lower
@@ -323,6 +333,8 @@ p.body {{ font-size: {body_size}px; line-height: 1.32; color: {t['body']}; max-w
   font-variation-settings: 'ROND' 100, 'wght' 450, 'wdth' 100, 'opsz' 24; text-wrap: pretty; }}
 .dev {{ box-shadow: {t['shadow']}; z-index: 2; }}
 .dev img {{ display: block; width: 100%; }}
+.crease {{ position: absolute; top: 0; bottom: 0; left: calc(50% - {1.5 * u}px); width: {3 * u}px;
+  background: linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.10) 50%, rgba(0,0,0,0) 100%); }}
 .spatial {{ overflow: hidden; box-shadow: 0 0 0 {3 * u}px rgba(158,242,228,.55), 0 30px 120px rgba(0,106,96,.55), 0 20px 60px rgba(0,0,0,.5); }}
 .mon {{ display: flex; flex-direction: column; align-items: center; z-index: 2; }}
 .mon .dev {{ width: 100%; }}
