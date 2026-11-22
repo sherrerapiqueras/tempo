@@ -719,7 +719,10 @@
     </plurals>
     <string name="task_category_badge_description">Category: %1$s</string>
     <string name="focus_session_paused">Paused</string>
-    <string name="focus_session_finished_title">%1$d minutes done</string>
+    <plurals name="focus_session_finished_title">
+        <item quantity="one">%1$d minute done</item>
+        <item quantity="other">%1$d minutes done</item>
+    </plurals>
     <string name="focus_break_finished_title">Break\'s over — back to it</string>
     <string name="focus_session_start">Start %1$s</string>
     <string name="focus_session_length_decrease">Shorter session</string>
@@ -727,7 +730,10 @@
     <string name="focus_session_pause">Pause</string>
     <string name="focus_session_resume">Resume</string>
     <string name="focus_session_stop">Stop here</string>
-    <string name="focus_session_another">Another %1$d minutes</string>
+    <plurals name="focus_session_another">
+        <item quantity="one">Another %1$d minute</item>
+        <item quantity="other">Another %1$d minutes</item>
+    </plurals>
     <string name="focus_session_take_break">%1$d min break</string>
     <string name="focus_session_focusing">Focusing</string>
     <string name="focus_session_remaining">%1$s left</string>
