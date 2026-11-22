@@ -163,8 +163,9 @@ class HabitChainLiveActivityManager
                             )
 
                         else ->
-                            context.getString(
-                                R.string.habit_chain_progress_text,
+                            context.resources.getQuantityString(
+                                R.plurals.habit_chain_progress_text,
+                                totalCount,
                                 completedCount,
                                 totalCount,
                             )
@@ -183,8 +184,9 @@ class HabitChainLiveActivityManager
                             },
                         ).setContentText(contentText)
                         .setSubText(
-                            context.getString(
-                                R.string.habit_chain_progress_text,
+                            context.resources.getQuantityString(
+                                R.plurals.habit_chain_progress_text,
+                                totalCount,
                                 completedCount,
                                 totalCount,
                             ),

@@ -1,5 +1,6 @@
 package com.mandrecode.tempo.core.data.local.security
 
+import android.annotation.SuppressLint
 import android.content.Context
 import androidx.annotation.VisibleForTesting
 
@@ -32,6 +33,8 @@ internal object DbKdfIterMarker {
         return stored.takeIf { it != NOT_SET }
     }
 
+    // commit(), not the KTX edit {}: its result is checked, and the KTX form returns nothing.
+    @SuppressLint("UseKtx")
     fun write(
         context: Context,
         kdfIter: Int,
@@ -42,6 +45,7 @@ internal object DbKdfIterMarker {
     }
 
     @VisibleForTesting
+    @SuppressLint("UseKtx")
     fun clear(context: Context) {
         check(prefs(context).edit().clear().commit()) {
             "Failed to clear the database kdf_iter marker"

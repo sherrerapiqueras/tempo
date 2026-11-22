@@ -8,6 +8,7 @@
      - Picker preview: generated from the real layout on Android 15+ (TodayWidgetUpdater), the
        static previewLayout on 12-14, the previewImage icon before that. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:minWidth="180dp"
     android:minHeight="110dp"
     android:minResizeWidth="40dp"
@@ -22,4 +23,5 @@
     android:previewImage="@drawable/ic_add_task_widget_preview"
     android:previewLayout="@layout/widget_today_preview"
     android:resizeMode="horizontal|vertical"
-    android:widgetCategory="home_screen" />
+    android:widgetCategory="home_screen"
+    tools:targetApi="31" />

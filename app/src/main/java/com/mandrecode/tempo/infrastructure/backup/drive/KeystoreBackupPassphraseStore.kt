@@ -3,6 +3,7 @@ package com.mandrecode.tempo.infrastructure.backup.drive
 import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import androidx.core.content.edit
 import com.mandrecode.tempo.features.backup.domain.repository.BackupPassphraseStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.nio.ByteBuffer
@@ -116,11 +117,12 @@ class KeystoreBackupPassphraseStore
 
         @Synchronized
         override fun clear() {
-            prefs
-                .edit()
-                .remove(KEY_BLOB)
-                .remove(KEY_ALIAS_IN_USE)
-                .commit()
+            // Synchronous: the Keystore keys are discarded next, and a blob left behind by an
+            // unflushed apply() would point at a key that no longer exists.
+            prefs.edit(commit = true) {
+                remove(KEY_BLOB)
+                remove(KEY_ALIAS_IN_USE)
+            }
             discard(KEY_ALIAS)
             discard(KEY_ALIAS_ALTERNATE)
         }

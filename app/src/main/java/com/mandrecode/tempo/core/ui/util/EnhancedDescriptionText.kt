@@ -3,7 +3,6 @@ package com.mandrecode.tempo.core.ui.util
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -27,6 +26,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.core.net.toUri
 
 private const val URL_ANNOTATION_TAG = "tempo_url"
 
@@ -131,7 +131,7 @@ internal fun openExternalUri(
     uri: String,
 ) {
     val intent =
-        Intent(Intent.ACTION_VIEW, Uri.parse(uri))
+        Intent(Intent.ACTION_VIEW, uri.toUri())
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
     try {

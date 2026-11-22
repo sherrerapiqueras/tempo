@@ -2,6 +2,7 @@ package com.mandrecode.tempo.features.widget.presentation
 
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
@@ -211,7 +212,15 @@ internal fun widgetContainer(): GlanceModifier =
         .fillMaxSize()
         .appWidgetBackground()
         .background(GlanceTheme.colors.widgetBackground)
-        .cornerRadius(android.R.dimen.system_app_widget_background_radius)
+        .then(
+            // The launcher's own widget radius exists from Android 12; corner radius only applies
+            // from there anyway, so older launchers keep their square widgets.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                GlanceModifier.cornerRadius(android.R.dimen.system_app_widget_background_radius)
+            } else {
+                GlanceModifier
+            },
+        )
 
 @DrawableRes
 private fun CardGroupPosition.cardBackground(): Int =

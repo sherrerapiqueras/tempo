@@ -1,6 +1,7 @@
 package com.mandrecode.tempo.infrastructure.backup.drive
 
 import android.content.Context
+import androidx.core.content.edit
 import com.mandrecode.tempo.features.backup.domain.model.BackupFrequency
 import com.mandrecode.tempo.features.backup.domain.model.DriveBackupFailure
 import com.mandrecode.tempo.features.backup.domain.model.DriveBackupSettings
@@ -26,7 +27,7 @@ class SharedPrefsDriveBackupPreferences
         /** Minted once and kept in this device-only file (excluded from backup and transfer). */
         override val installId: String =
             prefs.getString(KEY_INSTALL_ID, null) ?: UUID.randomUUID().toString().also {
-                prefs.edit().putString(KEY_INSTALL_ID, it).apply()
+                prefs.edit { putString(KEY_INSTALL_ID, it) }
             }
         private val _settings = MutableStateFlow(readSettings())
         private val _status = MutableStateFlow(readStatus())
@@ -35,36 +36,32 @@ class SharedPrefsDriveBackupPreferences
 
         @Synchronized
         override fun updateSettings(settings: DriveBackupSettings) {
-            prefs
-                .edit()
-                .putBoolean(KEY_ENABLED, settings.enabled)
-                .putString(KEY_FREQUENCY, settings.frequency.name)
-                .putBoolean(KEY_UNMETERED_ONLY, settings.unmeteredOnly)
-                .apply()
+            prefs.edit {
+                putBoolean(KEY_ENABLED, settings.enabled)
+                putString(KEY_FREQUENCY, settings.frequency.name)
+                putBoolean(KEY_UNMETERED_ONLY, settings.unmeteredOnly)
+            }
             _settings.value = settings
         }
 
         @Synchronized
         override fun recordSuccess(atMillis: Long) {
-            prefs.edit().putLong(KEY_LAST_SUCCESS, atMillis).apply()
+            prefs.edit { putLong(KEY_LAST_SUCCESS, atMillis) }
             _status.value = _status.value.copy(lastSuccessAt = atMillis)
         }
 
         @Synchronized
         override fun replaceLastSuccess(atMillis: Long?) {
-            val edit = prefs.edit()
-            if (atMillis == null) edit.remove(KEY_LAST_SUCCESS) else edit.putLong(KEY_LAST_SUCCESS, atMillis)
-            edit.apply()
+            prefs.edit { if (atMillis == null) remove(KEY_LAST_SUCCESS) else putLong(KEY_LAST_SUCCESS, atMillis) }
             _status.value = _status.value.copy(lastSuccessAt = atMillis)
         }
 
         @Synchronized
         override fun clearFailure() {
-            prefs
-                .edit()
-                .remove(KEY_LAST_FAILURE_AT)
-                .remove(KEY_LAST_FAILURE)
-                .apply()
+            prefs.edit {
+                remove(KEY_LAST_FAILURE_AT)
+                remove(KEY_LAST_FAILURE)
+            }
             _status.value = _status.value.copy(lastFailure = null, lastFailureAt = null)
         }
 
@@ -73,11 +70,10 @@ class SharedPrefsDriveBackupPreferences
             failure: DriveBackupFailure,
             atMillis: Long,
         ) {
-            prefs
-                .edit()
-                .putLong(KEY_LAST_FAILURE_AT, atMillis)
-                .putString(KEY_LAST_FAILURE, failure.name)
-                .apply()
+            prefs.edit {
+                putLong(KEY_LAST_FAILURE_AT, atMillis)
+                putString(KEY_LAST_FAILURE, failure.name)
+            }
             _status.value = _status.value.copy(lastFailure = failure, lastFailureAt = atMillis)
         }
 

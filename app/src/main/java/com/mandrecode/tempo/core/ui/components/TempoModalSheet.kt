@@ -1,6 +1,5 @@
 package com.mandrecode.tempo.core.ui.components
 
-import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import androidx.activity.ExperimentalActivityApi
 import androidx.activity.compose.PredictiveBackHandler
@@ -61,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.WindowCompat
 import com.mandrecode.tempo.R
 import com.mandrecode.tempo.core.ui.glass.glassPanel
@@ -453,7 +453,7 @@ private fun TempoModalSheetWindowEffects() {
     val dialogWindow = (view.parent as? DialogWindowProvider)?.window
     SideEffect {
         dialogWindow?.let { window ->
-            window.setBackgroundDrawable(ColorDrawable(0))
+            window.setBackgroundDrawable(0.toDrawable())
             window.setDimAmount(0f)
             WindowCompat.getInsetsController(window, view).apply {
                 isAppearanceLightStatusBars = !isDarkTheme

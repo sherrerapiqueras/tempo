@@ -256,7 +256,7 @@ private fun rememberStreakLabelUiModel(
         if (daysToShow <= 1) {
             stringResource(R.string.habit_history_today)
         } else {
-            stringResource(R.string.habit_history_last_days, daysToShow)
+            pluralStringResource(R.plurals.habit_history_last_days, daysToShow, daysToShow)
         }
     val streakText = streakLabelText(streakStatus, habitType) ?: noStreakText
     val toggledStreakStatus =
