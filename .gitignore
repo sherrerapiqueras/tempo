@@ -57,3 +57,6 @@ settings_override.gradle.kts
 actions-runner/
 actions-runner-2/
 actions-runner-3/
+
+# Kotlin compiler daemon session files
+.kotlin/

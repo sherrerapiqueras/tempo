@@ -1,8 +1,6 @@
 package com.mandrecode.tempo.features.settings.presentation
 
-import android.content.Context
 import android.util.Log
-import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mandrecode.tempo.core.data.preferences.ThemePreferencesRepository
@@ -13,10 +11,9 @@ import com.mandrecode.tempo.features.tasks.domain.repository.CompletedTaskRetent
 import com.mandrecode.tempo.features.tasks.domain.repository.MissedReminderPreferences
 import com.mandrecode.tempo.features.tasks.domain.scheduler.MissedReminderScheduler
 import com.mandrecode.tempo.features.tasks.domain.usecase.ConfigureCompletedTaskRetentionUseCase
-import com.mandrecode.tempo.features.widget.presentation.QuickAddTaskWidget
+import com.mandrecode.tempo.features.widget.presentation.QuickAddTaskWidgetRefresher
 import com.mandrecode.tempo.util.AppVersionProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -60,7 +57,7 @@ class SettingsViewModel
         private val driveBackupDelegate: SettingsDriveBackupDelegate,
         private val vacationModeRepository: VacationModeRepository,
         private val focusSessionRepository: FocusSessionRepository,
-        @ApplicationContext private val appContext: Context,
+        private val quickAddTaskWidgetRefresher: QuickAddTaskWidgetRefresher,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(SettingsContract.UiState())
         val uiState: StateFlow<SettingsContract.UiState> = _uiState.asStateFlow()
@@ -195,7 +192,7 @@ class SettingsViewModel
         private fun refreshQuickAddTaskWidget() {
             viewModelScope.launch {
                 try {
-                    QuickAddTaskWidget().updateAll(appContext)
+                    quickAddTaskWidgetRefresher.refresh()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

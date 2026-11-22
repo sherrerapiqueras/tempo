@@ -1,6 +1,5 @@
 package com.mandrecode.tempo.features.settings.presentation
 
-import android.content.Context
 import android.net.Uri
 import android.util.Log
 import app.cash.turbine.test
@@ -19,6 +18,7 @@ import com.mandrecode.tempo.features.tasks.domain.repository.CompletedTaskRetent
 import com.mandrecode.tempo.features.tasks.domain.repository.MissedReminderPreferences
 import com.mandrecode.tempo.features.tasks.domain.scheduler.MissedReminderScheduler
 import com.mandrecode.tempo.features.tasks.domain.usecase.ConfigureCompletedTaskRetentionUseCase
+import com.mandrecode.tempo.features.widget.presentation.QuickAddTaskWidgetRefresher
 import com.mandrecode.tempo.infrastructure.backup.BackupFileDataSource
 import com.mandrecode.tempo.util.AppVersionInfo
 import com.mandrecode.tempo.util.AppVersionProvider
@@ -64,7 +64,7 @@ class SettingsViewModelTest {
     private lateinit var importBackup: ImportBackupUseCase
     private lateinit var backupRepository: BackupRepository
     private lateinit var backupFileDataSource: BackupFileDataSource
-    private lateinit var appContext: Context
+    private lateinit var quickAddTaskWidgetRefresher: QuickAddTaskWidgetRefresher
     private lateinit var vacationModeRepository: VacationModeRepository
     private val testDispatcher = StandardTestDispatcher()
 
@@ -86,7 +86,7 @@ class SettingsViewModelTest {
         importBackup = mockk(relaxed = true)
         backupRepository = mockk(relaxed = true)
         backupFileDataSource = mockk(relaxed = true)
-        appContext = mockk(relaxed = true)
+        quickAddTaskWidgetRefresher = mockk(relaxed = true)
         vacationModeRepository =
             mockk(relaxed = true) {
                 every { periods } returns MutableStateFlow(emptyList())
@@ -129,7 +129,10 @@ class SettingsViewModelTest {
         runTest {
             advanceUntilIdle()
             viewModel.onEvent(SettingsContract.UiEvent.TempoColorsToggled(true))
+            advanceUntilIdle()
             coVerify { themePreferencesRepository.setUseTempoColors(true) }
+            // The widget draws in the app's colours, so it is redrawn right away.
+            coVerify { quickAddTaskWidgetRefresher.refresh() }
         }
 
     @Test
@@ -687,6 +690,6 @@ class SettingsViewModelTest {
             driveBackupDelegate(),
             vacationModeRepository,
             focusSessionRepository,
-            appContext,
+            quickAddTaskWidgetRefresher,
         )
 }

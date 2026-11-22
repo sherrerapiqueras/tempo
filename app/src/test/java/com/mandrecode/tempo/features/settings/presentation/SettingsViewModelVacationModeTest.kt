@@ -16,6 +16,7 @@ import com.mandrecode.tempo.features.tasks.domain.repository.CompletedTaskRetent
 import com.mandrecode.tempo.features.tasks.domain.repository.MissedReminderPreferences
 import com.mandrecode.tempo.features.tasks.domain.scheduler.MissedReminderScheduler
 import com.mandrecode.tempo.features.tasks.domain.usecase.ConfigureCompletedTaskRetentionUseCase
+import com.mandrecode.tempo.features.widget.presentation.QuickAddTaskWidgetRefresher
 import com.mandrecode.tempo.infrastructure.backup.BackupFileDataSource
 import com.mandrecode.tempo.util.AppVersionInfo
 import com.mandrecode.tempo.util.AppVersionProvider
@@ -190,7 +191,7 @@ class SettingsViewModelVacationModeTest {
                 every { defaultLengthMinutes } returns MutableStateFlow(25)
                 every { breakLengthMinutes } returns MutableStateFlow(5)
             },
-            mockk<Context>(relaxed = true),
+            mockk<QuickAddTaskWidgetRefresher>(relaxed = true),
         )
     }
 
