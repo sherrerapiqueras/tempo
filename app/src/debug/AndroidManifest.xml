@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds only: the feature flags screen, with its own launcher entry (AGENTS.md, "Feature
+     flags"). Its own task affinity keeps it from stacking on top of Tempo's task. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <activity
+            android:name=".debug.FeatureFlagsActivity"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/debug_feature_flags_title"
+            android:taskAffinity="com.mandrecode.tempo.debug.flags"
+            android:theme="@style/Theme.Tempo">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

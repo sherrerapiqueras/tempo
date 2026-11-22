@@ -5,6 +5,7 @@ import android.util.Log
 import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
 import com.mandrecode.tempo.core.data.preferences.ThemePreferencesRepository
+import com.mandrecode.tempo.core.domain.model.FeatureFlag
 import com.mandrecode.tempo.core.domain.model.FeatureFlags
 import com.mandrecode.tempo.core.domain.model.ThemeMode
 import com.mandrecode.tempo.core.domain.repository.VacationModeRepository
@@ -706,6 +707,6 @@ class SettingsViewModelTest {
             vacationModeRepository,
             focusSessionRepository,
             todayWidgetRefresher,
-            FeatureFlags(driveBackupEnabled = driveBackupEnabled),
+            FeatureFlags.of(FeatureFlag.DRIVE_BACKUP to driveBackupEnabled),
         )
 }

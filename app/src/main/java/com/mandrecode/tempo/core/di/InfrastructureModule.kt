@@ -3,8 +3,6 @@ package com.mandrecode.tempo.core.di
 import android.app.NotificationManager
 import android.content.Context
 import androidx.work.WorkManager
-import com.mandrecode.tempo.BuildConfig
-import com.mandrecode.tempo.core.domain.model.FeatureFlags
 import com.mandrecode.tempo.features.backup.domain.scheduler.BackupReminderScheduler
 import com.mandrecode.tempo.features.tasks.domain.scheduler.CompletedTaskCleanupScheduler
 import com.mandrecode.tempo.infrastructure.backup.BackupReminderSchedulerImpl
@@ -47,10 +45,6 @@ object InfrastructureModule {
     @Provides
     @Singleton
     fun provideClock(): Clock = Clock.System
-
-    @Provides
-    @Singleton
-    fun provideFeatureFlags(): FeatureFlags = FeatureFlags(driveBackupEnabled = BuildConfig.DRIVE_BACKUP_ENABLED)
 
     @Provides
     @Singleton

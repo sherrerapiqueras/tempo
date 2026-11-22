@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mandrecode.tempo.core.data.preferences.OnboardingPreferencesRepository
 import com.mandrecode.tempo.core.data.preferences.ThemePreferencesRepository
+import com.mandrecode.tempo.core.domain.model.FeatureFlag
 import com.mandrecode.tempo.core.domain.model.FeatureFlags
 import com.mandrecode.tempo.features.backup.presentation.DriveRestoreFlow
 import com.mandrecode.tempo.features.backup.presentation.DriveRestoreStep
@@ -27,7 +28,9 @@ class OnboardingViewModel
         featureFlags: FeatureFlags,
     ) : ViewModel() {
         private val mutableUiState =
-            MutableStateFlow(OnboardingContract.UiState(isDriveRestoreAvailable = featureFlags.driveBackupEnabled))
+            MutableStateFlow(
+                OnboardingContract.UiState(isDriveRestoreAvailable = featureFlags.isEnabled(FeatureFlag.DRIVE_BACKUP)),
+            )
         val uiState: StateFlow<OnboardingContract.UiState> = mutableUiState.asStateFlow()
 
         private val effectChannel = Channel<OnboardingContract.UiEffect>(Channel.BUFFERED)
