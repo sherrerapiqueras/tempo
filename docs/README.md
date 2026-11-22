@@ -36,6 +36,13 @@ workflow; everything here is reference material.
 | [`implementation/MIGRATIONS.md`](implementation/MIGRATIONS.md) | Room migration practice |
 | [`PRIVACY_POLICY.md`](PRIVACY_POLICY.md) | The published privacy policy |
 
+## Releasing
+
+| Doc | Covers |
+|:--|:--|
+| [`implementation/play-release.md`](implementation/play-release.md) | Publishing to Google Play: open testing, then production on approval |
+| [`implementation/google-drive-setup.md`](implementation/google-drive-setup.md) | The Google Cloud project Drive backup needs |
+
 ## Design & implementation notes
 
 - [`design/`](design/) — visual design, typography, colour, and the release visual-consistency

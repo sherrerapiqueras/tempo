@@ -28,10 +28,11 @@ release-please (CHANGELOG.md) → generate-whatsnew.sh → build/whatsnew/
    Output is written to `build/whatsnew/whatsnew-en-US` and
    `build/whatsnew/whatsnew-es-ES` (Spanish headers over the same entries).
    It is generated at publish time and never committed.
-3. **`publish.yml`** passes `build/whatsnew/` to the
-   `r0adkll/upload-google-play` action via `whatsNewDirectory`, so release
-   notes are uploaded alongside the AAB. The publish workflow also fails if
-   generated changelog files still contain GitHub issue/PR links.
+3. **`publish.yml`** hands `build/whatsnew/` from its build job to the
+   open-testing upload (`r0adkll/upload-google-play`, `whatsNewDirectory`), so
+   release notes are uploaded alongside the AAB. Promotion to production reuses
+   those same notes ([play-release.md](play-release.md)). The publish workflow
+   also fails if generated changelog files still contain GitHub issue/PR links.
 
 ## Output
 
